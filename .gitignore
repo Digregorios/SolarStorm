@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+*.egg
+build/
+dist/
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*~
+
+# Local IDE / tooling state (kiro/opencode/etc.)
+.commandcode/
+opencode.json
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Ruff / mypy / pytest caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Project artefacts
+artifacts/raw/**
+!artifacts/raw/.gitkeep
+artifacts/features/**
+!artifacts/features/.gitkeep
+artifacts/forecasts/**
+!artifacts/forecasts/.gitkeep
+artifacts/logs/**
+!artifacts/logs/.gitkeep
+artifacts/models/**
+!artifacts/models/.gitkeep
+artifacts/state/**
+!artifacts/state/.gitkeep
+artifacts/scratch/**
+!artifacts/scratch/.gitkeep
+artifacts/snapshots/**
+!artifacts/snapshots/.gitkeep
+artifacts/tuning/**
+!artifacts/tuning/.gitkeep
+
+# Large legacy CSV (kept by reference, not in git)
+references/legacy/datasets/*.csv
+NZWN.csv
+
+# OS
+Thumbs.db
+.DS_Store

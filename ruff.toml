@@ -1,0 +1,21 @@
+target-version = "py311"
+line-length = 110
+exclude = [
+    "references/legacy",
+    "artifacts",
+    "experiments/**/scratch",
+    ".venv",
+    "build",
+    "dist",
+]
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF"]
+ignore = [
+    "E501",  # we enforce line length manually where it matters
+    "N812",  # allow single-letter capital aliases (e.g. Q)
+]
+
+[lint.per-file-ignores]
+"tests/**" = ["B", "N802", "N803"]
+"audits/**" = ["B"]

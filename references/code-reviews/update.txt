@@ -1,0 +1,155 @@
+A seguir vai uma análise crítica e “anti-delírio” dos 5 arquivos (requirements.md, design.md, implementation-plan.md, tasks.md, README.md) com melhorias concretas para reduzir ambiguidade, evitar código cosmético e fechar portas clássicas de leakage/overengineering.
+Vou organizar em:
+1) Diagnóstico geral (o que já está bom vs onde ainda há brechas)  
+2) Melhorias por arquivo (mudanças pontuais, textuais, que deixam tarefas implementáveis)  
+3) “Lista curta de travas” (o mínimo que eu exigiria antes de escrever código)
+1) Diagnóstico geral (rigor)
+O que está forte
+Estrutura em 4 artefatos (REQ / Design / Plan / Tasks) + rastreabilidade: excelente.
+Regras anti-leakage: CP-aware, closed='left', feature_max_ts <= cp_utc, snapshot+hash: excelente.
+Gates pre-registrados e kill-criteria: raro ver isso bem feito; aqui está bem.
+Reverse-import guard e verdict file: isso evita a principal contaminação do projeto anterior.
+Onde ainda existe espaço para divergência / código cosmético
+Há 6 áreas onde um dev/LLM ainda pode “inventar coisas”:
+1) CPs avaliados: você congela CP operacional (23Z), mas o resto dos CPs (“quais CPs existem no sistema?”) não está fechado como contrato. Isso afeta dataset_builder, CV, relatórios, odds snapshots, tudo.
+2) Definição operacional de “day_complete”: aparece como “>= N obs” mas N não está definido e nem a regra de cobertura (ex.: tolerância de gaps). Isso vira fonte de p-hacking (descartar dias difíceis) ou de bugs (labels instáveis).
+3) A fonte do “inteiro do METAR cru”: você assume regex no texto METAR (ok), mas precisa especificar:
+como tratar M02 (negativo),
+como tratar formatos sem “TT/DD” padrão,
+como tratar METAR com múltiplos grupos,
+e principalmente: como lidar quando regex falha (fallback) sem vazar.
+4) Prob_dist e IC80 nas baselines: “heurística gaussiana” é perigoso porque vira cosmético e abre tuning sem valor. Baselines devem ser minimais e auditáveis: ou distribuição empírica, ou uma parametrização explicitamente congelada.
+5) Métrica primária EV: está correto definir EV como primária na Fase 8, mas você ainda precisa definir a mecânica de execução shadow (slippage/fees, fill assumptions, posição, sizing, limites). Sem isso, EV vira número arbitrário.
+6) Objetivo do threshold tuning: você sugere max(EV) sujeito a DD<=5%, mas falta definir:
+como medir drawdown (sobre qual equity curve),
+qual unidade de posição,
+e como o tuning evita overfit (ex.: nested CV / separar tuning window vs test window).
+2) Melhorias por arquivo
+A) requirements.md (onde fechar contratos para evitar “inventar”)
+1) Fechar o contrato de CPs
+Hoje: CP operacional definido; CPs “avaliados” aparecem em tasks/config como sugestão.
+Adicionar REQ-CON-6 (novo): “CP set oficial”
+Definir lista explícita (ex.: [20Z, 21Z, 22Z, 23Z] ou outro conjunto).
+Definir: “um CP é um inteiro de hora UTC (HH:00)”.
+Definir: “todas as métricas e relatórios são computados para esses CPs”.
+Isso evita um dev adicionar CPs arbitrários e depois escolher os que melhor performam.
+2) Definir day_complete como regra objetiva
+Crie um requirement do tipo:
+REQ-CON-7: Day completeness
+day_complete = True se:
+número de observações >= X (ex.: 40 se cadência 30min esperada em 24h = 48; permite gaps)
+maior gap <= Y minutos (ex.: <= 120 min)
+existe pelo menos 1 obs em cada quartil do dia local (para evitar “faltou manhã inteira”)
+Sem isso, o pipeline vai “pular dias” sem você perceber.
+3) REQ-CON-3 está ótimo, mas falta “fallback seguro”
+Você já diz para extrair do metar cru; mas o design/tasks dizem “fallback para tmpf quando regex falhar”.
+Isso é perigosíssimo se não virar contrato com regra clara.
+Adicionar:
+REQ-CON-8: Fallback policy:
+fallback permitido apenas se metar ausente/ilegível;
+fallback gera data_quality.tmp_c_int = imputed;
+o sistema deve reportar a taxa de fallback por mês e acionar kill criterion se > limiar (ex.: 0.5% ou 1%).
+4) EV primária: falta contrato de execução
+Adicionar requirements mínimos:
+REQ-MET-5: Shadow execution assumptions
+Define fee_bps, slippage_model, “entry price = mid/ask/bid”, e sizing (unit notional fixo).
+Define se trades são limit/market e a regra de fill.
+Sem isso, EV é “história”.
+B) design.md (onde transformar escolhas em interfaces de código)
+1) “tmpf decimal interno; nunca para gerar k_obs” está bom — mas falta especificar “quem é truth”
+Você usa metar para extrair inteiro, mas também diz que tmpf é decimal.
+Melhoria: declarar explicitamente 3 sinais diferentes:
+T_obs_int: inteiro do METAR (verdade do produto)
+T_obs_dec: decimal derivado de tmpf (apenas para features/diagnóstico)
+T_latent_dec: contínuo previsto por modelos (depois quantizado por Q)
+Isso evita confusão no código e no audit.
+2) Label de late spike L1 precisa ficar “implementável”
+Hoje: late_spike_l1 = (Q(Tmax_observed_after_cp) != Q(t_so_far_max_c_dec_at_cp)) (no design).
+Mas no seu mundo a observação é inteira (tmp_c_int). Então a implementação mais clara:
+k_cp = max(tmp_c_int for ts_local in [00:00, cp))
+k_eod = max(tmp_c_int for ts_local in [00:00, 24:00))
+late_spike_l1 = (k_eod != k_cp)  (simples e auditável)
+Sugiro documentar assim para não abrir espaço para “t_so_far_max_c_dec”.
+3) Distribuição prob_dist — definir como gerar (sem cosmético)
+Você precisa travar a regra de discretização do espaço de inteiros candidatos.
+Defina no design:
+conjunto de inteiros candidatos K = [k_min..k_max] por dia:
+ex.: k_min = min(climo_p10, nwp_p10) - 2
+k_max = max(climo_p90, nwp_p90) + 2
+truncar em limites plausíveis
+normalização e mass outside support (se permitido ou não)
+Sem isso, cada dev faz diferente.
+4) “Climatology smoothed” contradiz janela >=12 meses vs conformal janela curta
+No implementation-plan.md você diz climatologia com janela >= 12 meses no train split. Isso é ok, mas precisa constar no design como “contrato de baseline”:
+climatologia é treinada apenas em train window, não usa test.
+5) NWP: precisa de interface de snapshot (contrato)
+Você descreve snapshots por (model, run_time_utc, lead_h, valid_time_utc). Excelente.  
+Falta definir: “qual run escolher no CP” (latest run <= cp?) e “qual lead usar” (valid_time = cp? ou algum anchor?).
+Mesmo que seja TBD, você deve escrever “Selection rule v1” para não virar improviso.
+C) implementation-plan.md (onde reduzir espaços “talvez”)
+1) Fase 1: “Discrepância tmpf->int <0.5%” é bom, mas falta kill criterion para isso
+Você diz “em caso contrário abrir issue”. Melhor:
+se discrepância > 0.5% (ou outro limiar), parar e não seguir para Fase 2.
+Porque isso é literalmente a definição do label/truth.
+2) Baselines: “prob_dist ingênua gaussiana” é risco de cosmético
+Recomendação: trocar por baseline mais defensável e congelável:
+Baseline prob_dist = distribuição empírica de k_eod condicional em (month, cp, k_cp) ou (month, cp, t_so_far_max_int):
+Ex.: “histórico de dias onde t_so_far_max_int == k_cp naquele CP”.
+Isso produz prob_dist discreta sem assumir gaussiana.
+Também melhora interpretabilidade e reduz tuning.
+3) Fase 3 Ridge band-aware: “projeção de gradient para Ridge” está vago
+Isso abre porta para implementação inventada.
+Se Ridge é só baseline, simplifique:
+fit Ridge para prever y_latent_dec ou delta_dec
+depois converter para distribuição por B(k) via P(k) ∝ exp(-loss_band(y_hat, k)) com temperatura fixa τ
+τ congelado e documentado
+Ou: não use ridge para distribuição; use ridge só para p50_int e calibração empirica gera IC.  
+O importante: travar o método para evitar “mágica”.
+4) Fase 8: Shadow trading precisa de “market snapshot schema” e fill model travados
+Hoje está só “ingestor de odds” e EV. Falta:
+regra de seleção do contract (brackets)
+se tem múltiplos contracts (range), como mapear prob_dist -> p_yes de cada contract
+fill rule, fee, slippage
+Sem isso, EV vira “qualquer coisa”.
+D) tasks.md (onde evitar que vire checklist infinito)
+1) Adicionar blocos “BLOCKED UNTIL”
+Algumas tasks dependem de decisões OPN; você já lista OPNs, mas no nível de tasks sugiro marcar explicitamente:
+T-4-2 “Ingestor NWP forecast” bloqueado por T-4-1 (OPN-5)  
+T-8-2 odds ingest bloqueado por “qual mercado/eventUrl v1” (definir)
+Isso evita trabalho inútil.
+2) Trocar “plots PNG” por “tabelas mínimas”
+EDA em PNG geralmente vira cosmético. Sugiro que EDA tasks exijam:
+tabelas csv/parquet + markdown com estatísticas chave
+plots opcionais, mas “done” não depende de plots
+Ex.: T-1-8 done = “arquivo reports/eda/intro.md com 10 números chave e 3 tabelas”.
+3) Definir N e Y de completeness nos tasks (ou referenciar REQ-CON-7)
+Hoje tasks falam “>= N obs”. Isso tem que apontar para requirement.
+E) README.md (onde reduzir ambiguidade de entrada)
+1) “Estado atual: código não escrito (greenfield)” ok
+Mas falta instrução mínima de “como rodar” quando começar:
+comandos esperados
+onde colocar NZWN.csv
+como gerar snapshots
+Isso evita que cada pessoa invente path e quebre ASCII guard.
+2) Linkar a versão do contrato Q (Q_VERSION)
+Colocar no README:
+“Q_VERSION atual = 1.0”
+“mudança em contrato exige re-run de auditoria X”
+3) Lista curta de travas (o mínimo antes de codar)
+Se eu tivesse que impor 10 travas para evitar desvio:
+1) REQ-CON-6: CP set oficial fechado (não só CP operacional).
+2) REQ-CON-7: day_complete definido (N obs, max gap, cobertura mínima).
+3) REQ-CON-8: fallback policy explícita para regex/metar parse.
+4) Baselines sem “gaussiana cosmética”: usar distribuição empírica condicionada.
+5) “Truth types” no design: T_obs_int, T_obs_dec, T_latent_dec.
+6) Late spike L1 definido como k_eod != k_cp (simples, inteiro, auditável).
+7) Definir suporte K (inteiros candidatos) e regra para prob_dist.
+8) NWP selection rule v1 (qual run/lead entra no CP).
+9) Shadow trading execution assumptions (fee, slippage, fill).
+10) Definir tuning protocol (como evitar overfit nos thresholds: nested/walk-forward).
+Observação importante (consistência interna)
+Nos arquivos anexados, há uma frase: “Itens OPN-1 e OPN-5 SHALL estar fechados antes da Fase 4” — mas no plano, OPN-1 (resolver Polymarket) bloqueia Fase 8, não Fase 4.  
+Isso precisa ser uniformizado para não criar trabalho falso. Minha recomendação:
+OPN-5 fecha antes da Fase 4 (NWP).  
+OPN-1 fecha antes da Fase 8 (resolver/market).  
+Porém: você pode criar uma “validação mínima do resolver” antes (Fase 0/1) só para travar estação/timezone/janela.

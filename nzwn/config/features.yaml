@@ -1,0 +1,28 @@
+# NZWN feature toggles (FEATURES_VERSION = 0.1).
+# When a feature is set to false, dataset_builder will skip computing it.
+
+baseline_features:
+  t_so_far_max_c_int: true
+  t_so_far_max_age_min: true
+  last_obs_tmp_c_int: true
+  last_obs_dwp_c_int: true
+  slope_3h_c_per_h: true
+  slope_6h_c_per_h: true
+  time_since_new_max_min: true
+  wind_dir_sincos: true
+  wind_speed_kt: true
+  qnh_hpa: true
+  dp_qnh_3h: true
+  vis_km: true
+  ceiling_m: true
+  wx_flags: true
+  clim_tmax_c_dec: true
+  clim_tmax_int: true
+  tmax_d_minus_1_int: true
+  tmin_d_minus_1_int: true
+
+nwp_features:
+  enabled: false           # turned on in Phase 4
+
+regime_features:
+  enabled: false           # turned on after GMM is frozen

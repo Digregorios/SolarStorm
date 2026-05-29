@@ -1,0 +1,319 @@
+{
+  "aud2_gates_REQ_AUD_2": {
+    "n_violations": 3,
+    "passed": false,
+    "rule": "All anti-nowcaster gates pass across all splits",
+    "violations": [
+      {
+        "gate": "corr_diff",
+        "split": "2023-01-01_to_2023-12-31"
+      },
+      {
+        "gate": "corr_diff",
+        "split": "2024-01-01_to_2024-12-30"
+      },
+      {
+        "gate": "corr_diff",
+        "split": "2025-01-01_to_2025-12-31"
+      }
+    ]
+  },
+  "cp_operational": "23:00",
+  "kill_criterion_REQ_MET_4": {
+    "n_splits_passed": 3,
+    "passed": true,
+    "rule": "Ridge full > max(persistence, climatology) bracket-match in >= 2/3 splits with IC95 lo > 0"
+  },
+  "phase": 3,
+  "phase4_unblocked": false,
+  "splits": [
+    {
+      "alpha_full": 10.0,
+      "alpha_no_temp": 0.01,
+      "bracket_match": {
+        "baseline_max": 0.2493150684931507,
+        "climatology": 0.16712328767123288,
+        "persistence": 0.2493150684931507,
+        "ridge_full": 0.4191780821917808,
+        "ridge_minus_baseline": {
+          "ci95_high": 0.2410958904109589,
+          "ci95_low": 0.09315068493150686,
+          "point": 0.16986301369863013
+        },
+        "ridge_no_temp": 0.2493150684931507
+      },
+      "counterfactual_n_pairs": 325,
+      "gates": [
+        {
+          "ci_high": 0.6921454947902284,
+          "ci_low": 0.5893028701421023,
+          "details": {
+            "n": 365
+          },
+          "name": "ss_1h",
+          "passed": true,
+          "threshold": 0.08,
+          "value": 0.642019837691614
+        },
+        {
+          "ci_high": 0.6921454947902284,
+          "ci_low": 0.5893028701421023,
+          "details": {
+            "n": 365
+          },
+          "name": "ss_3h_proxy",
+          "passed": true,
+          "threshold": 0.1,
+          "value": 0.642019837691614
+        },
+        {
+          "ci_high": -0.008070159146513923,
+          "ci_low": -0.024563966156655324,
+          "details": {
+            "corr_now": 0.9771782614146943,
+            "corr_truth": 0.9613616500087007,
+            "n": 365
+          },
+          "name": "corr_diff",
+          "passed": false,
+          "threshold": 0.2,
+          "value": -0.015816611405993664
+        },
+        {
+          "ci_high": null,
+          "ci_low": null,
+          "details": {
+            "skipped": "phase3_uses_naive_ic_p50_pm_1; conformal_in_phase5",
+            "target": 0.8
+          },
+          "name": "coverage_ic80",
+          "passed": null,
+          "threshold": "|cov-0.8|<0.04",
+          "value": 0.8602739726027397
+        },
+        {
+          "ci_high": null,
+          "ci_low": null,
+          "details": {},
+          "name": "i_t_obs",
+          "passed": true,
+          "threshold": "< 0.1",
+          "value": 0.09725342553218592
+        },
+        {
+          "ci_high": null,
+          "ci_low": null,
+          "details": {},
+          "name": "counterfactual_same_temp",
+          "passed": true,
+          "threshold": "> 0.7",
+          "value": 0.802529919709135
+        }
+      ],
+      "n_test": 365,
+      "n_train": 1090,
+      "rps_full": 4.364457969205225,
+      "split": "2023-01-01_to_2023-12-31",
+      "test_window": [
+        "2023-01-01",
+        "2023-12-31"
+      ],
+      "train_window": [
+        "2020-01-01",
+        "2022-12-31"
+      ]
+    },
+    {
+      "alpha_full": 0.01,
+      "alpha_no_temp": 100.0,
+      "bracket_match": {
+        "baseline_max": 0.2328767123287671,
+        "climatology": 0.1643835616438356,
+        "persistence": 0.2328767123287671,
+        "ridge_full": 0.4602739726027397,
+        "ridge_minus_baseline": {
+          "ci95_high": 0.29863013698630136,
+          "ci95_low": 0.1561643835616438,
+          "point": 0.2273972602739726
+        },
+        "ridge_no_temp": 0.2465753424657534
+      },
+      "counterfactual_n_pairs": 303,
+      "gates": [
+        {
+          "ci_high": 0.6992429840972872,
+          "ci_low": 0.5998325605071755,
+          "details": {
+            "n": 365
+          },
+          "name": "ss_1h",
+          "passed": true,
+          "threshold": 0.08,
+          "value": 0.6513911620294599
+        },
+        {
+          "ci_high": 0.6992429840972872,
+          "ci_low": 0.5998325605071755,
+          "details": {
+            "n": 365
+          },
+          "name": "ss_3h_proxy",
+          "passed": true,
+          "threshold": 0.1,
+          "value": 0.6513911620294599
+        },
+        {
+          "ci_high": -0.010115894775351363,
+          "ci_low": -0.028002070814203573,
+          "details": {
+            "corr_now": 0.9788846712189567,
+            "corr_truth": 0.9603359644860898,
+            "n": 365
+          },
+          "name": "corr_diff",
+          "passed": false,
+          "threshold": 0.2,
+          "value": -0.018548706732866904
+        },
+        {
+          "ci_high": null,
+          "ci_low": null,
+          "details": {
+            "skipped": "phase3_uses_naive_ic_p50_pm_1; conformal_in_phase5",
+            "target": 0.8
+          },
+          "name": "coverage_ic80",
+          "passed": null,
+          "threshold": "|cov-0.8|<0.04",
+          "value": 0.8794520547945206
+        },
+        {
+          "ci_high": null,
+          "ci_low": null,
+          "details": {},
+          "name": "i_t_obs",
+          "passed": true,
+          "threshold": "< 0.1",
+          "value": 0.08895615391722542
+        },
+        {
+          "ci_high": null,
+          "ci_low": null,
+          "details": {},
+          "name": "counterfactual_same_temp",
+          "passed": true,
+          "threshold": "> 0.7",
+          "value": 0.8761987794245859
+        }
+      ],
+      "n_test": 365,
+      "n_train": 1455,
+      "rps_full": 4.435932312510443,
+      "split": "2024-01-01_to_2024-12-30",
+      "test_window": [
+        "2024-01-01",
+        "2024-12-30"
+      ],
+      "train_window": [
+        "2020-01-01",
+        "2023-12-31"
+      ]
+    },
+    {
+      "alpha_full": 0.01,
+      "alpha_no_temp": 10.0,
+      "bracket_match": {
+        "baseline_max": 0.2821917808219178,
+        "climatology": 0.16164383561643836,
+        "persistence": 0.2821917808219178,
+        "ridge_full": 0.4410958904109589,
+        "ridge_minus_baseline": {
+          "ci95_high": 0.2273972602739726,
+          "ci95_low": 0.08767123287671236,
+          "point": 0.1589041095890411
+        },
+        "ridge_no_temp": 0.27123287671232876
+      },
+      "counterfactual_n_pairs": 323,
+      "gates": [
+        {
+          "ci_high": 0.7276686660972923,
+          "ci_low": 0.6483074683429131,
+          "details": {
+            "n": 365
+          },
+          "name": "ss_1h",
+          "passed": true,
+          "threshold": 0.08,
+          "value": 0.6905444126074498
+        },
+        {
+          "ci_high": 0.7276686660972923,
+          "ci_low": 0.6483074683429131,
+          "details": {
+            "n": 365
+          },
+          "name": "ss_3h_proxy",
+          "passed": true,
+          "threshold": 0.1,
+          "value": 0.6905444126074498
+        },
+        {
+          "ci_high": 0.002595194863242697,
+          "ci_low": -0.014502369685429091,
+          "details": {
+            "corr_now": 0.9714226652462513,
+            "corr_truth": 0.9651419630442473,
+            "n": 365
+          },
+          "name": "corr_diff",
+          "passed": false,
+          "threshold": 0.2,
+          "value": -0.0062807022020040515
+        },
+        {
+          "ci_high": null,
+          "ci_low": null,
+          "details": {
+            "skipped": "phase3_uses_naive_ic_p50_pm_1; conformal_in_phase5",
+            "target": 0.8
+          },
+          "name": "coverage_ic80",
+          "passed": null,
+          "threshold": "|cov-0.8|<0.04",
+          "value": 0.9178082191780822
+        },
+        {
+          "ci_high": null,
+          "ci_low": null,
+          "details": {},
+          "name": "i_t_obs",
+          "passed": true,
+          "threshold": "< 0.1",
+          "value": 0.07530625506357284
+        },
+        {
+          "ci_high": null,
+          "ci_low": null,
+          "details": {},
+          "name": "counterfactual_same_temp",
+          "passed": true,
+          "threshold": "> 0.7",
+          "value": 0.8428056450375825
+        }
+      ],
+      "n_test": 365,
+      "n_train": 1821,
+      "rps_full": 4.08601697896251,
+      "split": "2025-01-01_to_2025-12-31",
+      "test_window": [
+        "2025-01-01",
+        "2025-12-31"
+      ],
+      "train_window": [
+        "2020-01-01",
+        "2024-12-31"
+      ]
+    }
+  ]
+}

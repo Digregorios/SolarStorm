@@ -1,0 +1,64 @@
+A sua análise do Open‑Meteo está no rumo certo e já antecipa o único ponto realmente perigoso: HFAPI “stitching” pode violar causalidade do CP mesmo sem ser reanalysis.
+1) Veredito técnico (sobre o que você escreveu)
+HFAPI: ótimo para backfill longo e diversidade de modelos, mas não é estritamente CP-causal quando você usa valid_time cujo valor vem de um run emitido depois do CP (o seu exemplo do run 00Z alimentando 02Z é exatamente isso).  
+Isso precisa entrar no spec como “approx-causal” com validação.
+Single Runs: é o “gold standard” de causalidade, mas a cobertura histórica limitada (por modelo) quebra split 1 — então sozinho não resolve.
+Ensemble API: sua conclusão é correta: sem retenção histórica, não serve para backfill.  
+Ensemble Mean API vira o caminho realista para spread (se houver retenção suficiente).
+2) A decisão correta para o projeto (mantendo rigor sem matar 3 splits)
+A estratégia C (Dual + cross-check no overlap) é a única que preserva:
+3 splits (2023/2024/2025)
+diversidade de centros (ECMWF/NOAA/UKMO/DWD)
+e ainda dá um “alarme anti-leakage” empírico.
+Eu recomendo formalizar isso como:
+Modo HFAPI (produção/backfill) = permitido somente se passar no cross-check contra Single Runs no overlap.  
+Se falhar, HFAPI fica restrito a features “menos sensíveis” (ex.: spread/disagreement) ou você reduz janela de treino.
+3) O que faltava na sua proposta (para ficar implementável e sem brecha)
+Para ficar realmente “anti-delirious”, você precisa transformar a discussão em 3 regras bem objetivas:
+(A) Definir o que é “issued_time_utc” para Open‑Meteo
+O spec precisa exigir que cada snapshot NWP tenha um campo inequívoco de emissão/run, por ex.:
+run_time_utc (init) ou
+issued_time_utc (publicação)
+e o pipeline deve logar isso por CP.
+Sem isso, ninguém consegue auditar “run usado vs CP”.
+(B) Guardrail adicional: “NWP timestamp gate”
+Você já sugeriu safety_margin = 60 min. Isso tem que virar regra do dataset:
+Para cada CP-row, registrar nwp_run_time_utc (ou issued_time_utc) e exigir:
+nwp_run_time_utc <= cp_utc - safety_margin
+E isso tem que entrar no “Frozen observation test” (fase 2 do protocolo) como check dedicado a NWP.
+(C) Cross-check com critério de aceite que não permite autoengano
+Seu critério “diferença dentro do IC95% bootstrap” é bom, mas eu adicionaria:
+comparar também RPS/ECE (não só bracket-match) no overlap  
+e um sanity por split: “split 1 não pode ter ganho muito maior que split 2/3 sem explicação” (indicador de leakage HFAPI).
+4) Sobre o conjunto de modelos (ECMWF HRES + GFS + UKMO + ICON + JMA)
+A seleção é boa e defendível porque:
+diversidade de centros (reduz risco de viés comum)
+cobertura antes de 2023
+resolução adequada para NZWN
+Só faltou uma regra prática no spec:
+v1 deve começar com 2 modelos (ECMWF+GFS) para validar pipeline e causalidade, e só depois escalar para 4.  
+Isso não é “cosmético”; reduz complexidade e custo de debug.
+5) a seção 27.6 com:
+lista de endpoints e usos
+explicação do risco de stitching (HFAPI)
+estratégia Modo C (dual + validação no overlap)
+modelo set recomendado
+guardrail de timestamp issued_time <= cp - safety_margin
+O que ainda falta (se você quiser máxima rigidez) é transformar o “cross-check HFAPI vs Single Runs” em uma task explícita no backlog (com nome/aceite/kill). Eu tentei adicionar isso junto do backlog numa patch anterior, mas falhou por contexto; posso inserir em uma seção própria de “tarefas OPN‑5” dentro do documento se você confirmar.
+Se você disser “ok”, eu adiciono no spec uma subseção tipo:
+27.7 Tarefa OPN‑5a: HFAPI vs Single Runs cross-check (overlap)  
+com: dataset, métricas, IC, critérios de aceite, e kill criterion.
+
+Sim — a questão de alta definição (resolução) não só “deveria ser investigada”, como não pode ser assumida como melhor por default. Em estação costeira/topográfica como Wellington (NZWN), hi‑res às vezes ajuda, mas também pode piorar por representatividade do ponto (gridbox vs estação), vies local e ruído.
+Para evitar decisão por intuição, eu já formalizei isso no spec como experimento obrigatório:
+Adicionei a seção 27.7 “Alta definição (resolução) vs desempenho real (ablation obrigatória)” na página Polymarket Tmax Forecaster — Design & Specs (v1).
+Ela define uma ablation pre-registrada na Fase 4 comparando:
+1) ECMWF HRES only (alto-res)  
+2) GFS only  
+3) UKMO only  
+4) ICON only  
+5) Multi-model blend (média simples dos modelos disponíveis no CP) + residual learning
+Critério de aceite: só privilegiar “HRES-only” como pilar principal se ganhar em ≥ 2/3 splits e com ganho acima do IC95% bootstrap. Se não, o default fica multi-model, e o HRES vira “mais um membro”.
+Também deixei explícito para evitar overengineering:
+não fazer regridding no v1
+usar o valor que o provedor retorna para o lat/lon da estação e auditar consistência.

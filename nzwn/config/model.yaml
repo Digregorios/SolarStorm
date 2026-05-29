@@ -1,0 +1,63 @@
+# NZWN model configuration
+# Frozen with REQ-MOD-6 (determinism), REQ-MOD-4 (calibration), design 8.1.1 (tau), design 4.5.2 (NWP selection).
+
+seeds:
+  python_random: 42
+  numpy: 42
+  lightgbm:
+    seed: 42
+    bagging_seed: 42
+    feature_fraction_seed: 42
+    drop_seed: 42
+
+# softmax band-aware (design 8.1.1)
+prob_dist:
+  tau: 0.5
+  mode: linear           # 'linear' | 'quadratic'
+  loss_alpha: 1.0
+
+# Conformal calibration (Phase 5)
+conformal:
+  per_cp_window_days: 90
+  seasonal_window_months: 12
+  min_n_per_bucket: 200
+
+# Confidence score (Phase 5)
+confidence:
+  min_confidence_default: 0.55
+
+# Online AR (Phase 6 - off by default)
+ar_online:
+  enabled: false
+  order: 7
+
+# NWP selection rule v1 (design 4.5.2 + contracts/nwp_source.md v1.0).
+nwp:
+  enabled: false                # Phase 4 toggle
+  source_version: "1.0"         # NWP_SOURCE_VERSION
+  models:                       # 2-model launch set; expand to 4 only with version bump
+    - id: "ecmwf_ifs_hres"
+      provider: "ecmwf"
+      open_meteo_id: "ecmwf_ifs_hres"
+      lead_step_h: 1
+      cycle_h: 6
+      archive_start: "2017-01-01"
+    - id: "ncep_gfs_global"
+      provider: "noaa_ncep"
+      open_meteo_id: "gfs_global"
+      lead_step_h: 1
+      cycle_h: 6
+      archive_start: "2021-03-23"
+  safety_margin_minutes: 60     # bumped from design default 30 per Open-Meteo latency
+  endpoint_historical: "historical-forecast-api.open-meteo.com"
+  endpoint_single_runs: "single-runs-api.open-meteo.com"
+  variables:
+    - "temperature_2m"
+    - "wind_speed_10m"
+    - "wind_direction_10m"
+    - "pressure_msl"
+    - "cloud_cover"
+    - "precipitation"
+
+threading:
+  omp_num_threads: 1         # determinism in CI

@@ -1,0 +1,31 @@
+# NZWN station configuration
+# Frozen with REQ-CON-6 (CP_SET) and OPN-1a (minimal resolver).
+icao: NZWN
+name: Wellington International Airport
+country: NZ
+lat: -41.3272
+lon: 174.8053
+elevation_m: 12
+tz: Pacific/Auckland
+
+# Checkpoints (CP_SET) - all integer UTC hours, HH:00:00.
+# REQ-CON-6: forbidden to evaluate on CPs outside this set.
+cp_set_utc:
+  - "20:00"
+  - "21:00"
+  - "22:00"
+  - "23:00"
+
+cp_operational_utc: "23:00"
+
+# Plausibility bounds for tmp_c_int extracted from raw METAR (REQ-CON-3 + REQ-CON-8).
+# Values outside these bounds are flagged 'missing', NOT imputed.
+tmp_c_int_plausibility:
+  min: -10
+  max: 40
+
+# Day completeness rule (REQ-CON-7).
+day_complete:
+  min_obs: 40
+  max_gap_minutes: 120
+  min_quartile_coverage: 1   # at least 1 obs per 6h-quartile of the local day
