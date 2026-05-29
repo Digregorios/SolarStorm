@@ -23,10 +23,74 @@ dist/
 .commandcode/
 opencode.json
 
-# Env / secrets
+# Env / secrets - keep this list strict and allow only explicit examples
 .env
 .env.*
 !.env.example
+
+# Cloud provider credentials
+.aws/
+aws-credentials
+aws-config
+.gcloud/
+gcloud-key.json
+service-account*.json
+service_account*.json
+gcp-key*.json
+.azure/
+
+# Generic secrets / API keys (never committed regardless of folder)
+secrets.yaml
+secrets.yml
+secrets.json
+secrets.toml
+secret.yaml
+secret.yml
+secret.json
+credentials
+credentials.json
+credentials.yaml
+credentials.yml
+config.local.*
+*.secret
+*.secrets
+*_secret.*
+*_secrets.*
+auth.json
+token
+token.json
+tokens.json
+.netrc
+_netrc
+
+# TLS / SSH / GPG keys and certs
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.cer
+*.crt
+*.csr
+*.der
+*.gpg
+*.asc
+*.kdbx
+id_rsa
+id_rsa.pub
+id_dsa
+id_ecdsa
+id_ed25519
+id_ed25519.pub
+known_hosts
+authorized_keys
+
+# Database dumps that may carry sensitive data
+*.dump
+*.sql.gz
+*.sqlite
+*.sqlite3
+*.db
 
 # Ruff / mypy / pytest caches
 .ruff_cache/
