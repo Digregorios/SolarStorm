@@ -101,36 +101,68 @@ def ingest_live(
     hours: int = typer.Option(96, "--hours", help="Lookback window of live METAR."),
     out_csv: Path | None = typer.Option(None, "--out-csv", help="Optional merged CSV path."),
 ) -> None:
-    """Fetch CURRENT METAR (aviationweather.gov) and merge with history (REQ-DAT-1).
+    """Fetch CURRENT METAR (aviationweather.gov) + merge with history; emit a health-check.
 
     Live obs share the historical schema (one source of truth for the integer temperature),
-    so the label/feature/forecast path runs on fresh data unchanged. With ``--out-csv`` the
-    merged ``valid,metar`` frame is written for downstream reuse; otherwise it just reports
-    coverage so an operator/cron can confirm the 30-min feed is current.
+    so the label/feature/forecast path runs on fresh data unchanged. Prints a JSON health-check
+    (station/source/coverage/last_obs/gap/status) so a cron/scheduler can call ``ingest-live``
+    and just check ``status``. With ``--out-csv`` the merged frame is also written.
     """
+    import json as _json
+    from datetime import datetime, timezone
+
     new_run_id()
     cfg = load_station_config(station_yaml)
     tmin, tmax = cfg.tmp_c_int_plausibility.min, cfg.tmp_c_int_plausibility.max
     live, stats = fetch_observations(cfg.icao, hours=hours, tmp_min_c=tmin, tmp_max_c=tmax)
     n_hist = 0
+    n_dups = 0
     if csv.exists():
         hist, _ = load_observations(csv, tmp_min_c=tmin, tmp_max_c=tmax)
         n_hist = hist.height
+        hist_ts = set(hist["ts_utc"].to_list())
+        n_dups = sum(1 for t in live["ts_utc"].to_list() if t in hist_ts)
         merged = merge_observations(hist, live)
     else:
         merged = live.sort("ts_utc")
-    log_event("ingest", "ingest.live", extra={
-        "station": cfg.icao, "n_live": live.height, "n_hist": n_hist,
-        "n_merged": merged.height, "parse_stats": stats.to_dict(),
-    })
+
+    # Largest gap (minutes) between consecutive live obs in the fetched window.
+    lts = live["ts_utc"].to_list()
+    max_gap = max(((lts[i + 1] - lts[i]).total_seconds() / 60.0 for i in range(len(lts) - 1)),
+                  default=0.0)
+    last_obs = lts[-1] if lts else None
+    now = datetime.now(timezone.utc)
+    staleness_min = (now - last_obs).total_seconds() / 60.0 if last_obs else None
+    # status: ok if fresh (<90 min) and no big gaps (<=60 min) and parsing clean; else degraded/stale.
+    if last_obs is None:
+        status = "no_data"
+    elif staleness_min is not None and staleness_min > 90.0:
+        status = "stale"
+    elif max_gap > 60.0 or stats.fallback_rate > 0.05:
+        status = "degraded"
+    else:
+        status = "ok"
+
+    health = {
+        "station": cfg.icao,
+        "source": "aviationweather.gov",
+        "n_live_rows": int(live.height),
+        "n_merged_rows": int(merged.height),
+        "n_hist_rows": int(n_hist),
+        "last_obs_ts_utc": last_obs.isoformat() if last_obs else None,
+        "staleness_minutes": None if staleness_min is None else round(staleness_min, 1),
+        "fallback_rate_live": round(stats.fallback_rate, 6),
+        "n_duplicates_replaced": int(n_dups),
+        "max_gap_minutes_recent": round(max_gap, 1),
+        "status": status,
+    }
+    log_event("ingest", "ingest.live", extra=health)
     if out_csv is not None:
         out_csv.parent.mkdir(parents=True, exist_ok=True)
         merged.select(["valid", "metar"] if "valid" in merged.columns else ["ts_utc", "metar"]).write_csv(out_csv)
-    live_max = live["ts_utc"].max() if live.height else None
-    typer.echo(
-        f"OK: live={live.height} (ok={stats.n_parsed_ok}) hist={n_hist} merged={merged.height} "
-        f"latest_live={live_max}"
-    )
+    typer.echo(_json.dumps(health, ensure_ascii=True, sort_keys=True, indent=2))
+    if status in ("no_data", "stale"):
+        raise typer.Exit(code=1)
 
 
 __all__ = ["ingest_history", "build_features", "ingest_live"]
