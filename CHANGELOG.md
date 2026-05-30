@@ -15,6 +15,19 @@ narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 - **Rationale:** an intraday forecaster must pull current obs; the frozen IEM CSV ends
   2026-05-27. Reuses the historical parser so live and historical rows are identical in schema.
 
+## [cli-serving] - 2026-05-30 - ingest-live command + forecast --model flag
+
+- **Added** `ingest-live` CLI: fetch+merge current METAR (verified: 112322 merged rows to
+  2026-05-30 18:00Z, 100% parsed) - the live-ingestion bottleneck is RESOLVED.
+- **Added** `forecast --model {empirical|ridge}`: default stays `empirical` (NOT switched
+  silently); `--model ridge` trains the Phase-3 band-aware Ridge and emits its prob_dist.
+- **Conclusion (documented in `docs/PROJECT_JOURNEY.md`):** the backtest showed live ingestion
+  was blocking; with that fixed, the ACTIVE bottleneck is that the CLI default still serves the
+  Phase-2 baseline (1/4 backtest bracket-match floor) rather than a production model (~0.44).
+  Conceptual fork left open: Ridge is live-ready but failed corr_diff; the stronger NWP-residual
+  (phase4_ready) is live-gated on a live GFS anchor fetch. Promoting the default is a deliberate
+  separate step.
+
 ## [phase8-scope-fix] - 2026-05-30 - Odds are LIVE-only (no historical backtest)
 
 - **Corrected scope** across `requirements.md` (REQ-MET-1/5, REQ-DEC-3/4), `contracts/objective.md`,

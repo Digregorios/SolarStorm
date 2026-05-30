@@ -125,9 +125,22 @@ het gate, each for an honest, documented reason:
   to 2026-05-30 17:30Z).
 - **Clean backtest 2026-05-27..30** (`scripts/backtest_may2026.py`, merged history+live, baseline
   empirical @ CP 23:00): realized Tmax 15/17/15/16; bracket-match 1/4, IC80 coverage 4/4. The
-  baseline runs cold by 1-3C - this is the FLOOR (the CLI forecast still uses the Phase-2
-  empirical baseline, not the trained Ridge/NWP models that score ~0.44 bracket-match). Religando
-  o CLI ao modelo treinado e o agendamento 30-min do fetch sao os proximos passos operacionais.
+  baseline runs cold by 1-3C.
+- **Bottleneck progression (diagnosed via the backtest):**
+  1. RESOLVED - live ingestion was blocking (no current-obs fetch). Added `ingest-live` CLI
+     (`py -3 -m core.cli.app ingest-live`): merged 112322 rows to 2026-05-30 18:00Z, 100% parsed.
+  2. NEW bottleneck - the CLI was SERVING THE BASELINE, not a production model. The backtest's
+     1/4 bracket-match is the empirical FLOOR; the trained Ridge/NWP models score ~0.44.
+     Delivered `forecast --model {empirical|ridge}`: default stays `empirical` (NOT switched
+     silently), `--model ridge` is opt-in and trains the Phase-3 band-aware Ridge on the panel.
+     Verified 2026-05-27: empirical p50=13/IC80=[12,17] vs ridge p50=12/IC80=[12,13].
+- **Open conceptual fork (to resolve before promoting a default):** "production model" is not yet
+  unambiguous. Ridge (Phase 3) is trainable from obs alone for any live date, but failed
+  corr_diff (nowcast-tracking). The NWP-residual (Phase 4, phase4_ready=True) is the stronger
+  point model but its GFS s3_grib anchor only covers historical run dates - a TRUE live forecast
+  needs a live GFS run fetched at the CP, which is not yet wired. So: Ridge is live-ready now;
+  NWP-residual is the better model but live-gated on a live GFS anchor fetch. Promotion of the
+  default (empirical -> ridge/NWP) remains a deliberate, separate decision.
 
 ---
 
@@ -141,7 +154,11 @@ het gate, each for an honest, documented reason:
 ## Current status snapshot
 
 - DONE/green: Phases 0-4 (point forecast), Phase 7 (spike), Phase 8 offline logic + live odds +
-  live METAR fetch. Full test suite green.
+  live METAR fetch (`ingest-live`). Full test suite green.
 - CLOSED not-ready: Phase 5 interval calibration (diagnostic-only, fenced from trading).
-- Open/optional: T-8-4 threshold tuning (odds-free objective), T-6-3 AR DM-test, CLI `forecast`
-  re-wire to the trained model, 30-min fetch scheduling, live realized-EV (intrinsically live).
+- Resolved bottleneck: live ingestion (was blocking) -> `ingest-live` shipped.
+- Active bottleneck: the CLI default still serves the Phase-2 baseline. `forecast --model ridge`
+  makes the trained model opt-in; promoting the default and wiring a live GFS anchor for the
+  NWP-residual model are the next deliberate steps.
+- Open/optional: persist trained model to `artifacts/models/` (avoid per-call retrain), 30-min
+  `ingest-live` scheduling, T-8-4 threshold tuning, T-6-3 AR DM-test, live realized-EV.
