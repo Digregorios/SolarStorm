@@ -40,15 +40,17 @@ def main() -> int:
     obs, _ = load_observations(REPO / "NZWN.csv", tmp_min_c=cfg.tmp_c_int_plausibility.min,
                                tmp_max_c=cfg.tmp_c_int_plausibility.max)
     labels = build_tmax_labels(obs, tz_name=cfg.tz, cp_set_utc=cfg.cp_set_utc)
-    climo = fit_climatology(labels, train_start=date(2020, 1, 1), train_end=date(2024, 12, 31))
     all_dates = [d for d in labels["date_local"].drop_nulls().unique().to_list() if d is not None]
-    panel = build_training_panel(obs, labels, climo=climo, tz_name=cfg.tz, cp_set=cfg.cp_set_utc,
-                                 dates=all_dates)
     splits = expanding_walk_forward_splits(history_start=date(2020, 1, 1),
                                            test_starts=[date(2023, 1, 1), date(2024, 1, 1), date(2025, 1, 1)])
     cps = list(cfg.cp_set_utc)
     results = []
     for s in splits:
+        # Per-split climatology (train-only, NO leakage): fit on [history_start, train_end] so it
+        # never sees the test year. Used as the Ridge anchor + feature for fit/calib/test alike.
+        climo = fit_climatology(labels, train_start=date(2020, 1, 1), train_end=s.train_end)
+        panel = build_training_panel(obs, labels, climo=climo, tz_name=cfg.tz, cp_set=cfg.cp_set_utc,
+                                     dates=all_dates)
         tr = panel.filter((panel["date_local"] >= s.train_start) & (panel["date_local"] <= s.train_end))
         te = panel.filter((panel["date_local"] >= s.test_start) & (panel["date_local"] <= s.test_end))
         # TRUE split-conformal: fit Ridge ONLY on fit_rows (train before the calib window);
