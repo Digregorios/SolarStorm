@@ -1,5 +1,6 @@
 {
   "calib_days": 120,
+  "calibration_mode": "heldout_tail",
   "coverage_target": 0.8,
   "n_min": 30,
   "probe": "ridge_conformal_minimal",
@@ -7,29 +8,41 @@
     {
       "by_cp": {
         "20:00": {
-          "coverage": 0.8136986301369863,
+          "coverage": 0.8164383561643835,
           "mean_width": 5.0,
-          "n": 365
+          "n": 365,
+          "n_calib": 120,
+          "q": 2,
+          "source": "cp_specific"
         },
         "21:00": {
           "coverage": 0.8821917808219178,
           "mean_width": 5.0,
-          "n": 365
+          "n": 365,
+          "n_calib": 120,
+          "q": 2,
+          "source": "cp_specific"
         },
         "22:00": {
-          "coverage": 0.8328767123287671,
-          "mean_width": 3.0,
-          "n": 365
+          "coverage": 0.9616438356164384,
+          "mean_width": 5.0,
+          "n": 365,
+          "n_calib": 120,
+          "q": 2,
+          "source": "cp_specific"
         },
         "23:00": {
-          "coverage": 0.8904109589041096,
+          "coverage": 0.8931506849315068,
           "mean_width": 3.0,
-          "n": 365
+          "n": 365,
+          "n_calib": 120,
+          "q": 1,
+          "source": "cp_specific"
         }
       },
-      "mean_width": 4.0,
+      "mean_width": 4.5,
       "n_distinct_widths": 2,
-      "overall_coverage": 0.8547945205479452,
+      "overall_coverage": 0.8883561643835617,
       "split": "2023-01-01_to_2023-12-31"
     },
     {
@@ -37,55 +50,79 @@
         "20:00": {
           "coverage": 0.9068493150684932,
           "mean_width": 7.0,
-          "n": 365
+          "n": 365,
+          "n_calib": 120,
+          "q": 3,
+          "source": "cp_specific"
         },
         "21:00": {
-          "coverage": 0.873972602739726,
+          "coverage": 0.8794520547945206,
           "mean_width": 5.0,
-          "n": 365
+          "n": 365,
+          "n_calib": 120,
+          "q": 2,
+          "source": "cp_specific"
         },
         "22:00": {
           "coverage": 0.9616438356164384,
           "mean_width": 5.0,
-          "n": 365
+          "n": 365,
+          "n_calib": 120,
+          "q": 2,
+          "source": "cp_specific"
         },
         "23:00": {
           "coverage": 0.873972602739726,
           "mean_width": 3.0,
-          "n": 365
+          "n": 365,
+          "n_calib": 120,
+          "q": 1,
+          "source": "cp_specific"
         }
       },
       "mean_width": 5.0,
       "n_distinct_widths": 3,
-      "overall_coverage": 0.9041095890410958,
+      "overall_coverage": 0.9054794520547945,
       "split": "2024-01-01_to_2024-12-30"
     },
     {
       "by_cp": {
         "20:00": {
-          "coverage": 0.8027397260273973,
+          "coverage": 0.8082191780821918,
           "mean_width": 5.0,
-          "n": 365
+          "n": 365,
+          "n_calib": 120,
+          "q": 2,
+          "source": "cp_specific"
         },
         "21:00": {
-          "coverage": 0.863013698630137,
+          "coverage": 0.8684931506849315,
           "mean_width": 5.0,
-          "n": 365
+          "n": 365,
+          "n_calib": 120,
+          "q": 2,
+          "source": "cp_specific"
         },
         "22:00": {
-          "coverage": 0.8383561643835616,
+          "coverage": 0.8410958904109589,
           "mean_width": 3.0,
-          "n": 365
+          "n": 365,
+          "n_calib": 120,
+          "q": 1,
+          "source": "cp_specific"
         },
         "23:00": {
-          "coverage": 0.9178082191780822,
+          "coverage": 0.915068493150685,
           "mean_width": 3.0,
-          "n": 365
+          "n": 365,
+          "n_calib": 120,
+          "q": 1,
+          "source": "cp_specific"
         }
       },
       "mean_width": 4.0,
       "n_distinct_widths": 2,
-      "overall_coverage": 0.8554794520547945,
+      "overall_coverage": 0.8582191780821918,
       "split": "2025-01-01_to_2025-12-31"
     }
   ]

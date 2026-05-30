@@ -51,12 +51,16 @@ def main() -> int:
     for s in splits:
         tr = panel.filter((panel["date_local"] >= s.train_start) & (panel["date_local"] <= s.train_end))
         te = panel.filter((panel["date_local"] >= s.test_start) & (panel["date_local"] <= s.test_end))
-        # Train Ridge on operational CP rows (matches phase3), predict p50 for all rows.
-        tr_op = tr.filter(tr["cp"] == cfg.cp_operational_utc)
-        if tr_op.height < 100:
+        # TRUE split-conformal: fit Ridge ONLY on fit_rows (train before the calib window);
+        # the conformal residuals come from HELD-OUT calib_rows the Ridge never saw.
+        cal_start = s.train_end - timedelta(days=CALIB_DAYS - 1)
+        fit_rows = tr.filter(tr["date_local"] < cal_start)
+        cal_rows = tr.filter(tr["date_local"] >= cal_start)
+        fit_op = fit_rows.filter(fit_rows["cp"] == cfg.cp_operational_utc)
+        if fit_op.height < 100 or cal_rows.height < N_MIN:
             continue
-        Xtr, ytr = _arrays(tr_op, FEATURE_COLUMNS)
-        ctr = np.array([float(climo.tmax_dec_for(d)) for d in tr_op["date_local"].to_list()])
+        Xtr, ytr = _arrays(fit_op, FEATURE_COLUMNS)
+        ctr = np.array([float(climo.tmax_dec_for(d)) for d in fit_op["date_local"].to_list()])
         fr = fit_ridge_band(Xtr, ytr, config=RidgeBandConfig(feature_columns=tuple(FEATURE_COLUMNS),
                                                             use_climatology_anchor=True), clim_train=ctr)
 
@@ -65,12 +69,10 @@ def main() -> int:
             c = np.array([float(climo.tmax_dec_for(d)) for d in frame["date_local"].to_list()])
             return ridge_predict_int(fr, X, clim=c)
 
-        # Calibration window = last CALIB_DAYS of train, all CPs.
-        cal_start = s.train_end - timedelta(days=CALIB_DAYS - 1)
-        cal = tr.filter(tr["date_local"] >= cal_start)
-        cal_p50 = _p50(cal)
-        cal_abs = np.abs(cal["target_tmax_int"].to_numpy().astype(int) - cal_p50)
-        conf = fit_cp_abs_conformal(cal_abs.tolist(), cal["cp"].to_list(), coverage=0.80, n_min=N_MIN)
+        # Conformal residuals from HELD-OUT calib_rows (all CPs), not seen in the Ridge fit.
+        cal_p50 = _p50(cal_rows)
+        cal_abs = np.abs(cal_rows["target_tmax_int"].to_numpy().astype(int) - cal_p50)
+        conf = fit_cp_abs_conformal(cal_abs.tolist(), cal_rows["cp"].to_list(), coverage=0.80, n_min=N_MIN)
 
         te_p50 = _p50(te)
         te_y = te["target_tmax_int"].to_numpy().astype(int)
@@ -86,7 +88,9 @@ def main() -> int:
                 per_cp[cp]["covered"] += int(lo <= y <= hi)
                 per_cp[cp]["width_sum"] += w
         cp_cov = {cp: {"coverage": (v["covered"] / v["n"]) if v["n"] else None,
-                       "mean_width": (v["width_sum"] / v["n"]) if v["n"] else None, "n": v["n"]}
+                       "mean_width": (v["width_sum"] / v["n"]) if v["n"] else None,
+                       "n": v["n"], "n_calib": int(conf.n_by_cp.get(cp, 0)),
+                       "q": conf.q_by_cp.get(cp), "source": interval(conf, 0, cp)[2]}
                   for cp, v in per_cp.items()}
         w = np.asarray(widths)
         overall = float(np.mean([
@@ -101,7 +105,8 @@ def main() -> int:
         })
 
     out = {"probe": "ridge_conformal_minimal", "coverage_target": 0.80,
-           "calib_days": CALIB_DAYS, "n_min": N_MIN, "splits": results}
+           "calibration_mode": "heldout_tail", "calib_days": CALIB_DAYS, "n_min": N_MIN,
+           "splits": results}
     (REPO / "reports").mkdir(exist_ok=True)
     (REPO / "reports" / "ridge_conformal_probe.json").write_text(
         json.dumps(out, ensure_ascii=True, sort_keys=True, indent=2, default=str), encoding="ascii")

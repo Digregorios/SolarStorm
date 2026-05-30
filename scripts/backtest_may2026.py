@@ -10,7 +10,7 @@ ASCII report to reports/backtest_may2026.md.
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -32,6 +32,7 @@ from core.models.ridge_conformal import fit_cp_abs_conformal, interval
 REPO = Path(__file__).resolve().parents[1]
 TARGETS = [date(2026, 5, 27), date(2026, 5, 28), date(2026, 5, 29), date(2026, 5, 30)]
 CP = "23:00"
+CALIB_DAYS = 120
 
 
 def _score(p50, lo, hi, y):
@@ -69,13 +70,18 @@ def main() -> int:
         lo_e, hi_e = discrete_ic(pd_e, p_low=0.10, p_high=0.90)
         arms["empirical"] = _score(max(pd_e.items(), key=lambda kv: kv[1])[0], lo_e, hi_e, y)
 
-        # ridge (Phase 3 band-aware; clim anchor) - center p50 shared by both ridge arms
+        # ridge (Phase 3 band-aware; clim anchor) - TRUE split-conformal:
+        # fit Ridge on rows BEFORE the calib window; calibrate conformal on the held-out
+        # last CALIB_DAYS of train (the Ridge never saw them); apply to the fresh day.
         rtp = build_training_panel(obs, labels, climo=climo, tz_name=cfg.tz, cp_set=[CP],
                                    dates=[r for r in panel["date_local"].unique().to_list()
                                           if r is not None and date(2020, 1, 1) <= r <= train_end])
-        X = np.column_stack([rtp[c].to_numpy().astype(float) for c in FEATURE_COLUMNS])
-        ytr = rtp["target_tmax_int"].to_numpy().astype(int)
-        ctr = np.array([float(climo.tmax_dec_for(dd)) for dd in rtp["date_local"].to_list()])
+        cal_start = train_end - timedelta(days=CALIB_DAYS - 1)
+        fit_rtp = rtp.filter(rtp["date_local"] < cal_start)
+        cal_rtp = rtp.filter(rtp["date_local"] >= cal_start)
+        X = np.column_stack([fit_rtp[c].to_numpy().astype(float) for c in FEATURE_COLUMNS])
+        ytr = fit_rtp["target_tmax_int"].to_numpy().astype(int)
+        ctr = np.array([float(climo.tmax_dec_for(dd)) for dd in fit_rtp["date_local"].to_list()])
         fr = fit_ridge_band(X, ytr, config=RidgeBandConfig(feature_columns=tuple(FEATURE_COLUMNS),
                                                            use_climatology_anchor=True), clim_train=ctr)
         xr = np.array([[float(feats.features.get(c)) if feats.features.get(c) is not None else float("nan")
@@ -85,10 +91,12 @@ def main() -> int:
         p50_r = max(pd_r.items(), key=lambda kv: kv[1])[0]
         lo_n, hi_n = discrete_ic(pd_r, p_low=0.10, p_high=0.90)
         arms["ridge_naive_ic"] = _score(p50_r, lo_n, hi_n, y)
-        # ridge_conformal_cp (variant 1): IC from per-CP 80% quantile of the Ridge abs-residuals
-        p50_tr = ridge_predict_int(fr, X, clim=ctr)
-        abs_tr = np.abs(ytr - p50_tr)
-        conf = fit_cp_abs_conformal(abs_tr.tolist(), rtp["cp"].to_list(), coverage=0.80, n_min=30)
+        # ridge_conformal_cp (variant 1): IC from per-CP 80% quantile of HELD-OUT calib residuals
+        Xc = np.column_stack([cal_rtp[c].to_numpy().astype(float) for c in FEATURE_COLUMNS])
+        cc = np.array([float(climo.tmax_dec_for(dd)) for dd in cal_rtp["date_local"].to_list()])
+        p50_cal = ridge_predict_int(fr, Xc, clim=cc)
+        abs_cal = np.abs(cal_rtp["target_tmax_int"].to_numpy().astype(int) - p50_cal)
+        conf = fit_cp_abs_conformal(abs_cal.tolist(), cal_rtp["cp"].to_list(), coverage=0.80, n_min=30)
         lo_c, hi_c, _src = interval(conf, int(p50_r), CP)
         arms["ridge_conformal_cp"] = _score(p50_r, lo_c, hi_c, y)
 
