@@ -133,12 +133,22 @@ def ingest_live(
     last_obs = lts[-1] if lts else None
     now = datetime.now(timezone.utc)
     staleness_min = (now - last_obs).total_seconds() / 60.0 if last_obs else None
-    # status: ok if fresh (<90 min) and no big gaps (<=60 min) and parsing clean; else degraded/stale.
+    # Two distinct fallback thresholds (update.txt 2026-05-30): an operational WARN bar (5%) for
+    # the live health-check, and the much stricter historical CONTRACT KILL bar (0.5%, REQ-CON-8).
+    # The contract-kill is surfaced as a flag but does NOT itself fail the live cron (it is a
+    # data-quality contract signal, not a feed-freshness signal).
+    fallback_warn_threshold = 0.05
+    fallback_contract_kill_threshold = 0.005
+    contract_kill = stats.fallback_rate > fallback_contract_kill_threshold
+    # status: ok if fresh (<90 min) AND no big gap (<=60 min) AND fallback under the WARN bar.
+    # degraded = ALERT (gap or warn-level fallback), NOT a hard failure -> exit 0 so the cron
+    # keeps the feed but an operator/trading layer can choose to block on it. stale/no_data =
+    # hard failure -> non-zero exit.
     if last_obs is None:
         status = "no_data"
     elif staleness_min is not None and staleness_min > 90.0:
         status = "stale"
-    elif max_gap > 60.0 or stats.fallback_rate > 0.05:
+    elif max_gap > 60.0 or stats.fallback_rate > fallback_warn_threshold:
         status = "degraded"
     else:
         status = "ok"
@@ -152,9 +162,13 @@ def ingest_live(
         "last_obs_ts_utc": last_obs.isoformat() if last_obs else None,
         "staleness_minutes": None if staleness_min is None else round(staleness_min, 1),
         "fallback_rate_live": round(stats.fallback_rate, 6),
+        "fallback_rate_live_warn_threshold": fallback_warn_threshold,
+        "fallback_rate_contract_kill_threshold": fallback_contract_kill_threshold,
+        "fallback_contract_kill_exceeded": bool(contract_kill),
         "n_duplicates_replaced": int(n_dups),
         "max_gap_minutes_recent": round(max_gap, 1),
         "status": status,
+        "status_semantics": "ok=healthy; degraded=ALERT not hard-fail (exit 0); stale/no_data=hard-fail (exit 1)",
     }
     log_event("ingest", "ingest.live", extra=health)
     if out_csv is not None:
