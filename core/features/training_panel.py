@@ -9,13 +9,14 @@ Causality is enforced upstream by ``build_cp_features`` (REQ-CON-5, REQ-AUD-4).
 from __future__ import annotations
 
 import math
-from datetime import date
+from datetime import date, timedelta
 from typing import Iterable
 
 import polars as pl
 
-from core.baselines.climatology import Climatology
+from core.baselines.climatology import Climatology, TmaxHourClimatology
 from core.features.builder import build_cp_features
+from core.features.nwp import compute_nwp_features, select_max_trajectory_anchor
 
 
 # Feature columns emitted (locked v0.1.1 for Phase 3).
@@ -48,6 +49,17 @@ NO_TEMPERATURE_FEATURES = (
     "month_cos",
 )
 
+# Phase 4 NWP features added when nwp_snapshots is provided.
+NWP_FEATURE_COLUMNS = (
+    "nwp_t2m_at_cp_c",
+    "nwp_t2m_at_cp_spread_c",
+    "nwp_disagreement_score",
+    "nwp_t2m_at_cp_minus_obs_c",
+    "nwp_t2m_max_pre_cp_c",
+    "nwp_t2m_slope_pre_cp_c_per_h",
+    "nwp_t2m_range_pre_cp_c",
+)
+
 
 def build_training_panel(
     observations: pl.DataFrame,
@@ -58,14 +70,14 @@ def build_training_panel(
     cp_set: Iterable[str],
     dates: Iterable[date] | None = None,
     drop_incomplete: bool = True,
+    nwp_snapshots: pl.DataFrame | None = None,
+    nwp_models: tuple[str, ...] = ("ecmwf_ifs_hres", "ncep_gfs_global"),
+    tmax_hour_climo: TmaxHourClimatology | None = None,
 ) -> pl.DataFrame:
     """Build the (date_local, cp) training panel with features + target.
 
-    Returns a DataFrame with one row per ``(date_local, cp)`` pair where:
-    - ``target_tmax_int`` = integer label (truth, from ``labels``)
-    - ``target_delta`` = ``target_tmax_int - clim_tmax_c_dec`` (Ridge target)
-    - all of ``FEATURE_COLUMNS``
-    - bookkeeping: ``date_local``, ``cp``, ``cp_utc``, ``feature_max_ts_utc``, ``day_complete``
+    When ``nwp_snapshots`` is provided, also emits ``NWP_FEATURE_COLUMNS`` per
+    row (CP-causal selection enforced via ``compute_nwp_features``).
     """
     cp_set = list(cp_set)
     if dates is None:
@@ -77,6 +89,8 @@ def build_training_panel(
             d = row["date_local"]
             if d is not None:
                 label_map[d] = row
+
+    use_nwp = nwp_snapshots is not None and nwp_snapshots.height > 0
 
     rows: list[dict[str, object]] = []
     for d in dates:
@@ -111,12 +125,10 @@ def build_training_panel(
                 "cp_utc": f.cp_utc,
                 "feature_max_ts_utc": f.feature_max_ts_utc,
                 "day_complete": day_complete,
-                # target
                 "target_tmax_int": int(tmax_int) if tmax_int is not None else None,
                 "target_delta": (
                     float(tmax_int) - clim_dec if tmax_int is not None else None
                 ),
-                # features
                 "k_cp": f.features.get("k_cp"),
                 "clim_tmax_c_dec": clim_dec,
                 "slope_3h_c_per_h": f.features.get("slope_3h_c_per_h"),
@@ -131,8 +143,76 @@ def build_training_panel(
                 "month_sin": m_sin,
                 "month_cos": m_cos,
             }
+            if use_nwp:
+                last_obs = f.features.get("last_obs_tmp_c_int")
+                nwp = compute_nwp_features(
+                    nwp_snapshots,
+                    cp_utc=f.cp_utc,
+                    target_valid_utc=f.cp_utc,  # Phase 4 v1: causal at CP
+                    models=nwp_models,
+                    last_obs_tmp_c=float(last_obs) if last_obs is not None else None,
+                )
+                row_out["nwp_t2m_at_cp_c"] = nwp.nwp_t2m_at_cp_c
+                row_out["nwp_t2m_at_cp_spread_c"] = nwp.nwp_t2m_at_cp_spread_c
+                row_out["nwp_disagreement_score"] = nwp.nwp_disagreement_score
+                row_out["nwp_t2m_at_cp_minus_obs_c"] = nwp.nwp_t2m_at_cp_minus_obs_c
+                row_out["nwp_t2m_max_pre_cp_c"] = nwp.nwp_t2m_max_pre_cp_c
+                row_out["nwp_t2m_slope_pre_cp_c_per_h"] = nwp.nwp_t2m_slope_pre_cp_c_per_h
+                row_out["nwp_t2m_range_pre_cp_c"] = nwp.nwp_t2m_range_pre_cp_c
+                row_out["nwp_run_time_utc"] = nwp.nwp_run_time_utc
+                row_out["nwp_lead_h"] = nwp.nwp_lead_h
+                # Anchor amendment v1.1 (design 4.5.2.1): max-of-trajectory over the
+                # causal run's forward Tmax-hour window. The single-hour-at-CP value
+                # above stays only as a feature; this is the model anchor.
+                if tmax_hour_climo is not None:
+                    w_start, w_end = tmax_hour_climo.window_utc(d, f.cp_utc)
+                    mta = select_max_trajectory_anchor(
+                        nwp_snapshots, cp_utc=f.cp_utc,
+                        window_start_utc=w_start, window_end_utc=w_end,
+                        models=nwp_models,
+                    )
+                    row_out["nwp_t2m_maxtraj_c"] = mta.nwp_t2m_maxtraj_c
+                    row_out["nwp_t2m_maxtraj_spread_c"] = mta.nwp_t2m_maxtraj_spread_c
+                    if mta.run_time_utc is not None:
+                        row_out["nwp_run_time_utc"] = mta.run_time_utc
             rows.append(row_out)
-    return pl.DataFrame(rows)
+    schema_overrides: dict[str, pl.DataType] = {
+        "k_cp": pl.Int32,
+        "clim_tmax_c_dec": pl.Float64,
+        "slope_3h_c_per_h": pl.Float64,
+        "slope_6h_c_per_h": pl.Float64,
+        "last_obs_tmp_c_int": pl.Int32,
+        "tmax_d_minus_1_int": pl.Int32,
+        "tmin_d_minus_1_int": pl.Int32,
+        "wind_dir_sin": pl.Float64,
+        "wind_dir_cos": pl.Float64,
+        "wind_speed_kt": pl.Float64,
+        "qnh_hpa": pl.Float64,
+        "month_sin": pl.Float64,
+        "month_cos": pl.Float64,
+        "target_tmax_int": pl.Int32,
+        "target_delta": pl.Float64,
+    }
+    if use_nwp:
+        schema_overrides.update({
+            "nwp_t2m_at_cp_c": pl.Float64,
+            "nwp_t2m_at_cp_spread_c": pl.Float64,
+            "nwp_disagreement_score": pl.Float64,
+            "nwp_t2m_at_cp_minus_obs_c": pl.Float64,
+            "nwp_t2m_max_pre_cp_c": pl.Float64,
+            "nwp_t2m_slope_pre_cp_c_per_h": pl.Float64,
+            "nwp_t2m_range_pre_cp_c": pl.Float64,
+            "nwp_run_time_utc": pl.Datetime("us", time_zone="UTC"),
+            "nwp_lead_h": pl.Int32,
+            "nwp_t2m_maxtraj_c": pl.Float64,
+            "nwp_t2m_maxtraj_spread_c": pl.Float64,
+        })
+    return pl.DataFrame(rows, schema_overrides=schema_overrides, infer_schema_length=None)
 
 
-__all__ = ["FEATURE_COLUMNS", "NO_TEMPERATURE_FEATURES", "build_training_panel"]
+__all__ = [
+    "FEATURE_COLUMNS",
+    "NO_TEMPERATURE_FEATURES",
+    "NWP_FEATURE_COLUMNS",
+    "build_training_panel",
+]

@@ -25,20 +25,25 @@ conformal:
 # Confidence score (Phase 5)
 confidence:
   min_confidence_default: 0.55
+  # Phase 5 closed NOT READY (2026-05-30): IC80/confidence calibration never passed
+  # the REQ-AUD-5 het gate (v1.0/A1/A3/P/P'/D1/S all failed). Until Phase 5 is green,
+  # the confidence stay-out MUST NOT gate trades in production; it stays DIAGNOSTIC
+  # only (CP-stratified report, esp. 22Z/23Z). Flip to true only when Phase 5 is green.
+  gate_enabled_in_production: false
 
 # Online AR (Phase 6 - off by default)
 ar_online:
   enabled: false
   order: 7
 
-# NWP selection rule v1 (design 4.5.2 + contracts/nwp_source.md v1.0).
+# NWP selection rule (design 4.5.2 + 4.5.2.1 anchor v1.1 + contracts/nwp_source.md v1.1).
 nwp:
   enabled: false                # Phase 4 toggle
-  source_version: "1.0"         # NWP_SOURCE_VERSION
+  source_version: "1.1"         # NWP_SOURCE_VERSION (1.1: max-of-trajectory anchor, design 4.5.2.1)
   models:                       # 2-model launch set; expand to 4 only with version bump
     - id: "ecmwf_ifs_hres"
       provider: "ecmwf"
-      open_meteo_id: "ecmwf_ifs_hres"
+      open_meteo_id: "ecmwf_ifs"
       lead_step_h: 1
       cycle_h: 6
       archive_start: "2017-01-01"

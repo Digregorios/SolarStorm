@@ -1,0 +1,88 @@
+{
+  "per_year": {
+    "2023": {
+      "gfs": {
+        "status": "ok",
+        "n": 366,
+        "pearson": 0.9402,
+        "spearman": 0.9436,
+        "slope_obs_on_nwp": 1.0013,
+        "std_nwp": 3.3072,
+        "std_obs": 3.522,
+        "mean_bias_nwp_minus_obs": -1.0432
+      },
+      "ecmwf": {
+        "status": "ok",
+        "n": 366,
+        "pearson": 0.965,
+        "spearman": 0.9643,
+        "slope_obs_on_nwp": 1.0414,
+        "std_nwp": 3.2638,
+        "std_obs": 3.522,
+        "mean_bias_nwp_minus_obs": -1.0175
+      }
+    },
+    "2024": {
+      "gfs": {
+        "status": "ok",
+        "n": 367,
+        "pearson": 0.966,
+        "spearman": 0.9678,
+        "slope_obs_on_nwp": 1.1026,
+        "std_nwp": 3.3388,
+        "std_obs": 3.8109,
+        "mean_bias_nwp_minus_obs": -1.2561
+      },
+      "ecmwf": {
+        "status": "ok",
+        "n": 367,
+        "pearson": 0.9758,
+        "spearman": 0.9729,
+        "slope_obs_on_nwp": 1.1324,
+        "std_nwp": 3.2838,
+        "std_obs": 3.8109,
+        "mean_bias_nwp_minus_obs": -1.2937
+      }
+    },
+    "2025": {
+      "gfs": {
+        "status": "ok",
+        "n": 366,
+        "pearson": 0.9533,
+        "spearman": 0.9611,
+        "slope_obs_on_nwp": 0.992,
+        "std_nwp": 3.3352,
+        "std_obs": 3.4707,
+        "mean_bias_nwp_minus_obs": -1.0863
+      },
+      "ecmwf": {
+        "status": "ok",
+        "n": 366,
+        "pearson": 0.9704,
+        "spearman": 0.971,
+        "slope_obs_on_nwp": 1.0787,
+        "std_nwp": 3.1223,
+        "std_obs": 3.4707,
+        "mean_bias_nwp_minus_obs": -1.1303
+      }
+    }
+  },
+  "pooled": {
+    "gfs": {
+      "n": 1099,
+      "pearson": 0.9525,
+      "spearman": 0.9581,
+      "slope_obs_on_nwp": 1.0315,
+      "std_nwp": 3.3286,
+      "std_obs": 3.6047
+    },
+    "ecmwf": {
+      "n": 1099,
+      "pearson": 0.9695,
+      "spearman": 0.9688,
+      "slope_obs_on_nwp": 1.0833,
+      "std_nwp": 3.2261,
+      "std_obs": 3.6047
+    }
+  }
+}

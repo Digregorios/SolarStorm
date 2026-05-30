@@ -1,8 +1,16 @@
-# Contract: NWP source (NWP_SOURCE_VERSION = 1.0)
+# Contract: NWP source (NWP_SOURCE_VERSION = 1.1)
 
-> Source: REQ-DAT-5, REQ-AUD-2, design 4.5.2, OPN-5.
+> Source: REQ-DAT-5, REQ-AUD-2, design 4.5.2 + 4.5.2.1, OPN-5.
 > Frozen on 2026-05-29 as v1.0 (Phase 4 enable).
 > Promotes from "open" (OPN-5) to "decided" with this contract.
+>
+> **v1.1 amendment (2026-05-29, code review `references/code-reviews/update.txt`):**
+> the `target_valid_utc` anchor changes from a single climatological Tmax-hour to the
+> **max-of-trajectory** over a forward window `(month, regime)` of the same causal run
+> (design 4.5.2.1). Per the Change protocol below, changing the anchor is a version
+> bump; hence 1.0 -> 1.1. The T-OPN-5a cross-check is re-scoped to compare HFAPI vs
+> SingleRuns **on the max-of-trajectory aggregation**, not a single valid-hour. A single
+> causal source per period feeds BOTH anchor and spread (no source asymmetry).
 
 ## Provider
 
@@ -52,9 +60,15 @@ safety_margin = 60 minutes   # Open-Meteo publication latency for ECMWF/GFS at o
 candidate_runs = { r in archive(M) : r.run_time_utc <= cp_utc - safety_margin }
 selected_run   = max(candidate_runs, key=run_time_utc)
 
-target_valid_utc = climo_tmax_hour_local(date_local) -> UTC
-lead_h_raw       = (target_valid_utc - selected_run.run_time_utc).total_seconds() / 3600
-lead_h           = round_to_step(lead_h_raw, step=model.lead_step_h)   # 1h ECMWF/GFS
+# v1.0 (superseded): single Tmax-hour anchor
+#   target_valid_utc = climo_tmax_hour_local(date_local) -> UTC
+#   lead_h           = round_to_step((target_valid_utc - selected_run.run_time_utc)/1h, step)
+#   value            = t2m(selected_run, lead_h)
+#
+# v1.1 (active, design 4.5.2.1): max-of-trajectory anchor
+window W       = forward window around climo Tmax-hour distribution by (month, regime)
+anchor_value(M)= max over valid in W of t2m(selected_run_M, valid)   # same causal run
+# ensemble: simple mean of anchor_value(M); spread = np.std; one causal source per period.
 
 if lead_h not in selected_run.available_leads:
     lead_h = nearest_available_lead(selected_run, lead_h_raw)
@@ -102,7 +116,8 @@ Pressure-level variables (500/700/850 hPa T and geopotential) reserved for v1.1.
 
 Before promoting Phase 4 to "ready", the pipeline MUST run a binary cross-check
 between Historical Forecast API and Single Runs API on the overlap window
-`2024-03-01 .. 2025-12-31` for ECMWF IFS HRES. Acceptance criteria:
+`2024-03-01 .. 2025-12-31` for ECMWF IFS HRES, **computed on the max-of-trajectory
+aggregation (v1.1, design 4.5.2.1), not a single valid-hour.** Acceptance criteria:
 
 1. `|bracket_match_HFAPI - bracket_match_SingleRuns|` lies inside the bootstrap
    IC95% paired-difference for both 2024 and 2025 sub-windows.
