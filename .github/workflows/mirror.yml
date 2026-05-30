@@ -1,0 +1,21 @@
+name: Mirror to Organization
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to Digregorios/SolarStorm
+        run: |
+          git remote add org https://x-access-token:${{ secrets.ORG_TOKEN }}@github.com/Digregorios/SolarStorm.git
+          git push -f org main
