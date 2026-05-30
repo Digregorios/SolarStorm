@@ -1,0 +1,336 @@
+{
+  "all_splits_band_attainable_calib": false,
+  "all_splits_band_attainable_normalized": {
+    "const": true,
+    "nwp_spread": true,
+    "p50_var": true
+  },
+  "all_splits_decimal_near_target": false,
+  "band": [
+    0.76,
+    0.8400000000000001
+  ],
+  "coverage_target": 0.8,
+  "coverage_tol": 0.04,
+  "purpose": "diagnose-first: confirm quantization diagnosis + calib-only band feasibility",
+  "splits": [
+    {
+      "confirmatory": {
+        "decimal_coverage_calib_insample": 0.8314606741573034,
+        "decimal_coverage_test": 0.8452054794520548,
+        "integer_coverage_test": 0.9273972602739726,
+        "quantization_gap": 0.0821917808219178
+      },
+      "feasibility_calib": {
+        "all_feasible_combos": [],
+        "band": [
+          0.76,
+          0.8400000000000001
+        ],
+        "band_attainable": false,
+        "min_width_feasible": null,
+        "n_feasible_combos": 0,
+        "symmetric_ladder": [
+          {
+            "coverage": 0.38202247191011235,
+            "w": 0,
+            "width_brackets": 1
+          },
+          {
+            "coverage": 0.8455056179775281,
+            "w": 1,
+            "width_brackets": 3
+          },
+          {
+            "coverage": 0.9803370786516854,
+            "w": 2,
+            "width_brackets": 5
+          },
+          {
+            "coverage": 1.0,
+            "w": 3,
+            "width_brackets": 7
+          },
+          {
+            "coverage": 1.0,
+            "w": 4,
+            "width_brackets": 9
+          },
+          {
+            "coverage": 1.0,
+            "w": 5,
+            "width_brackets": 11
+          },
+          {
+            "coverage": 1.0,
+            "w": 6,
+            "width_brackets": 13
+          },
+          {
+            "coverage": 1.0,
+            "w": 7,
+            "width_brackets": 15
+          },
+          {
+            "coverage": 1.0,
+            "w": 8,
+            "width_brackets": 17
+          }
+        ]
+      },
+      "n_calib": 1452,
+      "n_calib_recent": 356,
+      "n_test": 1460,
+      "normalized_feasibility": {
+        "const": {
+          "band_attainable_calib": true,
+          "calib_cov_at_chosen": 0.797752808988764,
+          "calib_mean_width": 2.657303370786517,
+          "calib_width_std": 0.47461105079759747,
+          "chosen_c": 0.57,
+          "test_cov_at_chosen": 0.8287671232876712,
+          "test_mean_width": 2.6595890410958902,
+          "test_n_distinct_widths": 2
+        },
+        "nwp_spread": {
+          "band_attainable_calib": true,
+          "calib_cov_at_chosen": 0.797752808988764,
+          "calib_mean_width": 2.657303370786517,
+          "calib_width_std": 0.47461105079759747,
+          "chosen_c": 0.57,
+          "test_cov_at_chosen": 0.8287671232876712,
+          "test_mean_width": 2.6595890410958902,
+          "test_n_distinct_widths": 2
+        },
+        "p50_var": {
+          "band_attainable_calib": true,
+          "calib_cov_at_chosen": 0.8033707865168539,
+          "calib_mean_width": 3.191011235955056,
+          "calib_width_std": 2.194868399701582,
+          "chosen_c": 0.585,
+          "test_cov_at_chosen": 0.8431506849315068,
+          "test_mean_width": 3.3657534246575342,
+          "test_n_distinct_widths": 18
+        }
+      },
+      "readout_test_cov_at_calib_choice": null,
+      "split": "2023-01-01_to_2023-12-31"
+    },
+    {
+      "confirmatory": {
+        "decimal_coverage_calib_insample": 0.8222222222222222,
+        "decimal_coverage_test": 0.8958904109589041,
+        "integer_coverage_test": 0.9513698630136986,
+        "quantization_gap": 0.05547945205479454
+      },
+      "feasibility_calib": {
+        "all_feasible_combos": [
+          {
+            "coverage": 0.7916666666666666,
+            "w_hi": 1,
+            "w_lo": 1,
+            "width_brackets": 3
+          }
+        ],
+        "band": [
+          0.76,
+          0.8400000000000001
+        ],
+        "band_attainable": true,
+        "min_width_feasible": {
+          "coverage": 0.7916666666666666,
+          "w_hi": 1,
+          "w_lo": 1,
+          "width_brackets": 3
+        },
+        "n_feasible_combos": 1,
+        "symmetric_ladder": [
+          {
+            "coverage": 0.38055555555555554,
+            "w": 0,
+            "width_brackets": 1
+          },
+          {
+            "coverage": 0.7916666666666666,
+            "w": 1,
+            "width_brackets": 3
+          },
+          {
+            "coverage": 0.9388888888888889,
+            "w": 2,
+            "width_brackets": 5
+          },
+          {
+            "coverage": 0.9805555555555555,
+            "w": 3,
+            "width_brackets": 7
+          },
+          {
+            "coverage": 1.0,
+            "w": 4,
+            "width_brackets": 9
+          },
+          {
+            "coverage": 1.0,
+            "w": 5,
+            "width_brackets": 11
+          },
+          {
+            "coverage": 1.0,
+            "w": 6,
+            "width_brackets": 13
+          },
+          {
+            "coverage": 1.0,
+            "w": 7,
+            "width_brackets": 15
+          },
+          {
+            "coverage": 1.0,
+            "w": 8,
+            "width_brackets": 17
+          }
+        ]
+      },
+      "n_calib": 1460,
+      "n_calib_recent": 360,
+      "n_test": 1460,
+      "normalized_feasibility": {
+        "const": {
+          "band_attainable_calib": true,
+          "calib_cov_at_chosen": 0.8,
+          "calib_mean_width": 3.0055555555555555,
+          "calib_width_std": 0.07432826755699806,
+          "chosen_c": 0.645,
+          "test_cov_at_chosen": 0.8904109589041096,
+          "test_mean_width": 3.000684931506849,
+          "test_n_distinct_widths": 2
+        },
+        "nwp_spread": {
+          "band_attainable_calib": true,
+          "calib_cov_at_chosen": 0.8,
+          "calib_mean_width": 3.0055555555555555,
+          "calib_width_std": 0.07432826755699806,
+          "chosen_c": 0.645,
+          "test_cov_at_chosen": 0.8904109589041096,
+          "test_mean_width": 3.000684931506849,
+          "test_n_distinct_widths": 2
+        },
+        "p50_var": {
+          "band_attainable_calib": true,
+          "calib_cov_at_chosen": 0.8,
+          "calib_mean_width": 3.7944444444444443,
+          "calib_width_std": 2.6081011019561133,
+          "chosen_c": 0.645,
+          "test_cov_at_chosen": 0.8945205479452055,
+          "test_mean_width": 3.8684931506849316,
+          "test_n_distinct_widths": 21
+        }
+      },
+      "readout_test_cov_at_calib_choice": 0.8876712328767123,
+      "split": "2024-01-01_to_2024-12-30"
+    },
+    {
+      "confirmatory": {
+        "decimal_coverage_calib_insample": 0.8222222222222222,
+        "decimal_coverage_test": 0.821917808219178,
+        "integer_coverage_test": 0.9315068493150684,
+        "quantization_gap": 0.1095890410958904
+      },
+      "feasibility_calib": {
+        "all_feasible_combos": [],
+        "band": [
+          0.76,
+          0.8400000000000001
+        ],
+        "band_attainable": false,
+        "min_width_feasible": null,
+        "n_feasible_combos": 0,
+        "symmetric_ladder": [
+          {
+            "coverage": 0.4527777777777778,
+            "w": 0,
+            "width_brackets": 1
+          },
+          {
+            "coverage": 0.8916666666666667,
+            "w": 1,
+            "width_brackets": 3
+          },
+          {
+            "coverage": 0.9888888888888889,
+            "w": 2,
+            "width_brackets": 5
+          },
+          {
+            "coverage": 1.0,
+            "w": 3,
+            "width_brackets": 7
+          },
+          {
+            "coverage": 1.0,
+            "w": 4,
+            "width_brackets": 9
+          },
+          {
+            "coverage": 1.0,
+            "w": 5,
+            "width_brackets": 11
+          },
+          {
+            "coverage": 1.0,
+            "w": 6,
+            "width_brackets": 13
+          },
+          {
+            "coverage": 1.0,
+            "w": 7,
+            "width_brackets": 15
+          },
+          {
+            "coverage": 1.0,
+            "w": 8,
+            "width_brackets": 17
+          }
+        ]
+      },
+      "n_calib": 1460,
+      "n_calib_recent": 360,
+      "n_test": 1460,
+      "normalized_feasibility": {
+        "const": {
+          "band_attainable_calib": true,
+          "calib_cov_at_chosen": 0.7972222222222223,
+          "calib_mean_width": 2.236111111111111,
+          "calib_width_std": 0.424691245872796,
+          "chosen_c": 0.525,
+          "test_cov_at_chosen": 0.8027397260273973,
+          "test_mean_width": 2.2376712328767123,
+          "test_n_distinct_widths": 2
+        },
+        "nwp_spread": {
+          "band_attainable_calib": true,
+          "calib_cov_at_chosen": 0.7972222222222223,
+          "calib_mean_width": 2.236111111111111,
+          "calib_width_std": 0.424691245872796,
+          "chosen_c": 0.525,
+          "test_cov_at_chosen": 0.8027397260273973,
+          "test_mean_width": 2.2376712328767123,
+          "test_n_distinct_widths": 2
+        },
+        "p50_var": {
+          "band_attainable_calib": true,
+          "calib_cov_at_chosen": 0.8,
+          "calib_mean_width": 2.661111111111111,
+          "calib_width_std": 1.3770495387235586,
+          "chosen_c": 0.595,
+          "test_cov_at_chosen": 0.813013698630137,
+          "test_mean_width": 2.6356164383561644,
+          "test_n_distinct_widths": 12
+        }
+      },
+      "readout_test_cov_at_calib_choice": null,
+      "split": "2025-01-01_to_2025-12-31"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+[1/3] Building Phase 5 panel (walk-forward, real data) ...
+  panel_rows=8752
+[2/3] Evaluating 3 splits (Track A.A1; winsorize [P25,P95]) ...
+
+[3/3] verdict (AFTER arm vs unchanged gates)
+  prereg sha256: ea5b279a70c9b889...  run_id=20260530T012449Z
+  2023-01-01_to_2023-12-31: clip=[0.099,0.309] reuse=True | widest bin cov 1.000->0.947 | het_passed=False | test_cov=0.8425 distinct_w=5
+  2024-01-01_to_2024-12-30: clip=[0.105,0.360] reuse=True | widest bin cov 1.000->0.981 | het_passed=False | test_cov=0.8822 distinct_w=6
+  2025-01-01_to_2025-12-31: clip=[0.111,0.317] reuse=True | widest bin cov 1.000->1.000 | het_passed=False | test_cov=0.8158 distinct_w=4
+  het passed (all splits):            False
+  coverage within tol (all splits):   False
+  calib global in band (all splits):  True
+  widths non-degenerate (all splits): True
+  ACCEPT A1: True   KILL hit: False
+  see D:\Downloads\Wellington\reports\phase5_trackA_a1.md  audit D:\Downloads\Wellington\audits\20260530T012449Z\phase5
