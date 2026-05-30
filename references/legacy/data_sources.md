@@ -8,7 +8,24 @@
 - Timezone of `valid` column: UTC (tz-naive in the CSV; treated as UTC by the ingest layer).
 - Cadence: nominal 30 minutes; SPECI messages may appear off-cadence.
 - Range observed in the local snapshot: 2020-01-01 to 2026-05-27 (~112,190 rows).
-- Use: historic only. Live ingest must come from a feed contract registered in `contracts/resolver.md`.
+- Use: historic only. Live ingest must come from a feed contract registered below.
+
+## NZWN live METAR (aviationweather.gov) - LIVE feed (registered 2026-05-30)
+
+- Source: NOAA Aviation Weather Center API.
+- URL pattern: `https://aviationweather.gov/api/data/metar?ids=<ICAO>&format=raw&hours=<H>`
+  (same pattern for every station; NZWN here). Returns raw METAR lines, ~30-min cadence.
+- Consumer: `core/ingest/metar_live.py` (`fetch_observations` / `merge_observations`), exposed
+  as the `ingest-live` CLI command. Part of the explicit data chain, not just a helper script.
+- Timestamp policy: METAR carries only `DDHHMMZ` (day-of-month + time, no month/year). Resolved
+  to a full UTC datetime against `now` (current year-month, rolling back one month at the
+  boundary; never resolves into the future). See `metar_live._resolve_ts`.
+- Schema parity: parsed via the SAME `parse_observations` as the historical CSV (one source of
+  truth for the integer temperature `T_obs_int`); wind/QNH extracted for `build_cp_features`.
+- Dedupe policy (historical + live): union then `unique(subset=["ts_utc"], keep="last")` sorted
+  by `ts_utc` - live wins on an overlapping timestamp. No silent overwrite of the historical CSV.
+- License / terms: U.S. Government (NOAA/NWS) public-domain data. Preserve attribution to the
+  NOAA Aviation Weather Center; respect the API's fair-use/rate guidance for polling.
 
 ## Citation
 

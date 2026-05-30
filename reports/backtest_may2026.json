@@ -1,60 +1,196 @@
 {
-  "bracket_match": 0.25,
-  "ic80_coverage": 1.0,
   "n_scored": 4,
   "rows": [
     {
-      "bracket_match": 0,
+      "arms": {
+        "climatology": {
+          "bracket_match": 1,
+          "ic80": [
+            15,
+            15
+          ],
+          "in_ic80": 1,
+          "p50": 15
+        },
+        "empirical": {
+          "bracket_match": 0,
+          "ic80": [
+            12,
+            17
+          ],
+          "in_ic80": 1,
+          "p50": 13
+        },
+        "persistence": {
+          "bracket_match": 0,
+          "ic80": [
+            12,
+            12
+          ],
+          "in_ic80": 0,
+          "p50": 12
+        },
+        "ridge": {
+          "bracket_match": 0,
+          "ic80": [
+            12,
+            13
+          ],
+          "in_ic80": 0,
+          "p50": 13
+        }
+      },
       "date": "2026-05-27",
-      "ic80": [
-        12,
-        17
-      ],
-      "in_ic80": 1,
       "k_cp": 12,
-      "p50_int": 13,
-      "src": "conditional",
       "truth_int": 15
     },
     {
-      "bracket_match": 0,
+      "arms": {
+        "climatology": {
+          "bracket_match": 0,
+          "ic80": [
+            15,
+            15
+          ],
+          "in_ic80": 0,
+          "p50": 15
+        },
+        "empirical": {
+          "bracket_match": 0,
+          "ic80": [
+            15,
+            18
+          ],
+          "in_ic80": 1,
+          "p50": 16
+        },
+        "persistence": {
+          "bracket_match": 0,
+          "ic80": [
+            15,
+            15
+          ],
+          "in_ic80": 0,
+          "p50": 15
+        },
+        "ridge": {
+          "bracket_match": 0,
+          "ic80": [
+            14,
+            16
+          ],
+          "in_ic80": 0,
+          "p50": 15
+        }
+      },
       "date": "2026-05-28",
-      "ic80": [
-        15,
-        18
-      ],
-      "in_ic80": 1,
       "k_cp": 15,
-      "p50_int": 16,
-      "src": "conditional",
       "truth_int": 17
     },
     {
-      "bracket_match": 1,
+      "arms": {
+        "climatology": {
+          "bracket_match": 1,
+          "ic80": [
+            15,
+            15
+          ],
+          "in_ic80": 1,
+          "p50": 15
+        },
+        "empirical": {
+          "bracket_match": 1,
+          "ic80": [
+            13,
+            19
+          ],
+          "in_ic80": 1,
+          "p50": 15
+        },
+        "persistence": {
+          "bracket_match": 0,
+          "ic80": [
+            11,
+            11
+          ],
+          "in_ic80": 0,
+          "p50": 11
+        },
+        "ridge": {
+          "bracket_match": 0,
+          "ic80": [
+            11,
+            13
+          ],
+          "in_ic80": 0,
+          "p50": 12
+        }
+      },
       "date": "2026-05-29",
-      "ic80": [
-        13,
-        19
-      ],
-      "in_ic80": 1,
       "k_cp": 11,
-      "p50_int": 15,
-      "src": "fallback_marginal",
       "truth_int": 15
     },
     {
-      "bracket_match": 0,
+      "arms": {
+        "climatology": {
+          "bracket_match": 0,
+          "ic80": [
+            15,
+            15
+          ],
+          "in_ic80": 0,
+          "p50": 15
+        },
+        "empirical": {
+          "bracket_match": 0,
+          "ic80": [
+            12,
+            17
+          ],
+          "in_ic80": 1,
+          "p50": 13
+        },
+        "persistence": {
+          "bracket_match": 0,
+          "ic80": [
+            12,
+            12
+          ],
+          "in_ic80": 0,
+          "p50": 12
+        },
+        "ridge": {
+          "bracket_match": 0,
+          "ic80": [
+            11,
+            13
+          ],
+          "in_ic80": 0,
+          "p50": 12
+        }
+      },
       "date": "2026-05-30",
-      "ic80": [
-        12,
-        17
-      ],
-      "in_ic80": 1,
       "k_cp": 12,
-      "p50_int": 13,
-      "src": "conditional",
       "truth_int": 16
     }
   ],
+  "summary": {
+    "climatology": {
+      "bracket_match": 0.5,
+      "ic80_coverage": 0.5
+    },
+    "empirical": {
+      "bracket_match": 0.25,
+      "ic80_coverage": 1.0
+    },
+    "persistence": {
+      "bracket_match": 0.0,
+      "ic80_coverage": 0.0
+    },
+    "ridge": {
+      "bracket_match": 0.0,
+      "ic80_coverage": 0.0
+    }
+  },
   "target_cp": "23:00"
 }
