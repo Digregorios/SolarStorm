@@ -30,7 +30,16 @@
           "in_ic80": 0,
           "p50": 12
         },
-        "ridge": {
+        "ridge_conformal_cp": {
+          "bracket_match": 0,
+          "ic80": [
+            12,
+            14
+          ],
+          "in_ic80": 0,
+          "p50": 13
+        },
+        "ridge_naive_ic": {
           "bracket_match": 0,
           "ic80": [
             12,
@@ -73,7 +82,16 @@
           "in_ic80": 0,
           "p50": 15
         },
-        "ridge": {
+        "ridge_conformal_cp": {
+          "bracket_match": 0,
+          "ic80": [
+            14,
+            16
+          ],
+          "in_ic80": 0,
+          "p50": 15
+        },
+        "ridge_naive_ic": {
           "bracket_match": 0,
           "ic80": [
             14,
@@ -116,7 +134,16 @@
           "in_ic80": 0,
           "p50": 11
         },
-        "ridge": {
+        "ridge_conformal_cp": {
+          "bracket_match": 0,
+          "ic80": [
+            11,
+            13
+          ],
+          "in_ic80": 0,
+          "p50": 12
+        },
+        "ridge_naive_ic": {
           "bracket_match": 0,
           "ic80": [
             11,
@@ -159,7 +186,16 @@
           "in_ic80": 0,
           "p50": 12
         },
-        "ridge": {
+        "ridge_conformal_cp": {
+          "bracket_match": 0,
+          "ic80": [
+            11,
+            13
+          ],
+          "in_ic80": 0,
+          "p50": 12
+        },
+        "ridge_naive_ic": {
           "bracket_match": 0,
           "ic80": [
             11,
@@ -177,19 +213,28 @@
   "summary": {
     "climatology": {
       "bracket_match": 0.5,
-      "ic80_coverage": 0.5
+      "ic80_coverage": 0.5,
+      "mean_ic80_width": 1.0
     },
     "empirical": {
       "bracket_match": 0.25,
-      "ic80_coverage": 1.0
+      "ic80_coverage": 1.0,
+      "mean_ic80_width": 5.75
     },
     "persistence": {
       "bracket_match": 0.0,
-      "ic80_coverage": 0.0
+      "ic80_coverage": 0.0,
+      "mean_ic80_width": 1.0
     },
-    "ridge": {
+    "ridge_conformal_cp": {
       "bracket_match": 0.0,
-      "ic80_coverage": 0.0
+      "ic80_coverage": 0.0,
+      "mean_ic80_width": 3.0
+    },
+    "ridge_naive_ic": {
+      "bracket_match": 0.0,
+      "ic80_coverage": 0.0,
+      "mean_ic80_width": 2.75
     }
   },
   "target_cp": "23:00"
