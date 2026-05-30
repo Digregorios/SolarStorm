@@ -6,6 +6,8 @@ import json
 from datetime import date
 from pathlib import Path
 
+import polars as pl
+
 import typer
 
 from core.baselines.climatology import fit_climatology
@@ -15,10 +17,12 @@ from core.contracts.quantization import Q
 from core.contracts.station import load_station_config
 from core.eval.intervals import discrete_ic
 from core.features.builder import build_cp_features, build_panel
+from core.features.training_panel import FEATURE_COLUMNS, build_training_panel
 from core.ingest.iem_csv import load_observations
 from core.io.logging import log_event, new_run_id
 from core.io.timeutil import day_local_window
 from core.labels.tmax import build_tmax_labels
+from core.models.ridge_band import RidgeBandConfig, fit_ridge_band, predict_dist as ridge_predict_dist
 
 
 def run(
@@ -29,9 +33,14 @@ def run(
     train_start: str = typer.Option("2020-01-01", "--train-start"),
     train_end: str | None = typer.Option(None, "--train-end"),
     out_root: Path = typer.Option(Path("artifacts/forecasts"), "--out-root"),
+    model: str = typer.Option("empirical", "--model", help="Forecast model: 'empirical' (default baseline) or 'ridge' (Phase 3 trained)."),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
-    """Emit a baseline forecast row with empirical-conditional prob_dist."""
+    """Emit a forecast row. Default model is the Phase-2 empirical baseline; ``--model ridge``
+    uses the trained Phase-3 band-aware Ridge. The default is NOT changed silently - the trained
+    model is opt-in via the flag until it is promoted deliberately."""
+    if model not in ("empirical", "ridge"):
+        raise typer.BadParameter(f"--model must be 'empirical' or 'ridge'; got {model!r}")
     rid = new_run_id()
     cfg = load_station_config(station_yaml)
     cp_hhmm = f"{int(cp):02d}:00"
@@ -69,9 +78,36 @@ def run(
         kcp_for_pred = Q(climo.tmax_dec_for(d))
     else:
         kcp_for_pred = int(kcp)
-    prob_dist, source = empirical.predict_dist(
-        month=d.month, cp=cp_hhmm, k_cp=kcp_for_pred, support_k=sk
-    )
+
+    if model == "empirical":
+        prob_dist, source = empirical.predict_dist(
+            month=d.month, cp=cp_hhmm, k_cp=kcp_for_pred, support_k=sk
+        )
+        model_version = "baseline-empirical-v0.1"
+    else:  # ridge (Phase 3 band-aware, trained on the training panel; clim anchor)
+        import numpy as np
+
+        tpanel = build_training_panel(
+            obs, labels, climo=climo, tz_name=cfg.tz, cp_set=cfg.cp_set_utc,
+            dates=[r for r in panel["date_local"].unique().to_list()
+                   if r is not None and train_start_d <= r <= train_end_d],
+        ).filter(pl.col("cp") == cp_hhmm)
+        if tpanel.height < 100:
+            raise typer.BadParameter(
+                f"ridge needs >=100 training rows at CP {cp_hhmm}; got {tpanel.height}"
+            )
+        cfg_ridge = RidgeBandConfig(feature_columns=tuple(FEATURE_COLUMNS),
+                                    tau=0.5, mode="linear", use_climatology_anchor=True)
+        X_tr = np.column_stack([tpanel[c].to_numpy().astype(float) for c in FEATURE_COLUMNS])
+        y_tr = tpanel["target_tmax_int"].to_numpy().astype(int)
+        clim_tr = np.array([float(climo.tmax_dec_for(dd)) for dd in tpanel["date_local"].to_list()])
+        fitted = fit_ridge_band(X_tr, y_tr, config=cfg_ridge, clim_train=clim_tr)
+        x_row = np.array([[float(feats.features.get(c)) if feats.features.get(c) is not None
+                           else float("nan") for c in FEATURE_COLUMNS]])
+        clim_row = np.array([float(climo.tmax_dec_for(d))])
+        prob_dist = ridge_predict_dist(fitted, x_row, [sk], clim=clim_row)[0]
+        source = f"ridge_band_alpha_{fitted.alpha}"
+        model_version = "phase3-ridge-band-v1.0"
     p50 = max(prob_dist.items(), key=lambda kv: kv[1])[0]
     low, high = discrete_ic(prob_dist, p_low=0.10, p_high=0.90)
     forecast_row = {
@@ -87,7 +123,7 @@ def run(
         "support_k": sk,
         "prob_dist": {str(k): v for k, v in prob_dist.items()},
         "prob_dist_source": source,
-        "model_version": "baseline-empirical-v0.1",
+        "model_version": model_version,
         "tau": None,
         "fallback_rate": stats.fallback_rate,
     }

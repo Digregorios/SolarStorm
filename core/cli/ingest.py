@@ -10,6 +10,7 @@ import typer
 from core.contracts.station import load_station_config
 from core.features.builder import build_cp_features
 from core.ingest.iem_csv import load_observations
+from core.ingest.metar_live import fetch_observations, merge_observations
 from core.ingest.snapshot import snapshot_csv_by_local_day
 from core.io.hashing import sha256_file
 from core.io.logging import log_event, new_run_id
@@ -94,4 +95,42 @@ def build_features(
     )
 
 
-__all__ = ["ingest_history", "build_features"]
+def ingest_live(
+    station_yaml: Path = typer.Option(Path("nzwn/config/station.yaml"), "--station-config"),
+    csv: Path = typer.Option(Path("NZWN.csv"), "--csv", help="Historical IEM CSV to merge with."),
+    hours: int = typer.Option(96, "--hours", help="Lookback window of live METAR."),
+    out_csv: Path | None = typer.Option(None, "--out-csv", help="Optional merged CSV path."),
+) -> None:
+    """Fetch CURRENT METAR (aviationweather.gov) and merge with history (REQ-DAT-1).
+
+    Live obs share the historical schema (one source of truth for the integer temperature),
+    so the label/feature/forecast path runs on fresh data unchanged. With ``--out-csv`` the
+    merged ``valid,metar`` frame is written for downstream reuse; otherwise it just reports
+    coverage so an operator/cron can confirm the 30-min feed is current.
+    """
+    new_run_id()
+    cfg = load_station_config(station_yaml)
+    tmin, tmax = cfg.tmp_c_int_plausibility.min, cfg.tmp_c_int_plausibility.max
+    live, stats = fetch_observations(cfg.icao, hours=hours, tmp_min_c=tmin, tmp_max_c=tmax)
+    n_hist = 0
+    if csv.exists():
+        hist, _ = load_observations(csv, tmp_min_c=tmin, tmp_max_c=tmax)
+        n_hist = hist.height
+        merged = merge_observations(hist, live)
+    else:
+        merged = live.sort("ts_utc")
+    log_event("ingest", "ingest.live", extra={
+        "station": cfg.icao, "n_live": live.height, "n_hist": n_hist,
+        "n_merged": merged.height, "parse_stats": stats.to_dict(),
+    })
+    if out_csv is not None:
+        out_csv.parent.mkdir(parents=True, exist_ok=True)
+        merged.select(["valid", "metar"] if "valid" in merged.columns else ["ts_utc", "metar"]).write_csv(out_csv)
+    live_max = live["ts_utc"].max() if live.height else None
+    typer.echo(
+        f"OK: live={live.height} (ok={stats.n_parsed_ok}) hist={n_hist} merged={merged.height} "
+        f"latest_live={live_max}"
+    )
+
+
+__all__ = ["ingest_history", "build_features", "ingest_live"]

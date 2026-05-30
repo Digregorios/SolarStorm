@@ -24,6 +24,7 @@ app.command("decide")(decide_cmd.run)
 app.command("postmortem")(postmortem_cmd.run)
 app.command("audit")(audit_cmd.run)
 app.command("ingest-history")(ingest_cmd.ingest_history)
+app.command("ingest-live")(ingest_cmd.ingest_live)
 app.command("build-features")(ingest_cmd.build_features)
 app.command("report")(report_cmd.run)
 
