@@ -15,7 +15,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Push to Digregorios/SolarStorm
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.ORG_SSH_KEY }}
+
+      - name: Push to Digregorios/SolarStorm (SSH)
         run: |
-          git remote add org https://x-access-token:${{ secrets.ORG_TOKEN }}@github.com/Digregorios/SolarStorm.git
+          git remote add org git@github.com:Digregorios/SolarStorm.git
           git push -f org main
