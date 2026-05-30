@@ -22,6 +22,25 @@
 - `speci_handling`: SPECI messages between regular METARs - included by default; audited in T-8-1.
 - `missing_metar_policy`: a missing regular METAR does NOT extend the window; the day stays open until 23:59:59.999 local.
 
+## Polymarket event URL / slug pattern (DETERMINISTIC; live-only context)
+
+Every city+date Tmax market uses the SAME slug pattern - no per-market config needed:
+
+```
+https://polymarket.com/event/highest-temperature-in-<city>-on-<month>-<day>-<year>
+# e.g. highest-temperature-in-wellington-on-may-31-2026
+```
+
+- `<city>` slugified lowercase (spaces -> '-'); `<month>` full lowercase name; `<day>` no
+  leading zero; `<year>` 4 digits. Derived in code by `core/ingest/odds.py::event_slug`.
+- Live prices via the Gamma API: `gamma-api.polymarket.com/events?slug=<slug>`. The event holds
+  one `market` per integer-degC bracket with `groupItemTitle` (e.g. "11C or below", "18C",
+  "21C or higher"), `outcomes` ["Yes","No"] and `outcomePrices` [YES,NO].
+- Bracket -> `ContractRange`: "N or below" => `k_hi=N`; bare "N" => `k_lo=k_hi=N`; "N or
+  higher/above" => `k_lo=N`. Resolution source is Wunderground NZWN, whole degrees C.
+- Odds are captured ONLY at the live forecast CP (REQ-DEC-4) for EV/Kelly context; there is no
+  historical odds dataset and no backtest over odds.
+
 ## Change protocol
 
 Promotion from v0.1 to v1.0 requires the audit report `reports/resolver_audit.md` and a successful T-8-1.

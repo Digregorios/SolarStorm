@@ -1,1 +1,53 @@
-"""Subpackage."""
+"""Decision-engine subpackage (Phase 5: confidence stay-out)."""
+
+from core.decision.engine import (
+    NO_TRADE,
+    PASS,
+    REASON_LOW_CONFIDENCE,
+    Decision,
+    confidence_gate,
+    confidence_gate_enabled_in_production,
+    load_min_confidence,
+    production_confidence_gate,
+    Thresholds,
+    ForecastRow,
+    EngineDecision,
+    decide,
+    BLOCK_BUY_NO_LATE_SPIKE,
+    NO_TRADE_RESOLVED,
+    OPPORTUNITY_ASSYMETRIC,
+    BUY_NO,
+    REASON_NO_EDGE,
+)
+from core.decision.sizing import (
+    SizingResult,
+    expected_value,
+    kelly_fraction,
+    size_side,
+    size_book,
+)
+
+__all__ = [
+    "NO_TRADE",
+    "PASS",
+    "REASON_LOW_CONFIDENCE",
+    "Decision",
+    "confidence_gate",
+    "production_confidence_gate",
+    "load_min_confidence",
+    "confidence_gate_enabled_in_production",
+    "Thresholds",
+    "ForecastRow",
+    "EngineDecision",
+    "decide",
+    "BLOCK_BUY_NO_LATE_SPIKE",
+    "NO_TRADE_RESOLVED",
+    "OPPORTUNITY_ASSYMETRIC",
+    "BUY_NO",
+    "REASON_NO_EDGE",
+    "SizingResult",
+    "expected_value",
+    "kelly_fraction",
+    "size_side",
+    "size_book",
+]

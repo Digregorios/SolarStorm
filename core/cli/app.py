@@ -6,6 +6,7 @@ import typer
 
 from core.cli import (
     audit as audit_cmd,
+    decide as decide_cmd,
     forecast as forecast_cmd,
     ingest as ingest_cmd,
     postmortem as postmortem_cmd,
@@ -19,6 +20,7 @@ app = typer.Typer(
 )
 
 app.command("forecast")(forecast_cmd.run)
+app.command("decide")(decide_cmd.run)
 app.command("postmortem")(postmortem_cmd.run)
 app.command("audit")(audit_cmd.run)
 app.command("ingest-history")(ingest_cmd.ingest_history)

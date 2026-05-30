@@ -1,24 +1,44 @@
 # Contract: Trading objective function (OBJECTIVE_VERSION = 1.0)
 
-> Source: REQ-DEC-3, REQ-MET-6. Frozen on 2026-05-29.
+> Source: REQ-DEC-3, REQ-MET-6. Frozen on 2026-05-29. Scope-corrected 2026-05-30:
+> Polymarket odds are LIVE-only context (no historical odds dataset), so the OFFLINE
+> objective is odds-free; EV/Kelly are a LIVE product of the forecast + the moment's odds.
 
 ## Selected objective (v1)
 
+### Offline (model promotion + threshold tuning; odds-free)
+
 ```
-maximise   EV_realised(test_split)
+maximise   bracket_match_when_traded(test_split)
 subject to
-    max_drawdown_realised <= 5.0% of initial bankroll,
     coverage >= 25%,
-    n_trades_per_month >= 5,
-    spike_block_violation_rate < 1.0%
+    forecast-quality gates pass (RPS, ECE, SS-vs-persistence, anti-nowcaster REQ-AUD-2)
 ```
+
+This is the ONLY objective computable offline: there is no historical odds dataset, so a
+realized-EV backtest over the test split does not exist. Model promotion is decided here.
+
+### Live (at the forecast CP; uses the moment's odds)
+
+```
+per live forecast at cp_utc:
+    EV_yes = p_yes * (1 - price_yes) - (1 - p_yes) * price_yes - fees   (and symmetric EV_no)
+    size   = fractional_kelly(p, price, kelly_cap)   # 0 when EV <= 0
+subject to   max_concurrent_positions, time_in_force   (contracts/execution.md)
+```
+
+`EV` and Kelly sizing are computed at forecast time from the model `prob_dist` and the live
+odds snapshot (REQ-DEC-4); they are NOT an offline training/selection criterion.
 
 ## Variables
 
-- `EV_realised(test_split)`: cumulative PnL on the test split, computed via `core/decision/shadow_exec.py` under `EXECUTION_VERSION` 1.0.
-- `max_drawdown_realised`: peak-to-trough drawdown of the equity curve in absolute units.
-- `coverage`: share of `(date_local, cp_utc)` pairs in which a non-`NO_TRADE` decision was emitted, over the count of pairs with `confidence_score >= min_confidence`.
-- `spike_block_violation_rate`: share of trades where `spike_risk >= threshold_spike` was traded.
+- `bracket_match_when_traded(test_split)`: share of traded `(date_local, cp_utc)` pairs whose
+  `p50_int` hit the realized bracket, over the test split (odds-free).
+- `coverage`: share of `(date_local, cp_utc)` pairs with a non-`NO_TRADE` decision, over the
+  count of pairs with `confidence_score >= min_confidence`.
+- `EV_yes/EV_no` (LIVE): expected value per unit notional given the live price and the model
+  `p_yes`, net of `fee_bps` (contracts/execution.md).
+- `fractional_kelly` (LIVE): Kelly fraction scaled by `kelly_cap`, floored at 0 when `EV <= 0`.
 
 ## Tunable thresholds (REQ-DEC-3, REQ-MET-6)
 
