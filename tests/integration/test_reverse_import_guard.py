@@ -34,3 +34,14 @@ def test_detects_experiments_import(tmp_path: Path):
     )
     violations = scan(tmp_path)
     assert any(v[2].startswith("experiments") for v in violations)
+
+
+def test_detects_artifacts_scratch_import(tmp_path: Path):
+    (tmp_path / "core").mkdir()
+    bad = tmp_path / "core" / "bad.py"
+    bad.write_text(
+        "from artifacts.scratch.run import main\n",
+        encoding="ascii",
+    )
+    violations = scan(tmp_path)
+    assert any(v[2].startswith("artifacts.scratch") for v in violations)

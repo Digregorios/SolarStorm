@@ -1,0 +1,26 @@
+{
+  "by_cp_focus": [
+    "22:00",
+    "23:00"
+  ],
+  "by_cp_min_distinct": 3,
+  "c_grid": [
+    0.5,
+    0.96,
+    0.005
+  ],
+  "conformal_method_version": "1.3",
+  "coverage_target": 0.8,
+  "coverage_tol": 0.04,
+  "heterosced_band": [
+    0.7,
+    0.9
+  ],
+  "heterosced_n_bins": 4,
+  "method": "normalized_quantization_aware",
+  "monotonicity_min_rho": 0.1,
+  "per_cp_window_days": 90,
+  "sigma_floor_percentile": 1.0,
+  "sigma_proxy_after": "entropy(prob_dist) [shannon nats, raw]",
+  "sigma_proxy_before": "p50_var"
+}

@@ -1,8 +1,12 @@
 # Spec - Polymarket Tmax Forecaster (NZWN)
 
-> **Spec version:** 1.0
+> **Spec version:** 1.0 (Fase 4 sob emenda `criterion_version` 1.1)
 > **Idioma:** PT-BR (ASCII em CLIs/logs/paths)
-> **Status:** v1 do spec; pre-implementacao (Fase 0 do plano).
+> **Status (2026-05-30):** Fases 0-4 DONE (Fase 4 `phase4_ready=True`, anchor GFS s3_grib
+> max-de-trajetoria); Fase 5 CLOSED NOT READY (calibracao IC80/confidence diagnostica, fora do
+> trading); Fase 6 PARCIAL (AR(7) feito, DM-test adiado); Fase 7 DONE (spike PR-AUC ~0.95);
+> Fase 8 logica offline DONE + odds live + fetch METAR live (EV realizado e live-gated). Caminho
+> completo em `docs/PROJECT_JOURNEY.md`.
 
 Este diretorio contem os quatro artefatos que governam a construcao do **Polymarket Tmax Forecaster** para a estacao **NZWN (Wellington)**: previsao intraday do Tmax inteiro em °C com forecast por checkpoint (CP), confianca calibrada, modulo de late spike e auditoria forense anti-nowcaster.
 
@@ -52,9 +56,17 @@ Os artefatos foram derivados de `references/legacy/Polymarket Tmax Forecaster - 
 
 ## Estado atual do projeto
 
-- **Codigo:** ainda nao escrito (greenfield).
-- **Dados:** `NZWN.csv` (raiz do repo, 20 MB) - IEM ASOS, deve virar `references/legacy/datasets/NZWN.csv` na Fase 0 e ser substituido por snapshots versionados (REQ-DAT-1).
-- **Documento v1:** `Polymarket Tmax Forecaster - Design & Specs (v1) c38caff902d1420bbdf62c6c7ccd5f01.md` na raiz - deve ir para `references/legacy/` na Fase 0.
+- **Codigo:** Fases 0-3 implementadas (ingest, labels, baselines, Ridge band-aware,
+  audit H0, gates). Fase 4 (NWP residual) ~80%: ingestor NWP, features, anchor
+  max-de-trajetoria causal, residual LightGBM, pre-registro com sha256, ablation
+  pareado e gates de CI prontos; suite de testes unitarios verde (104 testes).
+  **Pendente:** T-OPN-5a cross-check HFAPI vs Single Runs + probe GFS-2023 (Passo 6),
+  re-run de `phase4_evaluate` com report estratificado por lead + `h0_verdict.json`
+  (Passos 8/9).
+- **Dados:** `NZWN.csv` ingerido; snapshots NWP HFAPI 2020-2026 em
+  `artifacts/raw/nwp/` (432 particoes, ECMWF IFS HRES + NCEP GFS). Backfill Single
+  Runs ECMWF (2024-03..2025-12) ainda **nao executado** (necessario p/ T-OPN-5a).
+- **Documento v1:** movido para `references/legacy/`.
 
 ### Versoes de contratos congeladas
 
@@ -120,19 +132,25 @@ py -3 -m core.cli audit --phase all
 - **`prob_dist` baselines:** empirica condicional `(month, cp, k_cp)` com Laplace; **proibido** gaussiana ingenua em `core/`.
 - **`prob_dist` ML:** softmax band-aware com `tau` congelado em `nzwn/config/model.yaml` (default `tau=0.5, mode=linear`).
 - **Suporte K:** derivado de climo+NWP percentis +/- 2, truncado a `[-10, 40]` °C (4.5.1).
-- **NWP selection v1:** latest run `<= cp - 30min`; valid_time anchor = hora climatologica do Tmax (4.5.2).
+- **NWP selection:** latest run `<= cp - 60min` (safety_margin v1.1, era 30min);
+  anchor = **max-de-trajetoria** sobre janela forward `(month, regime)` do mesmo run
+  causal (NWP_SOURCE_VERSION 1.1, design 4.5.2.1; era hora climatologica unica em 1.0).
 - **Shadow execution:** `taker_at_quote`, `fee=200 bps`, `sizing=1 unit`, `fill=assume_full_fill` (REQ-MET-5; congelar em T-8-0 antes da Fase 8).
 - **Tuning protocol:** nested walk-forward; tunar **apenas** thresholds operacionais (REQ-MET-6).
-- Stack: Python 3.11, polars, scikit-learn, lightgbm, conformal por CP.
+- Stack: Python 3.11-3.12 (`py -3`), polars, numpy, scikit-learn, lightgbm 4.6.0
+  (deterministic=True), httpx (cliente Open-Meteo), conformal por CP.
 
 ### Decisoes em aberto (bloqueiam fases)
 
 | ID | O que decidir | Bloqueia | Quem |
 |----|---------------|----------|------|
 | OPN-1a | Validacao **minima** do resolver: estacao + tz + janela do dia | Fase 1 | T-0-7 |
-| OPN-5 | Fonte NWP (ECMWF / GFS / blending) e cobertura historica | Fase 4 | T-4-1 |
 | OPN-1 | Validacao binaria de Q vs Polymarket (auditoria 30+ dias) | Fase 8 | T-8-1 |
 | OPN-3 | Cutoffs operacionais "NO caro" / `min_edge_*` / `min_confidence` | Fase 8 | aprender via REQ-DEC-3 + REQ-MET-6 (T-8-4) |
+
+> **OPN-5 (fonte NWP): RESOLVIDO** - `contracts/nwp_source.md` v1.1 (Open-Meteo;
+> ECMWF IFS HRES + NCEP GFS; safety_margin=60min; anchor max-de-trajetoria). T-4-1
+> CLOSED. Resta apenas o cross-check de validacao T-OPN-5a antes de `phase4_ready`.
 
 ---
 
@@ -172,6 +190,9 @@ Para o glossario completo, ver `requirements.md` secao 0.
 
 ## Referencias
 
+- **Guia de portabilidade / reproducao (outra cidade ou 2o sistema): `docs/guia_portabilidade.md`.**
+  Playbook das licoes caras de sourcing de NWP + checklist de portabilidade.
+- Runbook operacional Fase 4 Opcao 1 (ancora GFS causal): `reports/phase4_option1_runbook.md`.
 - v1 (historico): `references/legacy/polymarket-tmax-forecaster-v1.md`.
 - Atribuicao da fonte de dados: Iowa Environmental Mesonet (IEM ASOS).
 - Termos de uso e citacao: `references/legacy/data_sources.md` (a ser criado em T-0-1).

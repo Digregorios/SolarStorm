@@ -44,7 +44,7 @@ def test_golden_matches(pipeline_outputs, name, d):
     cfg, obs, labels = pipeline_outputs
     fix_path = GOLDEN / f"{name}.json"
     if not fix_path.exists():
-        pytest.skip(f"Golden missing: {fix_path}")
+        pytest.fail(f"Golden fixture missing: {fix_path} - generate with scripts/golden_freeze.py")
     with open(fix_path, encoding="ascii") as fh:
         fix = json.load(fh)
     row = labels.filter(labels["date_local"] == d)

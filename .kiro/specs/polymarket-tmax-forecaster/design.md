@@ -406,6 +406,56 @@ def select_nwp_v1(cp_utc, date_local, model_M) -> NwpSnapshot | None:
 
 Para ensemble (multiplos modelos): aplicar a regra acima por modelo independentemente; agregar via media ponderada e spread (REQ-MOD-3).
 
+### 4.5.2.1 Anchor amendment v1.1 (max-de-trajetoria) - C1
+
+> Emenda pre-registrada (code review 2026-05-29). Bumps: `NWP_SOURCE_VERSION` 1.0 -> 1.1
+> e `MODEL_VERSION`. Motivo: o anchor de hora unica (Tmax climatologico) e fragil ao
+> deslocamento sazonal / early-peak e nao reflete a intencao de "skill forward por
+> lead". Reconcilia a contradicao do anchor (hora unica vs trajetoria) a favor da
+> trajetoria.
+
+Substitui o passo (2) da regra v1 acima. Em vez de ancorar `valid_time` numa hora unica:
+
+- janela forward `W(date_local) = [center - delta, center + delta]`, onde `center` vem
+  da **distribuicao** climatologica do horario do Tmax por `(mes, regime)` - nao de um
+  ponto unico. A hora-unica permanece apenas como (a) feature e (b) insumo de confianca
+  lead-aware (tempo-ate-pico esperado), **nunca** como anchor.
+- `anchor_value(M) = max_{valid in W} t2m(selected_run_M, valid)` (max-de-trajetoria do
+  MESMO `selected_run` causal escolhido no passo (1)).
+- ensemble: media simples de `anchor_value(M)` entre modelos disponiveis no CP; spread =
+  `np.std`. **Uma fonte causal por periodo** alimenta anchor E spread (sem assimetria
+  HFAPI-spread + SingleRuns-anchor).
+- causalidade preservada: `selected_run.run_time_utc <= cp_utc - safety_margin`
+  (RuntimeError caso contrario); a janela `W` so consome valids do run causal selecionado.
+
+T-OPN-5a (cross-check 4.5.2 / 19.4) passa a comparar HFAPI vs SingleRuns **na agregacao
+max-de-trajetoria**, nao numa `valid_time` unica.
+
+#### 4.5.2.1.a Realidade de implementacao (verificada em dados, 2026-05-29)
+
+Duas restricoes empiricas descobertas ao codificar o anchor. Registradas aqui como
+**deferrals versionados** - nenhuma altera threshold; ambas limitam *quando* o anchor v1.1
+liga, nao *se* ele e aceito.
+
+1. **HFAPI nao alcanca o Tmax da tarde de forma causal.** Para CP=23:00 UTC (corte
+   22:00), o run causal mais recente e o de 18:00 UTC, e o HFAPI so expoe esse run ate
+   lead 5 -> `valid=23:00 UTC` ~= meio-dia local. O pico real de Wellington (~00:00-02:00
+   UTC = tarde local) so aparece no HFAPI via um run *posterior* (00:00 UTC), que viola o
+   corte. Logo a janela forward `W` so produz um max-de-trajetoria diferente do
+   `nwp_t2m_at_cp_c` quando alimentada por **Single Runs** (leads longos de um unico run
+   causal). Consequencia de sequenciamento: o seletor `select_max_trajectory_anchor`
+   (causal por construcao) e seus testes entram no Passo 4; a *ativacao* da janela forward
+   no painel ocorre apos o backfill Single Runs (Passo 6 / T-OPN-5a) e e exercida no
+   re-run (Passo 8). Em dados HFAPI a janela colapsa para `[cp-5h, cp]`, identica a feature
+   ja existente `nwp_t2m_max_pre_cp_c` - por isso nao se duplica coluna no painel antes do
+   Single Runs.
+2. **Regime ainda nao existe.** O `center`/janela `W` foi especificado por `(mes, regime)`,
+   mas o GMM de regimes (`nzwn/regimes/gmm_v1.pkl`, secao 7) e artefato da Fase 7 e nao
+   existe. v1.1 entrega o marginal **so por mes** (`fit_tmax_hour_climatology`); a
+   `TmaxHourClimatology.window_local_hours(regime=...)` levanta `NotImplementedError` em
+   vez de fingir condicionamento. O split por regime fica como bump futuro de
+   `NWP_SOURCE_VERSION` (assinatura ja aceita `regime` sem quebrar).
+
 ### 4.6 Forecast row (`forecasts`)
 
 ```
@@ -444,7 +494,8 @@ objective_version: str                         # REQ-DEC-3
 {
   "run_id": "...",
   "criterion": "anti-nowcaster-v1",
-  "criterion_version": "1.0",
+  "criterion_version": "1.1",
+  "preregistration_sha256": "...",
   "H0_rejected": true,
   "evidence_per_phase": [
     {"phase": "lead_time", "passed": true, "details": {...}},
@@ -456,9 +507,19 @@ objective_version: str                         # REQ-DEC-3
     {"phase": "economic_edge", "passed": null, "details": {"reason": "phase_not_active"}}
   ],
   "gate_violations": [],
+  "diagnostics": [
+    {"name": "corr_diff", "value": 0.0, "gating": false, "note": "demoted v1.1; monitor only"}
+  ],
   "created_utc": "..."
 }
 ```
+
+> **criterion_version changelog**
+> - `1.0` -> `1.1` (2026-05-29): `corr_diff` rebaixado de gate para diagnostico
+>   (reportado, nao bloqueia); intencao absorvida por `I_T_obs` + `SS(1h/3h)` +
+>   `counterfactual_same_temp` + curva de horizon-degradation. Adicionado
+>   `preregistration_sha256` (C3): o avaliador FALHA se o hash em runtime divergir do
+>   hash committado. Anchor NWP migrado para max-de-trajetoria (4.5.2.1).
 
 ---
 
@@ -684,12 +745,18 @@ def shadow_simulate(decision: Decision, market: MarketSnapshot, exec: ExecutionC
     return TradeResult(pnl=pnl, filled=True, fee_paid=2*fee, entry_price=entry_price, ...)
 ```
 
-Saidas obrigatorias do backtest shadow:
-- `equity_curve.parquet` (por timestamp),
-- `trades.parquet` (uma linha por trade),
-- `reports/shadow/<run_id>.md` com EV realizado vs esperado, drawdown, Sharpe, calibracao por bucket de EV.
+> **Correcao de escopo (2026-05-30): odds sao contexto AO VIVO, nao dataset.** Como nao ha
+> odds historicas, NAO existe backtest de EV / equity-curve sobre o test split. O simulador
+> `shadow_simulate` permanece como ferramenta de PnL de trade UNICO dado um `truth` conhecido
+> (postmortem / what-if de um forecast vivo ja resolvido), NAO um backtest historico de odds.
 
-EV reportado **sem** referencia a `EXECUTION_VERSION` SHALL ser tratado como invalido.
+Saidas no CP de forecast AO VIVO (REQ-DEC-4):
+- snapshot de odds `(contracts, price_yes, price_no, ts_utc, sha256)` capturado no momento,
+- `EV_yes` / `EV_no` esperados e fracao de Kelly (`core/decision/sizing.py`) a partir do
+  `prob_dist` do modelo + odds do momento,
+- linha de decisao com `expected_value` e `EXECUTION_VERSION` no metadado.
+
+EV/sizing reportado **sem** referencia a `EXECUTION_VERSION` SHALL ser tratado como invalido.
 
 ### 10.2 Tuning protocol (REQ-MET-6) - nested walk-forward
 
@@ -787,6 +854,7 @@ tmax report      --kind {coverage,calibration,spike,shadow} --window 30d
 | `prob_dist` ML | softmax band-aware com `tau` congelado | 8.1.1 |
 | Suporte K | derivado de climo+NWP percentis +/- 2 | 4.5.1 |
 | NWP selection v1 | latest run <= cp - 30min; valid_time = climo Tmax_hour | 4.5.2 |
+| NWP anchor v1.1 | max-de-trajetoria do run causal sobre janela `(mes,regime)`; safety_margin=60min | 4.5.2.1 (bump NWP_SOURCE_VERSION 1.1 + MODEL_VERSION) |
 | Shadow execution | `taker_at_quote`, fee=200bps, sizing=1 unit | REQ-MET-5, 10.1 |
 | Tuning protocol | nested walk-forward; tunar so thresholds operacionais | REQ-MET-6, 10.2 |
 | Core preferido | NWP + residual | discutido na secao 25 do v1 |
@@ -874,3 +942,95 @@ Embora o escopo v1 seja NZWN, a arquitetura permite replicacao:
 - contratos sao por-cidade quando o resolver muda; default global onde aplicavel.
 
 Antes de habilitar nova cidade: criar `<code>/config/`, treinar regimes e calibradores, repetir auditoria forense completa.
+
+---
+
+## 21. Bateria anti-nowcaster e orcamento de complexidade (reframe Fase 4)
+
+> Origem: code review 2026-05-29 (`references/code-reviews/update.txt`). Estas secoes
+> foram pre-registradas como parte do bump `criterion_version 1.1`.
+
+### 21.3 Bateria anti-nowcaster (gates sobreviventes vs diagnosticos)
+
+A intencao "o modelo nao e um nowcaster disfarcado" e testada por uma bateria de
+sinais ortogonais. Apos a emenda v1.1, os **gates** (bloqueiam promocao) sao:
+
+- `SS(1h) > 0.08` e `SS(3h) > 0.10`, IC95% excluindo 0 - bate persistencia (o nowcaster
+  canonico).
+- `I_T_obs < 0.10` - importancia da observacao corrente nao dominante (ataca o
+  nowcasting na raiz).
+- `AUC counterfactual same-temp > 0.70` - mesma T observada, regimes diferentes tem que
+  separar; o teste anti-nowcaster mais limpo.
+- `|coverage_80 - 0.80| < 0.04` (quando a fase calibra IC; Fase 4 usa IC naive e reporta
+  como diagnostico).
+- ACF(residuos) sem lag significativo ate 7.
+
+**Diagnostico (reportado, NAO bloqueia)** apos v1.1:
+
+- `corr_diff = corr(y_hat, truth) - corr(y_hat, T_now)`, calculado em **anomalias**
+  (climatologia causal train-only por split; mesma base climatologica para
+  `pred`/`truth`/`T_now`). Motivo do rebaixamento: e uma diferenca de correlacoes
+  marginais (alta variancia, nao particiona a colinearidade `pred ~ T_now`), e numa
+  cidade unica com climo causal per-split a regua e ruidosa; pre-registrar um threshold
+  nessa escala e fragil e abre superficie de researcher-degrees-of-freedom. Sua intencao
+  e absorvida pelos gates acima + a curva de horizon-degradation (28.6).
+
+### 21.7 Orcamento de complexidade e Plano B
+
+Nenhum componente sobrevive por inercia. Se um bloco nao prova skill incremental sob a
+regra de aceite (29.5), ele e **rebaixado**, nao deletado:
+
+- Fase 4: se NWP nao adiciona skill (ablation pareado, 29.5), NWP **nao** e removido -
+  vira provedor de feature/confianca e o projeto segue para Fases 5/7/8. "Fail" nunca e
+  beco sem saida; e um rebaixamento documentado.
+- Gates redundantes/zumbis sao consolidados (ver 21.3: `corr_diff` -> diagnostico) para
+  evitar pass/fail contraditorio e a tentacao de ajustar threshold (gaming acidental).
+
+## 28. Avaliacao por lead
+
+### 28.6 Curva de horizon-degradation
+
+CP operacional (livre, pode atualizar ao vivo) != CP de avaliacao (fixo e cedo). A prova
+de poder preditivo e **sempre por lead**: skill (bracket-match / RPS) reportada como
+funcao do lead-time ao pico, nao um numero agregado global. Skill positiva *horas antes*
+do pico, que degrada suavemente com o lead, e a assinatura de forward skill genuina;
+skill que so aparece colada ao pico e nowcasting. Esta curva absorve a intencao de
+forma/timing que o `corr_diff` tentava capturar, de modo mais estrito.
+
+## 29. Execucao Fase 4 (ordem + criterio de saida)
+
+### 29.4 Ordem de execucao (Passo 0 -> 9)
+
+Pre-requisitos de sequenciamento (separam "pass honesto" de "pass viciado"):
+
+0. Travar C1-C4 + versionar (NWP_SOURCE_VERSION 1.1, MODEL_VERSION, criterion_version
+   1.1). Nada de codigo antes disso.
+1. Bug i_t_obs anchor + teste de regressao.
+2. Config-as-contract (open_meteo_id) + teste config<->codigo.
+3. Auditoria de climatologia causal (feature E target) como teste de CI.
+4. Anchor max-de-trajetoria causal (4.5.2.1) + gate de leakage automatico
+   (`run_time <= cp - safety_margin`).
+5. Pre-registro com dente (C3): `phase4_preregistration.md` + sha256; avaliador falha se
+   hash runtime != committado.
+6. T-OPN-5a na agregacao max-de-trajetoria -> verdict; probe GFS-2023 real antes de
+   aceitar drop do split-1.
+7. `corr_diff` em anomalias (climo causal) rebaixado a diagnostico + testes.
+8. Re-run `phase4_evaluate` -> report estratificado por lead + `h0_verdict.json`.
+9. Avaliar contra o criterio de saida (29.5).
+
+Os passos 1-3 DEVEM preceder o re-anchoring (4), senao re-roda-se sobre base contaminada.
+
+### 29.5 Criterio de saida (aceite C2)
+
+NWP e tratado como **provedor de features forward + sinal de incerteza**, nao como anchor
+competindo com o Ridge. A estrutura residual REQ-MOD-3 (`NWP_baseline + correction`) e
+mantida, mas o aceite e um **ablation pareado**:
+
+- modelo obs+NWP residual vs modelo obs-only (Fase 3), E ablation da mesma classe
+  `LGBM(obs)` vs `LGBM(obs+NWP)` para atribuir a contribuicao das features NWP;
+- ganho de bracket-match/calibracao com **IC95% lo > 0** em `>= 2/3` (ou `>= 2/2` se o
+  split-1 cair) splits expanding-window;
+- gates sobreviventes (21.3) intactos.
+
+Passa -> segue Fase 5. Falha honesta -> Plano B (21.7): NWP vira feature/confianca, segue
+Fases 5/7/8. **Sem afrouxar threshold depois de ver o resultado.**

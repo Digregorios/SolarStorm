@@ -34,7 +34,12 @@ def test_impute_nan_handles_all_nan_column():
 
 
 def test_gate_corr_diff_returns_bootstrap_ci():
-    """N3: gate_corr_diff must report ci_low and ci_high from bootstrap."""
+    """N3: gate_corr_diff must report ci_low and ci_high from bootstrap.
+
+    Since criterion_version 1.1 corr_diff is a diagnostic monitor, but the
+    function still computes the point estimate + CI it reports (see
+    ``test_corr_diff_is_diagnostic_only`` for the demotion from the verdict).
+    """
     rng = np.random.default_rng(0)
     n = 300
     truth = rng.normal(20, 3, size=n)
@@ -59,9 +64,35 @@ def test_gate_corr_diff_fails_when_ci_includes_zero():
     g = gate_corr_diff(pred, truth, t_now, threshold=0.0, n_bootstrap=500, seed=2)
     # CI on independent random samples spans zero
     assert g.ci_low is not None and g.ci_high is not None
-    if g.value >= 0:
-        # If point happens to exceed threshold, gate must still fail because lo <= 0
-        assert (g.passed is False) or (g.ci_low > 0.0)
+    # When CI spans zero the gate must fail regardless of the point estimate's sign
+    assert g.passed is False, "Gate should fail when CI includes zero"
+
+
+def test_corr_diff_is_diagnostic_only():
+    """criterion_version 1.1: a FAILED corr_diff must NOT count as an aud2
+    violation (prereg corr_diff.role=diagnostic_monitor, blocks_verdict=false),
+    while a real gate failure still does."""
+    from scripts.phase4_evaluate import (
+        DIAGNOSTIC_ONLY_GATES,
+        collect_gate_violations,
+    )
+
+    assert "corr_diff" in DIAGNOSTIC_ONLY_GATES
+    split_results = [
+        {
+            "split": 1,
+            "gates": [
+                {"name": "corr_diff", "passed": False},  # diagnostic -> ignored
+                {"name": "ss_1h", "passed": True},
+                {"name": "coverage_ic80", "passed": None},  # skipped -> ignored
+            ],
+        }
+    ]
+    assert collect_gate_violations(split_results) == []
+
+    split_results[0]["gates"].append({"name": "i_t_obs", "passed": False})
+    violations = collect_gate_violations(split_results)
+    assert violations == [(1, "i_t_obs")]  # real gate still blocks; corr_diff still excluded
 
 
 def test_gate_ss_vs_persistence_vectorised_matches_loop_baseline():

@@ -48,3 +48,13 @@ def test_ic50_works_with_custom_percentiles():
     low, high = discrete_ic(pd, p_low=0.25, p_high=0.75)
     assert low == 2
     assert high == 3
+
+
+def test_ic80_negative_temperatures():
+    """Negative keys (frost days in Wellington) must sort and accumulate correctly."""
+    pd = {-5: 0.10, -3: 0.20, -1: 0.30, 1: 0.25, 3: 0.10, 5: 0.05}
+    low, high = discrete_ic(pd)
+    # 10th percentile: -5 (0.10) -> low = -5
+    # 90th percentile: need cumulative 0.90 -> -1:0.60, 1:0.85, 3:0.95 -> high = 3
+    assert low == -5
+    assert high == 3

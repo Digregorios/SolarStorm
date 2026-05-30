@@ -1,0 +1,22 @@
+{
+  "c_grid": [
+    0.5,
+    0.96,
+    0.005
+  ],
+  "conformal_method_version": "1.1",
+  "coverage_target": 0.8,
+  "coverage_tol": 0.04,
+  "heterosced_band": [
+    0.7,
+    0.9
+  ],
+  "heterosced_n_bins": 4,
+  "method": "normalized_quantization_aware",
+  "per_cp_window_days": 90,
+  "sigma_proxy": "p50_var",
+  "winsor_pctl": [
+    25.0,
+    95.0
+  ]
+}

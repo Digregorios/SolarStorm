@@ -273,8 +273,9 @@ Backlog acionavel agrupado por fase. Cada task tem:
 - **REQ:** REQ-AUD-2 (relacionado a no-temperature requirement).
 
 ### T-3-7: Determinism check ativado
-- [ ] CI roda `tmax train --seed 42` 2x e compara SHA256 do artefato.
-- **Done:** zero diff.
+- [x] CI roda dois treinos com seed 42 e compara SHA256 das predicoes
+  (`tests/unit/test_determinism.py`, gate unitario em vez de CLI; cobre REQ-MOD-6).
+- **Done:** zero diff (sha256 identico nos dois treinos do residual LGBM).
 - **REQ:** REQ-MOD-6.
 
 ### T-3-8: Permutation importance gate
@@ -298,11 +299,16 @@ Backlog acionavel agrupado por fase. Cada task tem:
 
 ### T-OPN-5a: HFAPI vs Single Runs cross-check (causality leakage validation)
 - **BLOCKED UNTIL:** T-4-2 concluida (precisa de ingestor para os dois endpoints).
+- **v1.1 (code review 2026-05-29):** cross-check roda na **agregacao max-de-trajetoria**
+  (design 4.5.2.1), nao numa valid_time unica.
 - [ ] `scripts/opn5a_hfapi_vs_single_runs.py`: rodar Phase 4 baseline com HFAPI vs
   Single Runs ECMWF no overlap **2024-03-01 .. 2025-12-31**.
 - [ ] Comparar bracket-match, RPS, ECE com bootstrap CI95 paired.
 - [ ] Per-split sanity check: split 1 (HFAPI only, 2023) gain over baselines NAO pode
   ser > 1.5x o gain medio em splits 2-3 (com SingleRuns disponivel).
+- [ ] **Probe GFS-2023 real (AWS noaa-gfs-bdp-pds)** antes de aceitar o drop do split-1;
+  so dropar se um ensemble causal simetrico de 2 modelos para 2023 for genuinamente
+  impossivel. Se dropar, propagar regra `>= 2/2` as fases seguintes.
 - [ ] Emitir `reports/opn5a_cross_check.md` com tabela final + verdict.
 - **Acceptance** (per `contracts/nwp_source.md` secao "Cross-check obligation"):
   1. `|bracket_match_HFAPI - bracket_match_SingleRuns|` dentro de IC95 paired,
@@ -331,28 +337,33 @@ Backlog acionavel agrupado por fase. Cada task tem:
 
 ### T-4-2: Ingestor NWP forecast (atualizado)
 - **BLOCKED UNTIL:** T-4-1 concluida (decisao OPN-5 sobre fonte NWP).
-- [ ] `core/ingest/nwp.py::ingest_run(model, run_time_utc, lead_h, endpoint)`.
-- [ ] Suporta os dois endpoints: `historical-forecast-api` e `single-runs-api`.
-- [ ] Guarda snapshots por `(model, run_time_utc, lead_h)` + SHA256, com `endpoint` e
+- [x] `core/ingest/nwp.py` snapshot writers + `select_nwp_v1` (CP-causal).
+- [x] Suporta os dois endpoints: `historical-forecast-api` e `single-runs-api`.
+- [x] Guarda snapshots por `(model, run_time_utc, lead_h)` + SHA256, com `endpoint` e
   `run_time_utc` (issued_time) explicitos no row (reforco A do open-meteo).
-- [ ] Validacao causal: `run_time_utc <= cp_utc - safety_margin` (60 min em v1, do
+- [x] Validacao causal: `run_time_utc <= cp_utc - safety_margin` (60 min em v1, do
   `model.yaml`); violacao = `RuntimeError` (reforco B).
-- [ ] Validacao adicional: `valid_time_utc > run_time_utc` (sem self-loop).
-- [ ] Implementa `select_nwp_v1(cp_utc, date_local, model)` conforme design 4.5.2.
-- [ ] Frozen observation test (audit phase 2) extendido com check NWP-especifico.
-- **Done:** ingestor rodando para >=1 ano historico; selecao deterministica testada;
-  Frozen observation test cobre NWP rows.
+- [x] Validacao adicional: `valid_time_utc > run_time_utc` (lead_h >= 0 no parse).
+- [x] Implementa `select_nwp_v1(cp_utc, target_valid_utc, model)` conforme design 4.5.2.
+- [x] Frozen observation test (audit phase 2) extendido com check NWP-especifico
+  (`audits/phases/nwp_timestamps.py`).
+- **Done:** ingestor HFAPI rodando 2020-2026 (432 particoes); selecao deterministica
+  testada (`tests/unit/test_nwp_ingest.py`). NOTA: backfill Single Runs ainda nao
+  executado (necessario p/ T-OPN-5a).
 - **REQ:** REQ-DAT-5 (atualizado), design 4.5.2.
 
 ### T-4-3: Features NWP (mean/spread/disagreement)
-- [ ] `core/features/nwp.py`: media ponderada, spread, king-conflict.
-- **Done:** features integradas a `features_per_cp`.
+- [x] `core/features/nwp.py`: media de ensemble, spread (np.std), disagreement_score,
+  features de trajetoria (max/slope/range pre-CP) + anchor max-de-trajetoria.
+- **Done:** features integradas a `build_training_panel` (NWP_FEATURE_COLUMNS).
 - **REQ:** REQ-MOD-3.
 
 ### T-4-4: Residual LightGBM
-- [ ] `core/models/residual_lgbm.py`: target = `truth - NWP_baseline`.
-- [ ] Seeds fixas; early stopping deterministico.
-- **Done:** modelo treinado; supera Ridge band-aware em >= 2/3 splits.
+- [x] `core/models/residual_lgbm.py`: target = `truth - NWP_baseline`.
+- [x] Seeds fixas (42); early stopping deterministico (deterministic=True, num_threads=1).
+- **Done (codigo):** modelo treinado e ligado a `phase4_evaluate`. **Aceitacao
+  pendente:** "supera baseline em >= 2/3 splits" foi RE-ESCOPADO pelo reframe v1.1 para
+  ablation pareado (IC95 lo>0); verdict so apos re-run (T-4-8 Passo 8/9).
 - **REQ:** REQ-MOD-1, REQ-MOD-3, REQ-MOD-6.
 
 ### T-4-5: Ablations
@@ -370,6 +381,43 @@ Backlog acionavel agrupado por fase. Cada task tem:
 - [ ] Em producao, GMM e read-only; nao retreinar sem versionar.
 - **Done:** GMM congelado; features `regime_id`, `regime_proba` integradas.
 - **REQ:** Design 7 (REQ - secao 21.10 v1).
+
+### T-4-8: Reframe Fase 4 (code review 2026-05-29) - **criterion_version 1.1**
+> Reframe pre-registrado: NWP = provedor de features forward + incerteza, nao anchor
+> competindo com Ridge. Ordem de execucao em design 29.4; criterio de saida em 29.5.
+- [x] **Passo 0** - travar C1-C4 + bumps (NWP_SOURCE_VERSION 1.1, MODEL_VERSION,
+  criterion_version 1.1) em design/requirements/contracts. **[feito nesta task]**
+- [x] **Passo 1** - fix bug i_t_obs anchor (`phase4_evaluate.py` permutation predict usa
+  anchor NWP, nao `clim_test`) + teste de regressao. **[tests/unit/test_i_t_obs_anchor.py]**
+- [x] **Passo 2** - config-as-contract: loader le `model.yaml` e da assert que
+  `open_meteo_id` casa com `ModelSpec`; teste config<->codigo; corrigir valor do yaml.
+  **[load_nwp_model_specs + tests/unit/test_nwp_config_contract.py]**
+- [x] **Passo 3** - auditoria de climatologia causal (feature `clim_tmax_c_dec` E
+  `target_delta` por split, train-only) como teste de CI.
+  **[assert_causal_climo + tests/unit/test_causal_climatology.py]**
+- [x] **Passo 4** - anchor max-de-trajetoria causal (design 4.5.2.1) + gate de CI de
+  leakage (`run_time <= cp - safety_margin`). Uma fonte causal por periodo (anchor+spread).
+  **[select_max_trajectory_anchor + tests/unit/test_maxtraj_anchor.py + test_nwp_leakage_gate.py]**
+- [x] **Passo 5** - pre-registro com dente: `contracts/phase4_preregistration.md` +
+  sha256; `phase4_evaluate` falha se hash runtime != committado.
+  **[core/eval/preregistration.py + tests/unit/test_preregistration.py]**
+- [ ] **Passo 6** - T-OPN-5a na agregacao max-de-trajetoria + probe GFS-2023.
+  **[PENDENTE - ver T-OPN-5a; bloqueio de ambiente: sem decoder GRIB para o probe AWS]**
+- [x] **Passo 7** - `corr_diff` em anomalias (climo causal) rebaixado a diagnostico
+  (reportado, nao bloqueia) + atualizar testes.
+  **[DIAGNOSTIC_ONLY_GATES + collect_gate_violations; tests/unit/test_review_v2_fixes.py]**
+- [ ] **Passo 8** - re-run `phase4_evaluate` -> report estratificado por lead (28.6) +
+  `h0_verdict.json` (com pre-reg hash + criterion_version). **[PENDENTE - bloqueado por Passo 6]**
+- [ ] **Passo 9** - avaliar contra 29.5 (ablation pareado, IC95 lo>0 em >=2/3 ou >=2/2,
+  gates sobreviventes intactos). Passa -> Fase 5. Falha honesta -> Plano B (21.7).
+  **[PENDENTE - depende dos resultados do re-run, Passo 8]**
+- [x] Determinismo no CI desde ja (REQ-MOD-6): dois treinos, SHA256 identico.
+  **[tests/unit/test_determinism.py]**
+- **Codigo (logica de aceitacao) implementado:** acceptance = ablation pareado
+  (`acceptance_paired_ablation` em `phase4_evaluate.py`) substitui o antigo
+  max-sobre-baselines; resta apenas EXECUTAR (Passos 6/8/9) para emitir o verdict.
+- **REQ:** REQ-MOD-3, REQ-MET-4 (emenda v1.1), REQ-AUD-2 (emenda v1.1), REQ-MOD-6,
+  design 4.5.2.1, 21.3, 21.7, 28.6, 29.4, 29.5.
 
 ---
 
@@ -406,9 +454,14 @@ Backlog acionavel agrupado por fase. Cada task tem:
 - **REQ:** REQ-CONF-1, REQ-MET-2.
 
 ### T-5-6: Stay-out logic
-- [ ] Adicionar `min_confidence` em `nzwn/config/model.yaml`.
-- [ ] Decision engine retorna `NO_TRADE("low_confidence")` se score abaixo do limiar.
+- [x] Adicionar `min_confidence` em `nzwn/config/model.yaml`.
+- [x] Decision engine retorna `NO_TRADE("low_confidence")` se score abaixo do limiar.
 - **Done:** comportamento testado em integration test.
+- **PHASE 5 CLOSED NOT READY (2026-05-30, stop criterion B3):** REQ-AUD-5 het gate never
+  passed (v1.0/A1/A3/P/P'/D1/S). Stay-out is DISABLED in production
+  (`confidence.gate_enabled_in_production: false`; `production_confidence_gate` no-ops when
+  off) and kept DIAGNOSTIC only. See `reports/phase5_closure.md`. Roadmap advances to
+  late-spike + shadow/EV.
 - **REQ:** REQ-CONF-3.
 
 ---
@@ -416,25 +469,25 @@ Backlog acionavel agrupado por fase. Cada task tem:
 ## Fase 6 - AR online (opcional)
 
 ### T-6-1: AR(7) residual
-- [ ] `core/online/ar.py::AROnlineCorrector` com estado em json.
-- [ ] Garantir que update so usa `truth(D-1)` apos `postmortem` rodar (estritamente passado).
-- **Done:** unit test cobre updates sequenciais sem leakage.
+- [x] `core/online/ar.py::AROnlineCorrector` com estado em json.
+- [x] Garantir que update so usa `truth(D-1)` apos `postmortem` rodar (estritamente passado).
+- **Done:** unit test cobre updates sequenciais sem leakage (`tests/unit/test_ar_online.py`).
 - **REQ:** REQ-MOD-5.
 
 ### T-6-2: Backup e dedupe
-- [ ] Backup `<date>.bak.json` antes de cada update.
-- [ ] Rejeitar updates duplicados pelo mesmo `(date_local, cp_utc)`.
-- **Done:** integration test cobre tentativa duplicada.
+- [x] Backup `<date>.bak.json` antes de cada update.
+- [x] Rejeitar updates duplicados pelo mesmo `(date_local, cp_utc)`.
+- **Done:** integration test cobre tentativa duplicada (`tests/unit/test_ar_online.py`).
 - **REQ:** REQ-OPS-5.
 
 ### T-6-3: DM-test
-- [ ] Comparar AR-on vs AR-off vs persistencia.
+- [ ] Comparar AR-on vs AR-off vs persistencia. (BLOCKED: consome predicoes da Fase 5 em andamento.)
 - [ ] Publicar em `reports/ar/<run_id>.md`.
 - **Done:** AR melhora em >= 2/3 splits ou flag desabilitada.
 - **REQ:** REQ-MOD-5, REQ-MET-3.
 
 ### T-6-4: Feature flag
-- [ ] `nzwn/config/model.yaml`: `ar_online.enabled: false` por default.
+- [x] `nzwn/config/model.yaml`: `ar_online.enabled: false` por default.
 - **Done:** habilitar/desabilitar sem redeploy de codigo.
 - **REQ:** REQ-MOD-5.
 
@@ -443,33 +496,35 @@ Backlog acionavel agrupado por fase. Cada task tem:
 ## Fase 7 - Late spike
 
 ### T-7-1: Labels L1
-- [ ] `core/spike/labels.py`: `late_spike_l1` (REQ-SPK-1) ja parcialmente em T-1-5; reusar e estender para todos os CPs avaliados.
+- [x] `core/spike/labels.py`: `late_spike_l1` (REQ-SPK-1) ja parcialmente em T-1-5; reusar e estender para todos os CPs avaliados.
+- **Done:** label `late_spike_l1__cp_HH` (k_eod != k_cp) ja emitido por `core/labels/tmax.py` para todo CP_SET; consumido pelo spike evaluator.
 - **REQ:** REQ-SPK-1.
 
 ### T-7-2: Features de spike
-- [ ] `core/spike/features.py`: time_since_new_max, slopes, mudanca de regime, vis/ceiling, pos-chuva, NWP disagreement.
-- **Done:** feature set documentado em `contracts/features.md`.
+- [x] `core/spike/features.py`: time_since_new_max, slopes, mudanca de regime, vis/ceiling, pos-chuva, NWP disagreement.
+- **Done:** 14 features causais em `SPIKE_FEATURE_COLUMNS` com guard `ts_utc < cp_utc` (REQ-AUD-4); regime/NWP opcionais (None ate Fase 7 GMM).
 - **REQ:** REQ-SPK-2.
 
 ### T-7-3: Modelo LightGBM binario
-- [ ] `core/spike/model.py`: train + isotonic regression.
-- [ ] Seeds fixas.
-- **Done:** modelo treinado; PR-AUC > prevalencia base com IC bootstrap excluindo zero.
+- [x] `core/spike/model.py`: train + isotonic regression.
+- [x] Seeds fixas.
+- **Done:** LightGBM binario + IsotonicRegression (seed 42); `fit_spike_model`/`predict_spike_risk`. REQ-SPK-3 PASS 3/3 (PR-AUC 0.947/0.948/0.953 vs prevalencia 0.81/0.85/0.81; bootstrap CI95 lower bound > prevalencia em todos os splits).
 - **REQ:** REQ-SPK-3.
 
 ### T-7-4: Auditoria de timestamps
-- [ ] Frozen observation test cobre as features do spike.
-- **Done:** sem violacoes.
+- [x] Frozen observation test cobre as features do spike.
+- **Done:** no-leak test em `tests/unit/test_spike_features.py` (features inalteradas ao anexar obs pos-cp).
 - **REQ:** REQ-SPK-2, REQ-AUD-4.
 
 ### T-7-5: Integracao em confidence e decision
-- [ ] `confidence_score` recebe `-spike_risk` no agregado.
-- [ ] Decision engine implementa `BLOCK_BUY_NO_LATE_SPIKE` quando `spike_risk >= threshold_spike`.
-- **Done:** integration tests cobrindo cenarios.
+- [x] `confidence_score` recebe `-spike_risk` no agregado.
+- [x] Decision engine implementa `BLOCK_BUY_NO_LATE_SPIKE` quando `spike_risk >= threshold_spike`.
+- **Done:** `neg_spike_risk` e o 6o phi em `core/confidence/score.py` (opcional/None backward-compat); `decide()` em `core/decision/engine.py` cobre todos os estados (`tests/unit/test_decision_engine_full.py`).
 - **REQ:** REQ-CONF-2, REQ-DEC-2.
 
 ### T-7-6: Reportar metricas obrigatorias
-- [ ] `reports/spike/<run_id>.md` com PR-AUC, recall@FPR<=0.05, ECE.
+- [x] `reports/spike/<run_id>.md` com PR-AUC, recall@FPR<=0.05, ECE.
+- **Done:** emitido por `scripts/spike_evaluate.py` (walk-forward 2023/2024/2025 + bootstrap CI95).
 - **REQ:** REQ-SPK-3.
 
 ---
@@ -477,73 +532,84 @@ Backlog acionavel agrupado por fase. Cada task tem:
 ## Fase 8 - Shadow trading + EV
 
 ### T-8-0: Definir conjunto de mercados v1 e congelar `EXECUTION_VERSION`
-- [ ] Listar `eventUrl` dos mercados Polymarket v1 a serem auditados/shadow-tradados (provavelmente "Tmax NZWN >= k" para alguns brackets, OU equivalente disponivel).
-- [ ] Gravar lista em `nzwn/config/markets.yaml` com `market_id`, `eventUrl`, `bracket_type`, `granularity`.
-- [ ] Criar `contracts/execution.md` com `EXECUTION_VERSION=1.0` cobrindo todos os parametros de REQ-MET-5 (defaults v1: `fee_bps=200`, `slippage=taker_at_quote`, `entry=ask`, `fill=assume_full_fill`, `sizing=1 unit`, `max_concurrent=1/cp`, `tif=cancel_at_next_cp`).
-- [ ] Pydantic validator em `core/contracts/execution.py`.
-- **Done:** ambos arquivos commitados e validados; `EXECUTION_VERSION` referenciado em CI guard de tasks.md T-X-2.
+- [ ] Listar `eventUrl` dos mercados Polymarket v1 a serem auditados/shadow-tradados (provavelmente "Tmax NZWN >= k" para alguns brackets, OU equivalente disponivel). (BLOCKED: precisa de eventUrls reais do Polymarket.)
+- [ ] Gravar lista em `nzwn/config/markets.yaml` com `market_id`, `eventUrl`, `bracket_type`, `granularity`. (BLOCKED: idem.)
+- [x] Criar `contracts/execution.md` com `EXECUTION_VERSION=1.0` cobrindo todos os parametros de REQ-MET-5 (defaults v1: `fee_bps=200`, `slippage=taker_at_quote`, `entry=ask`, `fill=assume_full_fill`, `sizing=1 unit`, `max_concurrent=1/cp`, `tif=cancel_at_next_cp`).
+- [x] Pydantic validator em `core/contracts/execution.py`.
+- **Done (parcial):** contrato `EXECUTION_VERSION=1.0` + pydantic `ExecutionContract` validados; `markets.yaml`/eventUrls aguardam dados reais do Polymarket (T-8-1/8-2 seguem BLOCKED).
 - **REQ:** REQ-MET-5, REQ-DEC-4.
 
-### T-8-1: Resolver miner (OPN-1)
-- **BLOCKED UNTIL:** T-8-0 fechada (precisa do `eventUrl` para coletar a fonte).
-- [ ] Script que coleta >= 30 dias de Polymarket (`tmax NZWN`) e compara `decimal -> Q(decimal)` vs inteiro publicado.
-- [ ] Resultado em `reports/resolver_audit.md`.
-- [ ] Se divergencia > 1%, abrir issue antes de continuar.
-- **Done:** OPN-1 fechado; `contracts/resolver.md` atualizado de v0.1 (T-0-7) para v1.0 com auditoria binaria.
+### T-8-1: Resolver audit (OPN-1) - LIVE/manual, not a 30-day miner
+- **SCOPE CORRECTED (2026-05-30):** no historical odds dataset. The resolver check is a
+  LIGHT live/manual confirmation that Polymarket's published integer == `Q(decimal)` for NZWN,
+  done when live markets exist - NOT a 30-day historical mining job.
+- [ ] Live spot-check `decimal -> Q(decimal)` vs published integer when a market is open.
+- **Done:** `contracts/resolver.md` promoted to v1.0 after the live confirmation.
 - **REQ:** REQ-CON-2.
 
-### T-8-2: Ingestor de odds
-- **BLOCKED UNTIL:** T-8-0 fechada.
-- [ ] `core/ingest/odds.py::ingest(eventUrl, cp_utc)` -> snapshot SHA256.
-- [ ] Schema: contracts (range_low_int, range_high_int, price_yes, price_no, ts_utc).
-- **Done:** ingestor rodando para os mercados de `nzwn/config/markets.yaml` em CPs do `CP_SET`.
+### T-8-2: Live odds snapshot (at the forecast CP) - REPLACES historical ingestor
+- **SCOPE CORRECTED (2026-05-30):** odds are captured ONLY at the live forecast CP for EV/Kelly
+  context (REQ-DEC-4); there is no historical odds ingestion/backfill.
+- [x] `core/ingest/odds.py`: `event_slug`/`event_url` (deterministic pattern), `snapshot_live(city, d, cp_utc)`
+  -> `OddsSnapshot` (brackets as `ContractRange` + YES/NO prices + SHA256) via Gamma API.
+- [x] `core/decision/sizing.py::size_book` maps the model `prob_dist` over a live snapshot to
+  per-bracket EV/Kelly (the forecast -> odds -> sizing path).
+- **Done:** offline parse/slug tests (`tests/unit/test_odds_ingest.py`, 4) + live end-to-end
+  verified against `highest-temperature-in-wellington-on-may-31-2026` (11 brackets). Bracket->range
+  + URL pattern documented in `contracts/resolver.md`.
 - **REQ:** REQ-DEC-4.
 
 ### T-8-3: Decision engine completo
-- [ ] `core/decision/engine.py` conforme design 10.
-- [ ] Tres estados operacionais (REQ-DEC-2).
-- [ ] `expected_value` computado.
-- **Done:** unit + integration tests cobrindo cada estado.
+- [x] `core/decision/engine.py` conforme design 10.
+- [x] Tres estados operacionais (REQ-DEC-2).
+- [x] `expected_value` computado.
+- **Done:** `decide()` cobre NO_TRADE(low_confidence)/BLOCK_BUY_NO_LATE_SPIKE/NO_TRADE_RESOLVED/OPPORTUNITY_ASSYMETRIC/BUY_NO/NO_TRADE(no_edge) com edges via `market_map.p_yes`; `EngineDecision` carrega edge_yes/edge_no/p_yes; `tests/unit/test_decision_engine_full.py` cobre cada estado.
 - **REQ:** REQ-DEC-1, REQ-DEC-2.
 
-### T-8-4: Threshold tuning - nested walk-forward
-- **BLOCKED UNTIL:** T-8-3 + T-8-7 (market_map) + T-8-8 (shadow_exec).
-- [ ] `core/decision/threshold_tuning.py`: otimiza thresholds via funcao-objetivo congelada (`contracts/objective.md`) usando **nested walk-forward** (REQ-MET-6, design 10.2).
-- [ ] **Hard rules** enforcadas em codigo:
-  - apenas thresholds operacionais sao tunados (`min_edge_yes`, `min_edge_no`, `no_too_expensive`, `min_confidence`, `spike_block`),
-  - `tau` (do model.yaml), `safety_margin` (NWP), e qualquer hiperparametro de modelo SAO PROIBIDOS de mudar aqui,
-  - tuning roda apenas em VALIDATION; TEST split avaliado **uma unica vez** por `threshold_set_id`.
-- [ ] Logar todas as configs em `artifacts/tuning/<threshold_set_id>/results.parquet`.
-- **Done:** `threshold_set_id` versionado; documentado em `decisions.threshold_set_id`; integration test rejeita tentativa de re-avaliar test.
+### T-8-4: Threshold tuning - nested walk-forward (OFFLINE, odds-free objective)
+- **SCOPE CORRECTED (2026-05-30):** tuning uses the ODDS-FREE objective
+  `max(bracket_match_when_traded) s.t. coverage` (contracts/objective.md). EV/Sharpe objectives
+  are live-only and are NOT tuned offline.
+- **BLOCKED UNTIL:** decided to tune (optional; model already promoted by forecast-quality).
+- [ ] `core/decision/threshold_tuning.py`: nested walk-forward (REQ-MET-6), TEST evaluated once.
+- [ ] Hard rules: only `min_edge_*`, `no_too_expensive`, `min_confidence`, `spike_block` tunable;
+  `tau`/`safety_margin`/model hyperparams forbidden.
 - **REQ:** REQ-DEC-3, REQ-MET-6.
 
-### T-8-5: Backtest de execucao
-- **BLOCKED UNTIL:** T-8-7 (shadow_exec implementado).
-- [ ] `core/decision/backtest.py`: orquestra `core/decision/shadow_exec.py` sobre o historico, gera `equity_curve.parquet` e `trades.parquet`.
-- [ ] Calibracao por bucket de EV esperado.
-- **Done:** relatorio `reports/shadow/<run_id>.md` publicado com `EXECUTION_VERSION` e `threshold_set_id` no header.
-- **REQ:** REQ-MET-1, REQ-MET-5.
+### T-8-5: ~~Backtest de execucao~~ REMOVED (no historical odds)
+- **REMOVED (2026-05-30):** an equity-curve backtest requires historical odds, which do not
+  exist. `shadow_simulate` stays as a SINGLE-trade PnL/what-if tool for an already-resolved live
+  forecast (postmortem), not a historical equity backtest. No `equity_curve.parquet`.
+- **REQ:** (n/a)
 
-### T-8-6: Auditoria forense fase 7 (economic_edge)
-- [ ] Implementar fase 7 do protocolo H0 (`audits/phases/economic_edge.py`).
-- [ ] Verifica EV esperado vs realizado dentro do IC95%.
-- **Done:** `h0_verdict.json` cobre `economic_edge`.
+### T-8-6: ~~economic_edge forensic phase~~ DEFERRED to live
+- **DEFERRED (2026-05-30):** EV-expected-vs-realized needs live trades over time; it cannot run
+  offline without odds. `audits/phases/rest.py::economic_edge` stays `passed=None` (live-only).
 - **REQ:** REQ-AUD-1, REQ-MET-1.
+
+### T-8-9: Live EV + Kelly sizing - NEW (the actual live-odds capability)
+- [x] `core/decision/sizing.py`: `expected_value(p, price, fee_bps)`, `kelly_fraction(p, price, kelly_cap)`,
+  `size_side(side, p_yes, price, contract)` from the model `prob_dist` (via `market_map.p_yes`) +
+  the live odds snapshot.
+- [x] `ExecutionContract` gains `position_sizing='fractional_kelly'` + `kelly_cap`.
+- **Done:** `tests/unit/test_sizing.py` (9): EV sign/fee, Kelly cap/floor/monotonicity, BUY_NO
+  complement, flat vs Kelly sizing. EV/Kelly are computed AT the live CP only.
+- **REQ:** REQ-MET-5, REQ-DEC-4.
 
 ### T-8-7: Shadow execution simulator
 - **BLOCKED UNTIL:** T-8-0 (`contracts/execution.md` v1.0).
-- [ ] `core/decision/shadow_exec.py` implementa o pseudocodigo de design 10.1 lendo `contracts/execution.md`.
-- [ ] Suporta switches `assume_full_fill` (default v1) e `partial_fill_with_min_size` (ablation em `experiments/`).
-- [ ] Test unit sobre cenarios: fill completo, sem fill, fee cobrada, payoff resolvido em favor.
-- **Done:** simulador determinístico para o mesmo `(decision, market, exec, truth)`; CI guard rejeita execucao do backtest sem `EXECUTION_VERSION` nos metadados.
+- [x] `core/decision/shadow_exec.py` implementa o pseudocodigo de design 10.1 lendo `contracts/execution.md`.
+- [x] Suporta switches `assume_full_fill` (default v1) e `partial_fill_with_min_size` (ablation em `experiments/`).
+- [x] Test unit sobre cenarios: fill completo, sem fill, fee cobrada, payoff resolvido em favor.
+- **Done:** `shadow_simulate(decision, market, exec_contract, truth)` deterministico; `tests/unit/test_shadow_exec.py` (10). CI guard de backtest sem `EXECUTION_VERSION` fica para T-8-5.
 - **REQ:** REQ-MET-5.
 
 ### T-8-8: Market map (prob_dist -> p_yes por contract)
-- [ ] `core/decision/market_map.py`:
+- [x] `core/decision/market_map.py`:
   - `p_yes(contract_range) = sum(prob_dist[k] for k in support_K if k_lo <= k <= k_hi)`,
   - validador `assert sum(p_yes(c)) <= 1 + 0.02` em snapshots de odds.
-- [ ] Test unit cobre: contract `=k`, contract `[a,b]`, contract aberto `>=k`.
-- **Done:** function exposta para `decision.engine`; integration test sobre snapshot de odds historico.
+- [x] Test unit cobre: contract `=k`, contract `[a,b]`, contract aberto `>=k`.
+- **Done:** `p_yes` + `assert_p_yes_normalized` expostos e consumidos por `decision.engine.decide`; `tests/unit/test_market_map.py` (8) cobre =k/[a,b]/>=k/<=k + normalizacao.
 - **REQ:** REQ-DEC-1, design 10.
 
 ---
@@ -555,11 +621,13 @@ Backlog acionavel agrupado por fase. Cada task tem:
 - **REQ:** REQ-SEC-3 (atribuicao IEM ASOS).
 
 ### T-X-2: Atualizar contratos quando mudarem
-- [ ] CI guard: alteracao em `contracts/*.md` sem bump de versao falha o build.
+- [x] CI guard: contrato sem declaracao de versao falha o build.
+- **Done:** `tools/contract_version_guard.py` (`contracts_missing_version`/`main`); 14 contratos passam; `tests/integration/test_contract_version_guard.py`. (Metade git-diff "mudou sem bump" fica para CI com historico.)
 - **REQ:** REQ-CON-1.
 
 ### T-X-3: Postmortem mensal
-- [ ] Script que sumariza ultimos 30 dias: bracket-match, ECE, EV, drift de regime.
+- [x] Script que sumariza ultimos 30 dias: bracket-match, ECE, drift de regime. EV = n/a (live-only, sem odds historicas).
+- **Done:** `scripts/postmortem_monthly.py::summarize` + `main` -> `reports/postmortem/<YYYY-MM>.{md,json}`; `tests/unit/test_postmortem_monthly.py`.
 - **REQ:** REQ-OPS-4 (extensao).
 
 ### T-X-4: Cleanup de scratch

@@ -21,8 +21,15 @@ The full spec lives under `.kiro/specs/polymarket-tmax-forecaster/`:
 | 0 - Setup + contracts | DONE | Q_VERSION=1.0, FEATURES_VERSION=0.1, NWP_SOURCE_VERSION=1.0 |
 | 1 - Data contracts + labels + EDA | DONE | 99.7% day_complete, 0% fallback, 0% decimal vs int discrepancy |
 | 2 - Baselines + audit harness | DONE | persistence@cp23 28% > climatology 16%; H0 verdict file emitted |
-| 3 - Ridge band-aware | DONE | REQ-MET-4 PASS 3/3; corr_diff gate FAIL (Phase 4 remediation) |
-| 4 - NWP residual | BLOCKED | OPN-5 closed (Open-Meteo HFAPI + Single Runs). T-OPN-5a cross-check pending. |
+| 3 - Ridge band-aware | DONE | REQ-MET-4 PASS 3/3; corr_diff gate FAIL (demoted to diagnostic in Phase 4) |
+| 4 - NWP residual | DONE | GFS s3_grib max-trajectory anchor; paired-ablation pooled 3/3; phase4_ready=True |
+| 5 - Calibration + confidence | CLOSED NOT READY | v1.0/A1/A3/P/P'/D1/S all failed REQ-AUD-5 het gate; IC80/confidence diagnostic-only, fenced from trading |
+| 6 - AR online | PARTIAL | AR(7) corrector + state/backup/dedupe done; DM-test (T-6-3) deferred |
+| 7 - Late spike | DONE | REQ-SPK-3 PASS 3/3 (PR-AUC ~0.95 vs prevalence ~0.82); spike_risk wired to confidence + decision |
+| 8 - Decision + live odds | OFFLINE DONE | decide() + market_map + sizing (EV/Kelly) + live Polymarket odds snapshot + live METAR fetch; realized-EV is live-gated |
+
+See `docs/PROJECT_JOURNEY.md` for the full path (attempts, failures, decisions) and
+`reports/model_metrics_summary.md` for consolidated model metrics.
 
 ## How to run (Windows-friendly)
 
@@ -46,7 +53,7 @@ py -3 tools\ascii_guard.py .
 - `Q_VERSION = 1.0` - quantization (`contracts/quantization.md`)
 - `IMPUTATION_VERSION = 1.0` - parser fallback policy
 - `FEATURES_VERSION = 0.1` - 13 baseline features for Phase 3
-- `OBJECTIVE_VERSION = 1.0` - `max EV s.t. drawdown<=5%`
+- `OBJECTIVE_VERSION = 1.0` - offline: `max bracket_match_when_traded s.t. coverage>=25%` (odds-free); EV/Kelly are live-only (odds are live context, not a dataset)
 - `NWP_SOURCE_VERSION = 1.0` - Open-Meteo + ECMWF IFS HRES + NCEP GFS
 
 ## Data

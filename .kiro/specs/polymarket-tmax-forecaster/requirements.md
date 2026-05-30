@@ -214,9 +214,22 @@ THEN ele SHALL usar uma funcao-objetivo escolhida e congelada antes de ver resul
 - `max(bracket_match_when_traded) sujeito a coverage >= X`,
 AND SHALL gravar a escolha em `contracts/objective.md`.
 
-### REQ-DEC-4: Snapshot de odds por CP
-WHEN o sistema executar shadow ou live trading (Fase 8),
-THEN ele SHALL salvar snapshot dos contracts/brackets do mercado a partir de `eventUrl`, junto com `cp_utc` e SHA256.
+> **Escopo (correcao 2026-05-30).** Tuning OFFLINE de thresholds usa a objetivo
+> odds-free `max(bracket_match_when_traded) s.t. coverage` (a unica computavel sem odds
+> historicas). As objetivos baseadas em `EV`/`Sharpe` so se aplicam AO VIVO, sobre forecasts
+> vivos com odds do momento - nunca como otimizacao offline sobre odds passadas.
+
+### REQ-DEC-4: Snapshot de odds ao vivo (somente no CP de forecast)
+WHEN o sistema emitir um forecast ao vivo (Fase 8),
+THEN ele SHALL, NAQUELE momento, capturar um snapshot dos contracts/brackets do mercado a partir de `eventUrl`, junto com `cp_utc` e SHA256,
+AND esse snapshot serve APENAS para dar contexto de mercado ao forecast vivo (EV + dimensionamento Kelly), NAO e um dataset historico.
+
+> **Escopo (correcao 2026-05-30).** Odds de Polymarket NUNCA foram um dataset historico.
+> Nao ha (e nao havera) backtest de EV sobre odds passadas: odds so existem no instante do
+> forecast vivo. A qualidade do MODELO e avaliada offline pela bateria de forecast-quality
+> (bracket-match, RPS, ECE, SS-vs-persistencia + gates anti-nowcaster), que nao usa odds. O
+> EV/Kelly e calculado AO VIVO combinando o `prob_dist` do modelo com o snapshot de odds do
+> momento.
 
 ---
 
@@ -259,6 +272,16 @@ THEN ela SHALL passar nos seguintes gates (CI95% bootstrap onde aplicavel):
 - `AUC contrafactual same-temp > 0.70`,
 - ACF(residuos) sem lag significativo ate 7,
 AND SHALL ganhar em >= 2/3 splits expanding-window.
+
+> **Emenda v1.1 (criterion_version 1.1, 2026-05-29 - code review).** O gate
+> `corr_diff` e REBAIXADO de gate (bloqueante) para **diagnostico reportado** (monitor):
+> e calculado em anomalias (climatologia causal train-only por split, mesma base para
+> `pred`/`truth`/`T_now`) e exibido no report, mas NAO entra em `aud2_passed`. Motivo:
+> diferenca de correlacoes marginais e fragil/ruidosa em cidade unica com climo causal
+> per-split, e pre-registrar threshold numa escala movel abre researcher-degrees-of-
+> freedom. Sua intencao e coberta por `I_T_obs` + `SS(1h/3h)` + `AUC counterfactual` +
+> curva de horizon-degradation (design 28.6). Gates sobreviventes e bateria completa:
+> design 21.3.
 
 ### REQ-AUD-3: Reverse-import guard
 WHEN qualquer arquivo em `core/` ou `nzwn/` importar de `audits/`,
@@ -343,8 +366,14 @@ AND nao SHALL ser importado por `core/` ou `nzwn/`.
 
 ### REQ-MET-1: Metrica primaria
 WHEN o sistema avaliar promocao para producao,
-THEN a metrica primaria SHALL ser `EV_realizado_no_test_split` em shadow trading (Fase 8),
-AND bracket-match, RPS, ECE e SS-vs-persistencia SHALL ser tratados como gates necessarios mas nao suficientes.
+THEN a metrica primaria SHALL ser a **qualidade de forecast no test split** - `bracket_match @ coverage` (REQ-MET-2) como metrica de topo, com RPS, ECE e SS-vs-persistencia como gates necessarios -, avaliada SEM odds,
+AND `EV` e dimensionamento (Kelly) SHALL ser computados APENAS ao vivo no CP de forecast (REQ-DEC-4), a partir do `prob_dist` do modelo e do snapshot de odds do momento; NAO existe backtest de EV sobre odds historicas.
+
+> **Correcao de escopo (2026-05-30).** Odds de Polymarket sao contexto de mercado ao vivo,
+> nao um dataset. Logo a promocao do modelo se decide por forecast-quality offline; o EV
+> realizado historico foi removido como metrica primaria (impossivel sem odds passadas). O EV
+> esperado ao vivo + fracao de Kelly sao um produto do forecast vivo, auditados por execucao
+> (REQ-MET-5), nao um criterio de treino offline.
 
 ### REQ-MET-2: Tabela coverage obrigatoria
 WHEN qualquer relatorio (`reports/`, postmortem, auditoria) for emitido,
@@ -360,20 +389,33 @@ WHEN a Fase 3 (Ridge band-aware) nao bater baselines em >= 2/3 splits,
 THEN o sistema SHALL parar e nao avancar para Fase 4 ate revisao de features/dados/labels.
 A mesma regra de "ganho em >= 2/3 splits sem regredir gates" SHALL valer para Fases 4-8.
 
-### REQ-MET-5: Shadow execution assumptions (congelado antes da Fase 8)
-WHEN o sistema computar `EV_realizado_no_test_split` (REQ-MET-1),
+> **Emenda v1.1 - aceite da Fase 4 (criterion_version 1.1, 2026-05-29).** Na Fase 4, o
+> "ganho" SHALL ser medido como **ablation pareado** que isola a contribuicao do NWP
+> (modelo obs+NWP vs obs-only, e `LGBM(obs)` vs `LGBM(obs+NWP)`), com IC95% lo > 0 em
+> `>= 2/3` splits - NAO como "NWP+residual bate max(persistence, climatology, ridge)".
+> NWP e provedor de features forward + incerteza (design 29.5), preservando a estrutura
+> residual REQ-MOD-3. Se o split-1 (2023) sair por ausencia de fonte causal (T-OPN-5a),
+> a regra vira explicitamente `>= 2/2` e SHALL ser propagada as fases seguintes. Falha
+> honesta -> Plano B (design 21.7): NWP rebaixado a feature/confianca, segue Fases 5/7/8;
+> sem afrouxar threshold pos-resultado.
+
+### REQ-MET-5: Live execution + sizing assumptions (congelado antes da Fase 8)
+WHEN o sistema computar EV esperado e dimensionamento (Kelly) AO VIVO no CP de forecast (REQ-MET-1, REQ-DEC-4),
 THEN ele SHALL usar uma **mecanica de execucao explicitamente congelada** em `contracts/execution.md` com no minimo:
 - `fee_bps`: taxa de transacao em basis points por trade (default proposto v1: `200 bps` = 2% / lado, ajustar conforme Polymarket real),
-- `slippage_model`: regra para preenchimento (default v1: `taker_at_quote` - paga `price_yes` em BUY YES e `price_no` em BUY NO; sem melhoria de preco),
-- `entry_price_rule`: `mid` ou `ask` ou `last` - ESCOLHA UNICA por versao, sem mistura (default v1: `ask`),
-- `fill_rule`: `assume_full_fill` no preco modelado, OR `partial_fill_with_min_size`, OR `no_fill_below_liquidity_threshold` (default v1: `assume_full_fill` com flag para auditar realismo),
-- `position_sizing`: unidade de posicao **fixa** (default v1: `1 unit notional` por trade; sem Kelly nem martingale na v1),
+- `slippage_model`: regra de preenchimento (default v1: `taker_at_quote` - paga `price_yes` em BUY YES e `price_no` em BUY NO; sem melhoria de preco),
+- `entry_price_rule`: `mid` ou `ask` ou `last` - ESCOLHA UNICA por versao (default v1: `ask`),
+- `position_sizing`: regra de dimensionamento. v1 default `1 unit notional` (sem Kelly); quando odds vivas estao disponiveis, `fractional_kelly` com `kelly_cap` documentado e permitido (REQ-DEC-3),
 - `max_concurrent_positions`: limite de exposicao (default v1: `1 trade ativo por mercado por CP`),
 - `time_in_force`: regra de expiracao (default v1: `cancel_unfilled_at_next_cp`),
-AND mudancas em qualquer parametro SHALL bumpar `EXECUTION_VERSION` e re-rodar todo o backtest shadow,
-AND EV reportado **sem** versao de execucao SHALL ser tratado como invalido (FAIL).
+AND mudancas em qualquer parametro SHALL bumpar `EXECUTION_VERSION`,
+AND qualquer EV/sizing reportado **sem** `EXECUTION_VERSION` SHALL ser tratado como invalido (FAIL).
 
-> **Justificativa:** sem mecanica congelada, EV vira numero arbitrario que cada implementacao reproduz diferente.
+> **Correcao de escopo (2026-05-30).** Esta mecanica define como o EV esperado e a fracao de
+> Kelly sao calculados NO INSTANTE do forecast vivo (modelo `prob_dist` + odds do momento). Como
+> nao ha odds historicas, NAO existe "re-rodar todo o backtest shadow"; o que se congela e a
+> formula de EV/sizing aplicada ao vivo, para que dois operadores cheguem ao mesmo numero dado o
+> mesmo snapshot.
 
 ### REQ-MET-6: Tuning protocol (anti-overfit em thresholds)
 WHEN o sistema otimizar thresholds (REQ-DEC-3, REQ-CONF-3),

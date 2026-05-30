@@ -103,6 +103,7 @@ def test_counterfactual_returns_nan_when_no_pairs():
     )
     # Each k_cp has only one row -> no class diversity -> filtered out
     assert n == 0
+    assert np.isnan(res), "Expected NaN when no valid pairs exist"
 
 
 def test_permutation_importance_zero_for_irrelevant_feature():

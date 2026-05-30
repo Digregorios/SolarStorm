@@ -15,6 +15,7 @@ from pathlib import Path
 
 ROOTS = ("core", "nzwn", "audits", "contracts", "tools", "tests")
 EXTENSIONS = {".py", ".md", ".yaml", ".yml", ".toml", ".ini", ".jsonl"}
+_MAX_READ_BYTES = 10 * 1024 * 1024  # 10 MiB guard against OOM
 
 
 def _is_ascii(text: bytes) -> bool:
@@ -43,6 +44,8 @@ def scan(repo_root: Path) -> list[tuple[Path, str]]:
                 continue
             if p.is_file() and p.suffix.lower() in EXTENSIONS:
                 try:
+                    if p.stat().st_size > _MAX_READ_BYTES:
+                        continue
                     raw = p.read_bytes()
                 except OSError:
                     continue
