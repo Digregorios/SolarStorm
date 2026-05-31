@@ -706,6 +706,35 @@ Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo a
 - **Done:** ganho walk-forward por CP >= 2/3 ou kill. `reports/...`.
 - **REQ:** REQ-MOD-3, REQ-MET-3.
 
+### T-9-5: native_integer_conformal_v0 (atacar o objeto de calibracao)
+- [x] Calibrar nativamente no inteiro (M1 |residuo| simetrico; M2 residuo signed), SEM decimal->Q.
+- **Done:** **KILL DECISIVO** (prereg `contracts/native_integer_conformal_v0_prereg.md`; pipeline 3
+  agentes + re-verificacao minha). Nativo-inteiro AINDA over-covers (het FAIL >=2/3) -> **refuta a
+  hipotese Q-apos-decimal**: a folga e a GRANULARIDADE inteira em si. M2 e estritamente mais estreito
+  que v1.0 3/3 (4.25/4.00/3.75 vs 4.27/4.28/3.77), mas nao bate het em 2/3. het gate reusado sem
+  afrouxar. `reports/calibration/native_integer_conformal_v0.md`.
+- **REQ:** REQ-MOD-4, REQ-AUD-5.
+
+### T-9-6: nwp_spread_sigma feasibility (proximo eixo fisico)
+- [x] Feasibility-first: existe nwp_spread causal no CP com qualidade para rastrear |erro_int|?
+- **Done:** **NOT FEASIBLE** (`scripts/evaluate_nwp_spread_sigma.py`). Arquivo local tem so 1 modelo
+  (NCEP GFS) -> spread/disagreement identicamente zero. Revisitar exige 2a fonte NWP causal (ECMWF).
+  `reports/calibration/nwp_spread_sigma_feasibility.md`.
+- **REQ:** REQ-MOD-4, REQ-DAT-5.
+
+### T-9-7: calibration_stopgap_decision (memo operacional)
+- [x] Formalizar o que pode ser usado enquanto o telhado segue aberto.
+- **Done:** `docs/decisions/calibration_stopgap_2026-05-31.md` - `ridge_conformal_minimal` como
+  DIAGNOSTICO-only (over-covers 0.86-0.91), nunca gate de trade (`gate_enabled_in_production: false`
+  permanece), banner obrigatorio, aposentado quando algo passar REQ-AUD-5 >=2/3.
+- **REQ:** REQ-CONF-1, REQ-CONF-3.
+
+> **Conclusao estrategica de calibracao (2026-05-31):** um IC80 INTEIRO calibrado provavelmente NAO e
+> recuperavel com o modelo de ponto + granularidade atuais. Tres ataques independentes (regime T-9-3,
+> objeto nativo-inteiro T-9-5, eixo NWP-spread T-9-6) falharam/inviaveis. Calibracao = SETTLED-WITH-
+> STOPGAP; unico lever restante = 2a fonte NWP causal (revisitar T-9-6). Nao repetir Mondrian por mais
+> eixos locais sem nova hipotese forte.
+
 ---
 
 ## Tasks transversais (qualquer momento)

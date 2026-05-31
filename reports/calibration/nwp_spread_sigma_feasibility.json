@@ -1,0 +1,175 @@
+{
+  "task": "T-9-6",
+  "title": "NWP-spread sigma feasibility",
+  "n_splits": 3,
+  "n_required": 2,
+  "coverage_threshold": 0.8,
+  "spearman_threshold": 0.15,
+  "spread_columns_evaluated": [
+    "nwp_t2m_at_cp_spread_c",
+    "nwp_disagreement_score",
+    "nwp_t2m_maxtraj_spread_c"
+  ],
+  "per_column": {
+    "nwp_t2m_at_cp_spread_c": {
+      "splits": [
+        {
+          "split": "2023-01-01_to_2023-12-31",
+          "cp_coverage": 1.0,
+          "spearman": null,
+          "quartile_means": [
+            0.736986301369863,
+            null,
+            null,
+            null
+          ],
+          "n_test": 365,
+          "n_with_spread": 365,
+          "constant": true
+        },
+        {
+          "split": "2024-01-01_to_2024-12-30",
+          "cp_coverage": 1.0,
+          "spearman": null,
+          "quartile_means": [
+            0.7068493150684931,
+            null,
+            null,
+            null
+          ],
+          "n_test": 365,
+          "n_with_spread": 365,
+          "constant": true
+        },
+        {
+          "split": "2025-01-01_to_2025-12-31",
+          "cp_coverage": 1.0,
+          "spearman": null,
+          "quartile_means": [
+            0.6575342465753424,
+            null,
+            null,
+            null
+          ],
+          "n_test": 365,
+          "n_with_spread": 365,
+          "constant": true
+        }
+      ],
+      "summary": {
+        "n_coverage_pass": 3,
+        "n_spearman_pass": 0,
+        "n_monotonic_pass": 0,
+        "feasible": false
+      }
+    },
+    "nwp_disagreement_score": {
+      "splits": [
+        {
+          "split": "2023-01-01_to_2023-12-31",
+          "cp_coverage": 1.0,
+          "spearman": null,
+          "quartile_means": [
+            0.736986301369863,
+            null,
+            null,
+            null
+          ],
+          "n_test": 365,
+          "n_with_spread": 365,
+          "constant": true
+        },
+        {
+          "split": "2024-01-01_to_2024-12-30",
+          "cp_coverage": 1.0,
+          "spearman": null,
+          "quartile_means": [
+            0.7068493150684931,
+            null,
+            null,
+            null
+          ],
+          "n_test": 365,
+          "n_with_spread": 365,
+          "constant": true
+        },
+        {
+          "split": "2025-01-01_to_2025-12-31",
+          "cp_coverage": 1.0,
+          "spearman": null,
+          "quartile_means": [
+            0.6575342465753424,
+            null,
+            null,
+            null
+          ],
+          "n_test": 365,
+          "n_with_spread": 365,
+          "constant": true
+        }
+      ],
+      "summary": {
+        "n_coverage_pass": 3,
+        "n_spearman_pass": 0,
+        "n_monotonic_pass": 0,
+        "feasible": false
+      }
+    },
+    "nwp_t2m_maxtraj_spread_c": {
+      "splits": [
+        {
+          "split": "2023-01-01_to_2023-12-31",
+          "cp_coverage": 1.0,
+          "spearman": null,
+          "quartile_means": [
+            0.736986301369863,
+            null,
+            null,
+            null
+          ],
+          "n_test": 365,
+          "n_with_spread": 365,
+          "constant": true
+        },
+        {
+          "split": "2024-01-01_to_2024-12-30",
+          "cp_coverage": 1.0,
+          "spearman": null,
+          "quartile_means": [
+            0.7068493150684931,
+            null,
+            null,
+            null
+          ],
+          "n_test": 365,
+          "n_with_spread": 365,
+          "constant": true
+        },
+        {
+          "split": "2025-01-01_to_2025-12-31",
+          "cp_coverage": 1.0,
+          "spearman": null,
+          "quartile_means": [
+            0.6575342465753424,
+            null,
+            null,
+            null
+          ],
+          "n_test": 365,
+          "n_with_spread": 365,
+          "constant": true
+        }
+      ],
+      "summary": {
+        "n_coverage_pass": 3,
+        "n_spearman_pass": 0,
+        "n_monotonic_pass": 0,
+        "feasible": false
+      }
+    }
+  },
+  "verdict": "NOT FEASIBLE",
+  "best_column": null,
+  "reason": "All spread columns are CONSTANT (zero variance) across all splits. Root cause: panel uses a single NWP model (NCEP GFS only); inter-model spread requires >=2 models but only 1 is available in the local snapshot archive. The NWP-spread axis cannot be evaluated without a multi-model ensemble.",
+  "recommendation": null
+}

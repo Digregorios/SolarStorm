@@ -4,6 +4,33 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase9:calibration-fronts] - 2026-05-31 - T-9-5 KILL (decisive), T-9-6 NOT FEASIBLE, T-9-7 stopgap adopted
+
+Three parallel calibration fronts (reviewer-directed; preregs/scopes mine, subagent impl, my
+independent re-verification). All predictor/calibration-only; execution stays frozen.
+
+- **T-9-5 native_integer_conformal_v0 (`contracts/native_integer_conformal_v0_prereg.md`,
+  `core/calibration/integer_conformal.py`): KILL - and DECISIVE.** Calibrated the integer object
+  directly (M1 symmetric |residual| quantile; M2 signed residual quantiles), NO decimal->`Q`. It STILL
+  over-covers / fails the REQ-AUD-5 het gate in >=2/3 splits. **This refutes the `Q`-after-decimal
+  hypothesis**: the structural slack is the integer GRANULARITY itself (Tmax integers are too coarse for
+  80% to land in-band without over-covering). Useful positive: M2 (signed) is strictly TIGHTER than the
+  v1.0 decimal+`Q` baseline in 3/3 splits (width 4.25/4.00/3.75 vs 4.27/4.28/3.77) and at 2025 reaches
+  cov 0.876 with het PASS - but cannot hit the het gate in 2/3. het gate reused UNCHANGED [0.70,0.90].
+- **T-9-6 nwp_spread_sigma feasibility (`scripts/evaluate_nwp_spread_sigma.py`): NOT FEASIBLE.** The
+  local NWP archive holds only ONE causal model (NCEP GFS), so spread/disagreement columns are
+  identically zero (zero variance) - no usable difficulty axis. Revisiting requires ingesting a second
+  causal NWP source (e.g. ECMWF IFS). Read-only feasibility; no calibrator built.
+- **T-9-7 stopgap (`docs/decisions/calibration_stopgap_2026-05-31.md`): adopted.** Formalizes
+  `ridge_conformal_minimal` (per-CP IC80, over-covers ~0.86-0.91) as DIAGNOSTIC-ONLY: not passed
+  calibration, never a trade gate (`gate_enabled_in_production: false` stays), shown only with a
+  "diagnostic IC, over-covers, not for sizing" banner; retired when a method passes REQ-AUD-5 >=2/3.
+
+**Strategic conclusion (honest):** a calibrated 80% INTEGER IC is likely NOT recoverable with the
+current point model + integer granularity. Three independent attacks (regime axis T-9-3, native-integer
+object T-9-5, NWP-spread axis T-9-6) all failed or were infeasible. Calibration is now
+SETTLED-WITH-STOPGAP; the only remaining lever is a 2nd causal NWP model (T-9-6 revisit). Suite 367 green.
+
 ## [phase9:T-9-3] - 2026-05-31 - conditional_calibration_v0 KILL (honest; the "roof" stays open)
 
 The "roof": tried to fix the structural late-CP IC80 over-coverage (Phase 5's binding REQ-AUD-5

@@ -222,6 +222,12 @@ high-risk + Ridge center + conformal) and blending / conditional conformal can b
   over-cover (calm 0.945, non_calm 0.904), the slack is GLOBAL (Q-after-decimal + finite-sample rank),
   not regime-isolable. Confirms the Phase 5 closure. The calibration "roof" stays OPEN; next candidate
   is NWP-spread sigma or accepting ridge_conformal_minimal (per-CP IC80 0.86-0.91) as the stopgap.
+- **Phase 9 calibration SETTLED-WITH-STOPGAP (2026-05-31): T-9-5 native_integer_conformal KILL
+  (DECISIVE - native-integer still over-covers, refuting the Q-after-decimal hypothesis; the slack is
+  integer granularity itself), T-9-6 NWP-spread NOT FEASIBLE (only 1 local NWP model -> zero spread),
+  T-9-7 stopgap adopted (ridge_conformal_minimal diagnostic-only). A calibrated 80% integer IC is
+  likely not recoverable with the current point model + granularity; the only remaining lever is a 2nd
+  causal NWP model (ECMWF). Calibration is no longer the active blocker - the diagnostic stopgap holds.**
 - CLOSED not-ready: Phase 5 interval calibration (diagnostic-only, fenced from trading).
 - Ensemble-evolution track: ridge_conformal_minimal IC defensible; precursors validated (Etapa 2
   GO); risk_model v0/v0.1 GO=False (diagnostic); calm_day_filter_v0 GO=True (protective low side);

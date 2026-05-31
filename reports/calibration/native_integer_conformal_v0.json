@@ -1,0 +1,92 @@
+{
+  "task": "T-9-5",
+  "prereg": "native_integer_conformal_v0",
+  "verdict": "KILL",
+  "promoted_method": null,
+  "diagnosis": "het gate FAIL: over-coverage persists even native-integer; the slack is integer granularity itself, not Q-after; global coverage outside [0.78, 0.86]; Recommend T-9-7 diagnostic stopgap.",
+  "gate_M1": {
+    "cov_in_band": 0,
+    "het_pass": 0,
+    "width_lower": 0,
+    "gate_cov": false,
+    "gate_het": false,
+    "gate_width": false,
+    "gate_deterministic_causal": true,
+    "all_pass": false
+  },
+  "gate_M2": {
+    "cov_in_band": 1,
+    "het_pass": 1,
+    "width_lower": 3,
+    "gate_cov": false,
+    "gate_het": false,
+    "gate_width": true,
+    "gate_deterministic_causal": true,
+    "all_pass": false
+  },
+  "splits": [
+    {
+      "split": "2023-01-01_to_2023-12-31",
+      "n_train": 3880,
+      "n_calib": 480,
+      "n_test": 1460,
+      "v1_baseline": {
+        "global_coverage": 0.9205,
+        "mean_width": 4.27,
+        "het_gate_pass": false
+      },
+      "M1_integer_abs": {
+        "global_coverage": 0.9582,
+        "mean_width": 5.0,
+        "het_gate_pass": false
+      },
+      "M2_integer_signed": {
+        "global_coverage": 0.9144,
+        "mean_width": 4.25,
+        "het_gate_pass": false
+      }
+    },
+    {
+      "split": "2024-01-01_to_2024-12-30",
+      "n_train": 5340,
+      "n_calib": 480,
+      "n_test": 1460,
+      "v1_baseline": {
+        "global_coverage": 0.9055,
+        "mean_width": 4.28,
+        "het_gate_pass": false
+      },
+      "M1_integer_abs": {
+        "global_coverage": 0.9089,
+        "mean_width": 4.5,
+        "het_gate_pass": false
+      },
+      "M2_integer_signed": {
+        "global_coverage": 0.8568,
+        "mean_width": 4.0,
+        "het_gate_pass": false
+      }
+    },
+    {
+      "split": "2025-01-01_to_2025-12-31",
+      "n_train": 6804,
+      "n_calib": 480,
+      "n_test": 1460,
+      "v1_baseline": {
+        "global_coverage": 0.8925,
+        "mean_width": 3.77,
+        "het_gate_pass": false
+      },
+      "M1_integer_abs": {
+        "global_coverage": 0.8836,
+        "mean_width": 4.0,
+        "het_gate_pass": false
+      },
+      "M2_integer_signed": {
+        "global_coverage": 0.876,
+        "mean_width": 3.75,
+        "het_gate_pass": true
+      }
+    }
+  ]
+}
