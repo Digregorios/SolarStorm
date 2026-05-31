@@ -4,6 +4,38 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase10:post-calibration] - 2026-05-31 - 4 fronts: ECMWF feasibility, NWP early-lead, error map, IC fence
+
+Calibration is settled-with-stopgap and CLOSED as an active trail. Four parallel post-calibration
+fronts (scopes mine, subagent impl, my independent re-verification; predictor/analysis/governance only,
+execution frozen).
+
+- **T-10-1 ecmwf_causal_ingest_feasibility (`reports/nwp/ecmwf_causal_ingest_feasibility.md`):
+  CONDITIONAL GO.** The code ALREADY supports ECMWF (`select_nwp_v1` is model-parameterized); what is
+  missing is DATA, not code. Causal ECMWF single-runs are reachable for 2024-03..2025-12 (~2680 calls,
+  ~22 monthly partitions, no GRIB/eccodes). Condition: accept the split-1 asymmetry (ECMWF only for
+  dates >= 2024-03) + run the T-OPN-5a cross-check before promoting. Next action recorded; not executed.
+- **T-10-2 nwp_early_lead_point_gain (`scripts/evaluate_nwp_early_lead.py`,
+  `reports/nwp_early_lead_point_gain.md`): GO.** Consolidated the existing phase4 per-CP NWP gain in
+  degC. NWP+residual improves MAE AND RPS at 20/21/22Z in 3/3 splits (mean dMAE -0.197/-0.156/-0.105,
+  dRPS improves), CP23 non-regression PASS, and the degC view RECONCILES with the phase4 bracket-match
+  curve (not bracket-edge luck). NWP is a real point-improver at early leads.
+- **T-10-3 forecast_error_taxonomy (`scripts/evaluate_error_taxonomy.py`,
+  `reports/model_error_taxonomy.md`): delivered (the failure map).** Top remaining ex-ante error pockets
+  by share of total |error|: regime_non_calm (73%, MAE 0.732, n=765), delta06_high (47%), delta06_mid
+  (38%), southerly (33%); highest per-row error on s_to_n transition days (MAE 0.949) and January (0.989);
+  Tmax-already-reached shows a strong +0.83 over-prediction bias (post-hoc). **NOTE: I caught + fixed a
+  definitional drift the subagent introduced** - it had used non_calm = risk>=P70 (top 30%); corrected to
+  the canonical calm_day_filter c30 = P30 (calm = bottom 30%, non_calm = top 70%), consistent with
+  T-9-1/T-9-3. The fix moved non_calm to the #1 pocket (as expected, since it is ~70% of days).
+- **T-10-4 diagnostic_ic_display_contract (`docs/decisions/diagnostic_ic_display_contract.md`):
+  delivered.** Doc-only governance fence for the diagnostic IC (mandatory banner, per-CP coverage,
+  never a trade gate, retired when REQ-AUD-5 passes >=2/3). Parent: the T-9-7 stopgap memo.
+
+Direction: the failure map says the biggest ex-ante actionable error is concentrated in the non-calm /
+high-delta_06 regime - exactly where T-9-1's analog arm operates and where a 2nd NWP source (T-10-1)
+would help most. Suite 367 green; all guards pass.
+
 ## [phase9:calibration-fronts] - 2026-05-31 - T-9-5 KILL (decisive), T-9-6 NOT FEASIBLE, T-9-7 stopgap adopted
 
 Three parallel calibration fronts (reviewer-directed; preregs/scopes mine, subagent impl, my

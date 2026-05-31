@@ -1,0 +1,289 @@
+{
+  "cp": "23:00",
+  "model": "ridge_band_point_forecast",
+  "n_total": 1096,
+  "note": "EX-ANTE strata use predicted risk (not truth). DIAG_ strata are POST-HOC (truth-derived) and clearly labelled.",
+  "overall_bias": 0.025,
+  "overall_bracket_miss": 0.5593,
+  "overall_mae": 0.7,
+  "seed": 42,
+  "strata": {
+    "DIAG_material_late_warming": {
+      "bracket_miss_rate": 0.6235,
+      "error_share": 0.4628,
+      "label": "POST-HOC (truth-derived)",
+      "mean_abs_error": 0.868,
+      "n": 409,
+      "signed_bias": -0.79
+    },
+    "DIAG_no_late_warming": {
+      "bracket_miss_rate": 0.5211,
+      "error_share": 0.5372,
+      "label": "POST-HOC (truth-derived)",
+      "mean_abs_error": 0.6,
+      "n": 687,
+      "signed_bias": 0.509
+    },
+    "DIAG_tmax_already_reached": {
+      "bracket_miss_rate": 0.7419,
+      "error_share": 0.3246,
+      "label": "POST-HOC (truth-derived)",
+      "mean_abs_error": 0.892,
+      "n": 279,
+      "signed_bias": 0.828
+    },
+    "DIAG_tmax_not_yet_reached": {
+      "bracket_miss_rate": 0.4969,
+      "error_share": 0.6754,
+      "label": "POST-HOC (truth-derived)",
+      "mean_abs_error": 0.634,
+      "n": 817,
+      "signed_bias": -0.25
+    },
+    "delta06_bin_high": {
+      "bin_range": "[3.0, 999.0)",
+      "bracket_miss_rate": 0.5481,
+      "error_share": 0.4707,
+      "mean_abs_error": 0.709,
+      "n": 509,
+      "signed_bias": -0.045
+    },
+    "delta06_bin_low": {
+      "bin_range": "[-999.0, 1.0)",
+      "bracket_miss_rate": 0.5434,
+      "error_share": 0.1447,
+      "mean_abs_error": 0.642,
+      "n": 173,
+      "signed_bias": 0.098
+    },
+    "delta06_bin_mid": {
+      "bin_range": "[1.0, 3.0)",
+      "bracket_miss_rate": 0.5797,
+      "error_share": 0.3846,
+      "mean_abs_error": 0.713,
+      "n": 414,
+      "signed_bias": 0.08
+    },
+    "month_01": {
+      "bracket_miss_rate": 0.6667,
+      "error_share": 0.1199,
+      "mean_abs_error": 0.989,
+      "n": 93,
+      "signed_bias": -0.366
+    },
+    "month_02": {
+      "bracket_miss_rate": 0.5412,
+      "error_share": 0.0821,
+      "mean_abs_error": 0.741,
+      "n": 85,
+      "signed_bias": -0.012
+    },
+    "month_03": {
+      "bracket_miss_rate": 0.5484,
+      "error_share": 0.086,
+      "mean_abs_error": 0.71,
+      "n": 93,
+      "signed_bias": -0.022
+    },
+    "month_04": {
+      "bracket_miss_rate": 0.5333,
+      "error_share": 0.0704,
+      "mean_abs_error": 0.6,
+      "n": 90,
+      "signed_bias": 0.244
+    },
+    "month_05": {
+      "bracket_miss_rate": 0.6022,
+      "error_share": 0.0874,
+      "mean_abs_error": 0.72,
+      "n": 93,
+      "signed_bias": 0.333
+    },
+    "month_06": {
+      "bracket_miss_rate": 0.5222,
+      "error_share": 0.0808,
+      "mean_abs_error": 0.689,
+      "n": 90,
+      "signed_bias": 0.0
+    },
+    "month_07": {
+      "bracket_miss_rate": 0.4516,
+      "error_share": 0.0678,
+      "mean_abs_error": 0.559,
+      "n": 93,
+      "signed_bias": -0.065
+    },
+    "month_08": {
+      "bracket_miss_rate": 0.5269,
+      "error_share": 0.073,
+      "mean_abs_error": 0.602,
+      "n": 93,
+      "signed_bias": 0.0
+    },
+    "month_09": {
+      "bracket_miss_rate": 0.5556,
+      "error_share": 0.0769,
+      "mean_abs_error": 0.656,
+      "n": 90,
+      "signed_bias": -0.189
+    },
+    "month_10": {
+      "bracket_miss_rate": 0.6022,
+      "error_share": 0.086,
+      "mean_abs_error": 0.71,
+      "n": 93,
+      "signed_bias": 0.022
+    },
+    "month_11": {
+      "bracket_miss_rate": 0.5778,
+      "error_share": 0.0834,
+      "mean_abs_error": 0.711,
+      "n": 90,
+      "signed_bias": 0.111
+    },
+    "month_12": {
+      "bracket_miss_rate": 0.5806,
+      "error_share": 0.086,
+      "mean_abs_error": 0.71,
+      "n": 93,
+      "signed_bias": 0.237
+    },
+    "rain_persist_no": {
+      "bracket_miss_rate": 0.56,
+      "error_share": 0.8918,
+      "mean_abs_error": 0.708,
+      "n": 966,
+      "signed_bias": 0.004
+    },
+    "rain_persist_yes": {
+      "bracket_miss_rate": 0.5538,
+      "error_share": 0.1082,
+      "mean_abs_error": 0.638,
+      "n": 130,
+      "signed_bias": 0.177
+    },
+    "regime_exante_calm": {
+      "bracket_miss_rate": 0.5347,
+      "error_share": 0.2699,
+      "mean_abs_error": 0.625,
+      "n": 331,
+      "signed_bias": 0.082
+    },
+    "regime_exante_non_calm": {
+      "bracket_miss_rate": 0.5699,
+      "error_share": 0.7301,
+      "mean_abs_error": 0.732,
+      "n": 765,
+      "signed_bias": 0.0
+    },
+    "s_to_n_no": {
+      "bracket_miss_rate": 0.5526,
+      "error_share": 0.927,
+      "mean_abs_error": 0.686,
+      "n": 1037,
+      "signed_bias": 0.018
+    },
+    "s_to_n_yes": {
+      "bracket_miss_rate": 0.678,
+      "error_share": 0.073,
+      "mean_abs_error": 0.949,
+      "n": 59,
+      "signed_bias": 0.136
+    },
+    "season_DJF": {
+      "bracket_miss_rate": 0.5978,
+      "error_share": 0.2881,
+      "mean_abs_error": 0.815,
+      "n": 271,
+      "signed_bias": -0.048
+    },
+    "season_JJA": {
+      "bracket_miss_rate": 0.5,
+      "error_share": 0.2216,
+      "mean_abs_error": 0.616,
+      "n": 276,
+      "signed_bias": -0.022
+    },
+    "season_MAM": {
+      "bracket_miss_rate": 0.5616,
+      "error_share": 0.2438,
+      "mean_abs_error": 0.678,
+      "n": 276,
+      "signed_bias": 0.185
+    },
+    "season_SON": {
+      "bracket_miss_rate": 0.5788,
+      "error_share": 0.2464,
+      "mean_abs_error": 0.692,
+      "n": 273,
+      "signed_bias": -0.018
+    },
+    "wind_northerly": {
+      "bracket_miss_rate": 0.5589,
+      "error_share": 0.6728,
+      "mean_abs_error": 0.698,
+      "n": 739,
+      "signed_bias": 0.0
+    },
+    "wind_southerly": {
+      "bracket_miss_rate": 0.5602,
+      "error_share": 0.3272,
+      "mean_abs_error": 0.703,
+      "n": 357,
+      "signed_bias": 0.076
+    }
+  },
+  "top5_error_pockets": [
+    {
+      "actionable": "EX-ANTE actionable",
+      "bracket_miss_rate": 0.5699,
+      "error_share": 0.7301,
+      "mean_abs_error": 0.732,
+      "n": 765,
+      "signed_bias": 0.0,
+      "stratum": "regime_exante_non_calm"
+    },
+    {
+      "actionable": "EX-ANTE actionable",
+      "bracket_miss_rate": 0.5481,
+      "error_share": 0.4707,
+      "mean_abs_error": 0.709,
+      "n": 509,
+      "signed_bias": -0.045,
+      "stratum": "delta06_bin_high"
+    },
+    {
+      "actionable": "POST-HOC only",
+      "bracket_miss_rate": 0.6235,
+      "error_share": 0.4628,
+      "mean_abs_error": 0.868,
+      "n": 409,
+      "signed_bias": -0.79,
+      "stratum": "DIAG_material_late_warming"
+    },
+    {
+      "actionable": "EX-ANTE actionable",
+      "bracket_miss_rate": 0.5797,
+      "error_share": 0.3846,
+      "mean_abs_error": 0.713,
+      "n": 414,
+      "signed_bias": 0.08,
+      "stratum": "delta06_bin_mid"
+    },
+    {
+      "actionable": "EX-ANTE actionable",
+      "bracket_miss_rate": 0.5602,
+      "error_share": 0.3272,
+      "mean_abs_error": 0.703,
+      "n": 357,
+      "signed_bias": 0.076,
+      "stratum": "wind_southerly"
+    }
+  ],
+  "total_abs_error_degC": 767,
+  "walk_forward_splits": [
+    "2023-01-01",
+    "2024-01-01",
+    "2025-01-01"
+  ]
+}

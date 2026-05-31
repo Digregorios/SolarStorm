@@ -737,6 +737,43 @@ Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo a
 
 ---
 
+## Fase 10 - Pos-calibracao (foco preditor; execucao congelada)
+
+> Calibracao settled-with-stopgap. Estas frentes melhoram o preditor / mapeiam o erro / fecham
+> governanca. Tudo predictor/analysis/doc-only; zero execucao/Polymarket.
+
+### T-10-1: ecmwf_causal_ingest_feasibility (2a fonte NWP)
+- [x] Memo de viabilidade (sem ingest real). **CONDITIONAL GO**: codigo JA suporta ECMWF
+  (`select_nwp_v1` parametrizado por modelo); o que falta e DADO. Single-runs causais alcancaveis
+  2024-03..2025-12 (~2680 calls, ~22 particoes, sem GRIB). Condicao: aceitar assimetria do split-1 +
+  cross-check T-OPN-5a antes de promover. `reports/nwp/ecmwf_causal_ingest_feasibility.md`.
+- **REQ:** REQ-DAT-5, OPN-5a.
+
+### T-10-2: nwp_early_lead_point_gain (ponto em CP20-22)
+- [x] Consolidar em degC o ganho NWP por CP (ja existia em bracket-match no phase4). **GO**: dMAE
+  -0.20/-0.16/-0.11 em 20/21/22Z, dRPS melhora, 3/3 splits; CP23 sem regressao; degC reconcilia com
+  o bracket-match do phase4 (ganho real, nao sorte de borda). `reports/nwp_early_lead_point_gain.md`.
+- **REQ:** REQ-MOD-3, REQ-MET-3.
+
+### T-10-3: forecast_error_taxonomy (mapa de falhas)
+- [x] Ranquear os bolsoes de erro remanescentes. **Entregue**: maior pocket ex-ante = regime non_calm
+  (73% do erro total, n=765, MAE 0.732), depois delta06_high (47%), delta06_mid (38%), southerly (33%);
+  maior erro por-linha em dias s_to_n (0.949) e janeiro (0.989); tmax-ja-atingido tem vies +0.83
+  (over-prediction). Corrigi um drift do subagente (non_calm estava como P70; agora c30=P30 canonico).
+  `reports/model_error_taxonomy.md`.
+- **REQ:** REQ-MET-3 (diagnostico).
+
+### T-10-4: diagnostic_ic_display_contract (cerca de governanca)
+- [x] Doc-only: regras de exibicao do IC diagnostico (banner, cobertura por-CP, nunca gate de trade,
+  aposentado quando REQ-AUD-5 passar >=2/3). `docs/decisions/diagnostic_ic_display_contract.md`.
+- **REQ:** REQ-CONF-1, REQ-CONF-3.
+
+> **Direcao baseada em evidencia (mapa de erro):** o maior erro ex-ante acionavel esta no regime
+> non_calm / alto delta_06_to_cp - exatamente onde o analog arm (T-9-1) atua e onde uma 2a fonte NWP
+> (T-10-1) ajudaria mais.
+
+---
+
 ## Tasks transversais (qualquer momento)
 
 ### T-X-1: Documentacao no README

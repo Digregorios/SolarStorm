@@ -228,6 +228,13 @@ high-risk + Ridge center + conformal) and blending / conditional conformal can b
   T-9-7 stopgap adopted (ridge_conformal_minimal diagnostic-only). A calibrated 80% integer IC is
   likely not recoverable with the current point model + granularity; the only remaining lever is a 2nd
   causal NWP model (ECMWF). Calibration is no longer the active blocker - the diagnostic stopgap holds.**
+- **Phase 10 (post-calibration, 2026-05-31): T-10-1 ECMWF 2nd-NWP-source feasibility CONDITIONAL GO
+  (code ready, missing is DATA; causal single-runs reachable 2024-03..2025-12, no GRIB); T-10-2 NWP
+  early-lead point gain GO in degC (dMAE -0.20/-0.16/-0.11 at 20/21/22Z, 3/3 splits, reconciles
+  bracket-match); T-10-3 error taxonomy delivered - the biggest ex-ante error pocket is the non-calm
+  regime (73% of total error), then high-delta_06 days; T-10-4 diagnostic-IC display fence (doc).
+  Next predictor lever, evidence-driven: the non-calm / high-delta_06 regime (where the analog arm + a
+  2nd NWP source would help most).**
 - CLOSED not-ready: Phase 5 interval calibration (diagnostic-only, fenced from trading).
 - Ensemble-evolution track: ridge_conformal_minimal IC defensible; precursors validated (Etapa 2
   GO); risk_model v0/v0.1 GO=False (diagnostic); calm_day_filter_v0 GO=True (protective low side);
