@@ -39,6 +39,14 @@ engineering recipes (DEB blend, hourly/phase corrector, TAF-as-suppression). Ste
   obs-rate 0.22/0.13/0.21 vs base 0.38/0.38/0.36 (<= 0.65x), precision(no late-warming|calm)
   0.78/0.88/0.79 (>= 0.75), Brier < base 3/3. Diagnostic flag only (no IC/center change yet);
   high-risk detection deferred to Etapa 3 (analogs). `reports/spike/calm_day_filter_v0.md`.
+- **Etapa 3 analog_retrieval_audit** (prereg `contracts/analog_retrieval_audit_prereg.md`
+  prereg_version 1.0): causal k-NN (K=50, train-only pool date<test, no target/k_eod in distance).
+  Predictive gates PASS 3/3 incl the FOCUS g4 non-calm high-risk lift 1.42/1.36/1.34 (>=1.25) and
+  g3 top-decile lift ~2.1 (vs 1.38 from the logistic); PR-AUC 0.64-0.67 vs base ~0.37. Formal
+  GO=False only on g5 (analog_quality bucketing did not separate Brier - a HOW-to-score-adherence
+  metric, not predictive capability). **Analogs demonstrably capture the high-risk side the
+  logistic could not** -> leading high-risk arm candidate. No gate loosened.
+  `reports/analog/analog_retrieval_audit.md`.
 
 ## [live-metar] - 2026-05-30 - Live observation fetch (pipeline gap fixed)
 

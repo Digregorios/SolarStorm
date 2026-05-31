@@ -173,10 +173,15 @@ What was tried and what it showed (each gated, honest):
    **GO=True**: calm days (predicted risk < train P30) have ~0.5x base late-warming rate,
    precision(no late-warming|calm) 0.78-0.88, Brier < base 3/3. A protective filter that guards
    the ~63% calm days where Ridge already does well. Diagnostic flag only (no IC/center change).
+7. **Etapa 3 analog_retrieval_audit** - causal k-NN (train-only pool, anti-leakage). The high-risk
+   side the logistic missed IS captured by analogs: non-calm high-risk lift 1.42/1.36/1.34, top-
+   decile lift ~2.1, PR-AUC 0.64-0.67 vs base ~0.37 - predictive gates PASS 3/3. Formal GO=False
+   only on g5 (analog_quality bucketing, a HOW-to-score metric, not capability). Analogs are the
+   leading HIGH-risk arm candidate.
 
-Open decision (awaiting direction): wire the calm flag into a gated downstream use (narrower IC /
-reduced spike weight on calm days), and/or proceed to Etapa 3 (analog_retrieval_audit) for the
-high-risk side the logistic could not capture.
+Open decision (awaiting direction): refine analog_quality (v0.1 audit) and/or build the analog
+high-risk arm; then the ensemble has both sides (calm filter + analog high-risk) and can move to
+blending / conditional conformal. Or compare against NWP/Open-Meteo (Etapa 4) for the high-risk side.
 
 ## Cross-cutting discipline (held throughout)
 

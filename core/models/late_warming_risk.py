@@ -118,7 +118,7 @@ def build_features(obs: pl.DataFrame, labels: pl.DataFrame, tz: str, cp_hhmm: st
         rain_path = _win_rain(0, 6) and _win_rain(6, 9) and _win_rain(9, 24)
 
         rows.append({
-            "date_local": d, "month": d.month,
+            "date_local": d, "month": d.month, "k_cp": int(kcp),
             "delta_06_to_cp": delta_06_cp,
             "southerly_at_cp": int(q_cp == "S"),
             "rain_persistence_path": int(rain_path),
