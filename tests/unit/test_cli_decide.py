@@ -151,3 +151,33 @@ def test_decision_row_unavailable(tmp_path, monkeypatch):
     assert row["odds_status"] == "unavailable"
     assert row["brackets"] == []
     assert row["odds_sha256"] is None
+
+
+def _resolved_snapshot(city, d, cp_utc, **kwargs):
+    """A RESOLVED market: one winning bracket at price 1.0, the rest at boundary ~0."""
+    return OddsSnapshot(
+        slug="highest-temperature-in-wellington-on-july-15-2025",
+        event_url="https://polymarket.com/event/highest-temperature-in-wellington-on-july-15-2025",
+        cp_utc=cp_utc,
+        ts_utc=datetime(2025, 7, 15, 3, 0, tzinfo=timezone.utc),
+        sha256="abc123" * 8 + "abcdef12",
+        brackets=(
+            OddsBracket(contract=ContractRange(14, 14), label="14",
+                        price_yes=1.0, price_no=0.0, best_ask=None),       # winner (boundary)
+            OddsBracket(contract=ContractRange(15, None), label="15 or higher",
+                        price_yes=0.0005, price_no=0.9995, best_ask=None),  # loser (boundary)
+        ),
+    )
+
+
+def test_resolved_market_no_crash_and_coherent(tmp_path, monkeypatch):
+    """Boundary prices (resolved market) must NOT crash, NOT report 'unavailable', and the
+    sizing must follow the engine: NO_TRADE_RESOLVED brackets carry no EV/Kelly/stake."""
+    result, out_dir = _fake_run(tmp_path, monkeypatch, _resolved_snapshot)
+    assert result.exit_code == 0, result.output
+    row = json.loads(list(out_dir.glob("*.json"))[0].read_text(encoding="ascii"))
+    assert row["odds_status"] == "ok"  # the fetch succeeded; the market is just resolved
+    assert len(row["brackets"]) == 2
+    for b in row["brackets"]:
+        assert b["decide_state"] == "NO_TRADE_RESOLVED"
+        assert b["ev"] is None and b["kelly_fraction"] is None and b["stake"] == 0.0

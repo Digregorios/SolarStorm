@@ -113,6 +113,9 @@ def size_book(
     cfg = contract or default_execution_contract()
     book: list[tuple[str, SizingResult]] = []
     for b in brackets:
+        # Degenerate price (resolved market, or no live quote): cannot size a position.
+        if not (0.0 < b.price_yes < 1.0 and 0.0 < b.price_no < 1.0):
+            continue
         py = _p_yes(prob_dist, b.contract)
         yes = size_side("BUY_YES", py, b.price_yes, contract=cfg)
         no = size_side("BUY_NO", py, b.price_no, contract=cfg)

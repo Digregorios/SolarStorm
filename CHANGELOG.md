@@ -4,6 +4,26 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [fix:decision-line] - 2026-05-31 - live decide robustness + sizing/engine coherence
+
+Surfaced while producing a real `decision_line.json` for reviewer audit (a resolved Wellington
+market, 2026-05-31). Three real defects fixed (no gate/contract loosened):
+
+- **Boundary-price crash**: `size_book`/`expected_value` correctly reject price not in (0,1), but
+  the live `decide` CLI fed them resolved-market prices (winner at 1.0, losers at ~0.0005) and the
+  `ValueError` was caught by a blind `except Exception` and mis-reported as `odds_status=unavailable`.
+  Now `size_book` and the CLI SKIP degenerate prices (resolved / no live quote) -> `NO_TRADE_RESOLVED`.
+- **Blind except**: narrowed to `(ConnectionError, TimeoutError, ValueError, KeyError, OSError)` with a
+  `odds_unavailable:<Type>` note, so genuine bugs no longer masquerade as missing odds.
+- **Sizing<->engine incoherence**: `size_book` chose the best-EV side INDEPENDENTLY of `engine.decide`,
+  so a bracket could read `NO_TRADE_RESOLVED` yet carry `ev>0, stake=1.0`. Sizing now FOLLOWS the
+  engine state (the pre-registered state machine is the single source of truth): EV/Kelly/stake are
+  computed only for the side the engine chose (OPPORTUNITY_ASSYMETRIC->BUY_YES, BUY_NO->BUY_NO), else 0.
+
+Verified on the live 2026-06-02 market: coherent line (BUY_NO on overpriced 17/18/19, NO_TRADE_RESOLVED
+on boundary brackets, prob_dist sums to 1). Regression test `test_resolved_market_no_crash_and_coherent`.
+Suite 361 green.
+
 ## [ensemble-evolution] - 2026-05-31 - incremental track (NOT a from-scratch v1)
 
 Decision: evolve the current forecaster into a layered probabilistic ensemble incrementally

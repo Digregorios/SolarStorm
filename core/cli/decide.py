@@ -16,7 +16,7 @@ from core.contracts.quantization import Q
 from core.contracts.station import load_station_config
 from core.decision.engine import ForecastRow, Thresholds, decide
 from core.decision.market_map import p_yes
-from core.decision.sizing import size_book
+from core.decision.sizing import size_side
 from core.features.builder import build_cp_features, build_panel
 from core.ingest.iem_csv import load_observations
 from core.ingest.odds import event_url, snapshot_live
@@ -88,30 +88,44 @@ def run(
         snap = snapshot_live(city, d, cp_utc)
         odds_sha256 = snap.sha256
         exec_contract = default_execution_contract()
-        book_map = {label: sr for label, sr in size_book(prob_dist, snap.brackets, contract=exec_contract)}
         thresholds = Thresholds()
         forecast_row = ForecastRow(
             prob_dist=prob_dist,
             confidence_score=confidence_score,
             spike_risk=spike_risk,
         )
+        # Map an engine trade state to the side to size (None = no position).
+        trade_side = {"OPPORTUNITY_ASSYMETRIC": "BUY_YES", "BUY_NO": "BUY_NO"}
         for b in snap.brackets:
             py = p_yes(prob_dist, b.contract)
-            dec = decide(forecast_row, b.contract, b.price_yes, b.price_no, thresholds)
-            sr = book_map.get(b.label)
-            bracket_rows.append({
+            row = {
                 "label": b.label,
                 "contract": {"k_lo": b.contract.k_lo, "k_hi": b.contract.k_hi},
                 "p_yes": round(py, 6),
                 "price_yes": b.price_yes,
                 "price_no": b.price_no,
-                "decide_state": dec.state,
-                "ev": round(sr.expected_value, 6) if sr else None,
-                "kelly_fraction": round(sr.kelly_fraction, 6) if sr else None,
-                "stake": round(sr.stake, 6) if sr else 0.0,
-            })
-    except Exception:
+            }
+            # Degenerate price (resolved market / no live quote): never size a boundary price.
+            if not (0.0 < b.price_yes < 1.0 and 0.0 < b.price_no < 1.0):
+                row.update(decide_state="NO_TRADE_RESOLVED", ev=None, kelly_fraction=None, stake=0.0)
+                bracket_rows.append(row)
+                continue
+            dec = decide(forecast_row, b.contract, b.price_yes, b.price_no, thresholds)
+            # EV/Kelly/stake follow the ENGINE's chosen side (single source of truth); 0 otherwise.
+            side = trade_side.get(dec.state)
+            sr = size_side(side, py, b.price_yes if side == "BUY_YES" else b.price_no,
+                           contract=exec_contract) if side else None
+            row.update(
+                decide_state=dec.state,
+                ev=round(sr.expected_value, 6) if sr else None,
+                kelly_fraction=round(sr.kelly_fraction, 6) if sr else None,
+                stake=round(sr.stake, 6) if sr else 0.0,
+            )
+            bracket_rows.append(row)
+    except (ConnectionError, TimeoutError, ValueError, KeyError, OSError) as exc:
+        # Live odds genuinely unavailable (network / parsing). Do NOT swallow other bugs.
         odds_status = "unavailable"
+        notes.append(f"odds_unavailable:{type(exc).__name__}")
 
     decision_row = {
         "run_id": rid,
