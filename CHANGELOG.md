@@ -47,6 +47,14 @@ engineering recipes (DEB blend, hourly/phase corrector, TAF-as-suppression). Ste
   metric, not predictive capability). **Analogs demonstrably capture the high-risk side the
   logistic could not** -> leading high-risk arm candidate. No gate loosened.
   `reports/analog/analog_retrieval_audit.md`.
+- **analog_quality_v0.1** (prereg `contracts/analog_quality_v0_1_prereg.md` prereg_version 1.0):
+  operationalizes the only failing analog gate (g5). Verified the v0 code matched the prereg
+  distance vector (7 feats incl rain_persistence_path - the reviewer's flagged divergence was a
+  paste artifact). Same retrieval; only the adherence metric changes. **`analog_confidence` =
+  |P_analog - base| PASSES g5 3/3** (high-confidence bucket Brier 0.165-0.175 vs 0.221-0.229,
+  lift 2.2-2.6 vs ~1.0-1.3); effective_n and weighted_mean_dist fail. With g1-g4 (v0) + g5 now
+  resolved, the analog high-risk arm is ELIGIBLE for a (separately gated) build.
+  `reports/analog/analog_quality_v0_1.md`.
 
 ## [live-metar] - 2026-05-30 - Live observation fetch (pipeline gap fixed)
 

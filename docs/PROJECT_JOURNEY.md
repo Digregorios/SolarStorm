@@ -178,10 +178,14 @@ What was tried and what it showed (each gated, honest):
    decile lift ~2.1, PR-AUC 0.64-0.67 vs base ~0.37 - predictive gates PASS 3/3. Formal GO=False
    only on g5 (analog_quality bucketing, a HOW-to-score metric, not capability). Analogs are the
    leading HIGH-risk arm candidate.
+8. **analog_quality_v0.1** - resolves g5: `analog_confidence = |P_analog - base|` PASSES 3/3
+   (high-confidence bucket Brier 0.165-0.175 vs 0.221-0.229, lift 2.2-2.6 vs ~1.0-1.3); the v0
+   "divergence" was a paste artifact (code already used the 7-feat prereg vector). With g1-g4 + g5
+   resolved, the analog high-risk arm is ELIGIBLE for a separately-gated build.
 
-Open decision (awaiting direction): refine analog_quality (v0.1 audit) and/or build the analog
-high-risk arm; then the ensemble has both sides (calm filter + analog high-risk) and can move to
-blending / conditional conformal. Or compare against NWP/Open-Meteo (Etapa 4) for the high-risk side.
+Open decision (awaiting direction): build the analog_high_risk_arm_v0 (now eligible) and/or
+compare vs NWP/Open-Meteo (Etapa 4); then the ensemble has both sides (calm filter + analog
+high-risk + Ridge center + conformal) and blending / conditional conformal can begin.
 
 ## Cross-cutting discipline (held throughout)
 
