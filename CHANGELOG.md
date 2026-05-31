@@ -4,6 +4,30 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase9:T-9-3] - 2026-05-31 - conditional_calibration_v0 KILL (honest; the "roof" stays open)
+
+The "roof": tried to fix the structural late-CP IC80 over-coverage (Phase 5's binding REQ-AUD-5
+failure) by conditioning conformal on the EX-ANTE regime (calm/non_calm from the late-warming risk
+model, train-P30 c30 cutpoint) - a NEW axis vs Phase 5's sigma-bucket Mondrian (A3). Prereg
+`contracts/conditional_calibration_v0_prereg.md` (prereg_version 1.0), with an explicit honest prior
+that the over-coverage is likely structural/irreducible. Built via the 3-agent pipeline (my prereg +
+subagent impl/review + my independent re-verification).
+
+**VERDICT KILL** (expected per the prior): G1 global coverage in [0.78,0.86] FALSE (0.93/0.91/0.91);
+G2 het-quartile gate FALSE all splits AND per-regime coverage out of band (calm 0.96/0.94/0.93,
+non_calm 0.91/0.90/0.90 - BOTH over-cover); G3 no width inflation (deltas +0.13/+0.28/+0.21 < +0.5,
+so it is not gaming coverage). **Diagnosis: the over-coverage is GLOBAL + structural; conditioning on
+calm/non_calm does NOT isolate the slack to one regime** (worst in calm at 0.945, but non_calm also
+over-covers). The ~0.91 global coverage is the documented v1.0 `Q`-after-decimal integer-quantization
+inflation (+0.06..0.11), which the conditional method inherits. This CONFIRMS and reinforces the Phase
+5 closure ("reshaping relabels slack, does not remove it"). Anti-leakage review PASS 10/10 (het gate
+reused unchanged; regime ex-ante; calib disjoint from test). Suite 367 green.
+
+Next calibration candidate (recorded, not opened): NWP-spread sigma as the difficulty axis, OR accept
+`ridge_conformal_minimal` (per-CP IC80, coverage 0.86-0.91) as the operational stopgap. Phase 5 closure
+NOT reopened. Predictor/calibration-experiment only; no execution change.
+`reports/calibration/conditional_calibration_v0.md` (+ `_review.md`).
+
 ## [phase9:T-9-1] - 2026-05-31 - analog_high_risk_arm_v0 GO (predictor improvement; ex-ante gate)
 
 First Phase-9 (predictor-improvement) arm. Prereg `contracts/analog_high_risk_arm_v0_prereg.md`

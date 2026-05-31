@@ -217,6 +217,11 @@ high-risk + Ridge center + conformal) and blending / conditional conformal can b
   Non-calm MAE improves 3/3 splits, aggregate holds; anti-leakage review 10/10. Built via a 3-agent
   pipeline (my prereg + subagent impl/review + my re-verification). Gain is REAL but SMALL - the
   bigger open gap is the conditional distribution/interval (T-9-3), not the point.
+- **Phase 9 T-9-3 conditional_calibration_v0: KILL (honest)** - regime-conditional (ex-ante
+  calm/non_calm) conformal does NOT fix the structural late-CP IC80 over-coverage; both regimes
+  over-cover (calm 0.945, non_calm 0.904), the slack is GLOBAL (Q-after-decimal + finite-sample rank),
+  not regime-isolable. Confirms the Phase 5 closure. The calibration "roof" stays OPEN; next candidate
+  is NWP-spread sigma or accepting ridge_conformal_minimal (per-CP IC80 0.86-0.91) as the stopgap.
 - CLOSED not-ready: Phase 5 interval calibration (diagnostic-only, fenced from trading).
 - Ensemble-evolution track: ridge_conformal_minimal IC defensible; precursors validated (Etapa 2
   GO); risk_model v0/v0.1 GO=False (diagnostic); calm_day_filter_v0 GO=True (protective low side);

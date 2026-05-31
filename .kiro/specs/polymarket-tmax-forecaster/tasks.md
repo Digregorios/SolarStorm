@@ -688,11 +688,17 @@ Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo a
 - **REQ:** REQ-MOD-1, REQ-MET-3.
 
 ### T-9-3: distribuicao calibravel condicional (o "telhado")
-- [ ] Atacar o problema aberto da Fase 5: cobertura CONDICIONAL (heteroscedastica). Sem isto a
+- [x] Atacar o problema aberto da Fase 5: cobertura CONDICIONAL (heteroscedastica). Sem isto a
   distribuicao para brackets e fraca mesmo com ponto forte.
-- [ ] Explorar conformal condicional por regime calm/high-risk (os dois estratos agora existem).
-- **Done:** REQ-AUD-5 het gate passa em >= 2/3, OU documentar por que continua aberto e qual o
-  proximo candidato. `reports/...`.
+- [x] Explorar conformal condicional por regime calm/high-risk (os dois estratos agora existem).
+- **Done:** **KILL honesto** (prereg `contracts/conditional_calibration_v0_prereg.md`; pipeline de 3
+  agentes + re-verificacao minha). Conformal condicional por regime EX-ANTE (calm/non_calm via risco
+  previsto, c30=train P30) NAO conserta a over-coverage estrutural: G1 cobertura global fora de
+  [0.78,0.86] (0.93/0.91/0.91), G2 het-gate + per-regime fora de banda (calm 0.945, non_calm 0.904 -
+  AMBOS over-cover), G3 sem inflacao de largura. A folga e GLOBAL+estrutural (Q-apos-decimal +
+  rank finito), nao isolavel por regime. CONFIRMA o closure da Fase 5. Het gate reusado sem afrouxar.
+  **Telhado continua aberto.** Proximo candidato: NWP-spread sigma OU aceitar ridge_conformal_minimal
+  como stopgap operacional. `reports/calibration/conditional_calibration_v0.md`.
 - **REQ:** REQ-MOD-4, REQ-AUD-5, REQ-CONF-1.
 
 ### T-9-4: NWP em leads mais cedo (so apos 9-1..9-3)
