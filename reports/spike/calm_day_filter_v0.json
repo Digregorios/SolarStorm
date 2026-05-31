@@ -1,0 +1,58 @@
+{
+  "calm_rule": "predicted_risk < train P30",
+  "gate": {
+    "g1": true,
+    "g2": true,
+    "g3": true,
+    "g4": true,
+    "g6_no_post_cp_leak": true
+  },
+  "go_accept": true,
+  "model": "calm-day-filter-v0",
+  "note": "Protective LOW filter; high-risk detection deferred to Etapa 3 (analogs). Diagnostic only; no forecast/IC/center change. Does not promote risk_model_v0.1.",
+  "splits": [
+    {
+      "_g1": true,
+      "_g2": true,
+      "_g3": true,
+      "_g4": true,
+      "base_rate": 0.384,
+      "brier": 0.2294,
+      "brier_base": 0.2364,
+      "c_low": 0.378,
+      "calm_obs_rate": 0.219,
+      "calm_precision_no_lw": 0.781,
+      "n_calm": 64,
+      "split": "2023-01-01_to_2023-12-31"
+    },
+    {
+      "_g1": true,
+      "_g2": false,
+      "_g3": true,
+      "_g4": true,
+      "base_rate": 0.378,
+      "brier": 0.2188,
+      "brier_base": 0.2352,
+      "c_low": 0.314,
+      "calm_obs_rate": 0.125,
+      "calm_precision_no_lw": 0.875,
+      "n_calm": 24,
+      "split": "2024-01-01_to_2024-12-30"
+    },
+    {
+      "_g1": true,
+      "_g2": true,
+      "_g3": true,
+      "_g4": true,
+      "base_rate": 0.359,
+      "brier": 0.2139,
+      "brier_base": 0.2308,
+      "c_low": 0.255,
+      "calm_obs_rate": 0.21,
+      "calm_precision_no_lw": 0.79,
+      "n_calm": 119,
+      "split": "2025-01-01_to_2025-12-31"
+    }
+  ],
+  "target": "material_late_warming(k_eod-k_cp>=2)"
+}

@@ -143,7 +143,13 @@ def _render(out: dict) -> str:
           "Accept if ALL hold in >=2/3 splits.",
           "",
           "_If accepted, the predicted risk bucket may condition: conformal IC, upper-tail, eventual "
-          "center nudge - each as its own gated step. v0 remains diagnostic-only regardless._"]
+          "center nudge - each as its own gated step. v0 remains diagnostic-only regardless._",
+          "",
+          "_Methodological note (not invalidating; for a future v0.2): isotonic-calibrated "
+          "probabilities produce TIES/steps, so 30/70 quantile cutpoints can land on a large tied "
+          "mass (e.g. 2023 had an empty mid + huge high bucket). A v0.2 could bucket by the RAW "
+          "logistic score (rank) and report the isotonic-calibrated probability separately. NOT "
+          "changed retroactively - this is logged as a hypothesis, not applied here._"]
     return "\n".join(L) + "\n"
 
 

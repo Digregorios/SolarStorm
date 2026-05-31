@@ -169,9 +169,14 @@ What was tried and what it showed (each gated, honest):
    4/5 gates). v0.1 re-gated on bucket separation: also GO=False (high bucket too diluted for
    1.35x), BUT the LOW protective bucket is robust (~0.13-0.22 vs base ~0.38). **Net: a reliable
    CALM-DAY detector, not a sharp high-risk hunter.** No gate loosened; stays diagnostic-only.
+6. **calm_day_filter_v0** - reviewer-directed pivot of the objective to the robust LOW signal.
+   **GO=True**: calm days (predicted risk < train P30) have ~0.5x base late-warming rate,
+   precision(no late-warming|calm) 0.78-0.88, Brier < base 3/3. A protective filter that guards
+   the ~63% calm days where Ridge already does well. Diagnostic flag only (no IC/center change).
 
-Open decision (awaiting direction): use the protective low-bucket, open a v0.2 hypothesis, or
-proceed to Etapa 3 (analog_retrieval_audit) leaving the risk model diagnostic.
+Open decision (awaiting direction): wire the calm flag into a gated downstream use (narrower IC /
+reduced spike weight on calm days), and/or proceed to Etapa 3 (analog_retrieval_audit) for the
+high-risk side the logistic could not capture.
 
 ## Cross-cutting discipline (held throughout)
 

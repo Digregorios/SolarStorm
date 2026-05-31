@@ -33,6 +33,12 @@ engineering recipes (DEB blend, hourly/phase corrector, TAF-as-suppression). Ste
   separation: GO=False (g3 high>=1.35x base fails) - but the LOW protective bucket is robust
   (~0.13-0.22 vs base ~0.38). Net: a reliable CALM-DAY detector, NOT a sharp high-risk hunter.
   s_to_n did not help. NO gate loosened; stays diagnostic-only. `reports/spike/late_warming_risk_v0*.md`.
+- **calm_day_filter_v0** (prereg `contracts/calm_day_filter_v0_prereg.md` prereg_version 1.0,
+  `scripts/calm_day_filter_v0_evaluate.py`): re-frame the robust LOW signal as a protective
+  calm-day filter (reviewer-directed). **GO=True** - calm days (predicted risk < train P30) have
+  obs-rate 0.22/0.13/0.21 vs base 0.38/0.38/0.36 (<= 0.65x), precision(no late-warming|calm)
+  0.78/0.88/0.79 (>= 0.75), Brier < base 3/3. Diagnostic flag only (no IC/center change yet);
+  high-risk detection deferred to Etapa 3 (analogs). `reports/spike/calm_day_filter_v0.md`.
 
 ## [live-metar] - 2026-05-30 - Live observation fetch (pipeline gap fixed)
 
