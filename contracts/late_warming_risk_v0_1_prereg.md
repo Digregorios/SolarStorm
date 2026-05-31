@@ -1,5 +1,7 @@
 # Preregistration: material_late_warming_risk_model_v0.1
 
+> `prereg_version = 1.0` (frozen 2026-05-31, before running).
+>
 > Frozen 2026-05-31 BEFORE running. Per `references/code-reviews/update.txt`: v0 failed its
 > acceptance gate on top-decile SHARPNESS (lift@10% >= 1.4, passed only 1/3 splits) but showed
 > robust OOS BUCKET separation. The intended use of this component is a low/mid/high risk
