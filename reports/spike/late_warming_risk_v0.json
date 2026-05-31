@@ -1,0 +1,199 @@
+{
+  "calib_days": 120,
+  "cp_operational": "23:00",
+  "features": [
+    "delta_06_to_cp",
+    "southerly_at_cp",
+    "rain_persistence_path",
+    "month_sin",
+    "month_cos"
+  ],
+  "gate": {
+    "g1_brier_better_than_baserate": true,
+    "g2_pr_auc_gt_base": true,
+    "g3_top_decile_lift_ge_1.4": false,
+    "g4_low_bucket_le_0.8base": true,
+    "g5_bucket_reliability_monotone": true,
+    "g6_no_post_cp_timestamps": true
+  },
+  "go_accept_v0": false,
+  "model": "late-warming-risk-v0",
+  "splits": [
+    {
+      "_brier_better": true,
+      "_lift_ge_14": false,
+      "_low_le_08base": true,
+      "_pr_gt_base": true,
+      "base_rate_test": 0.384,
+      "base_rate_train": 0.385,
+      "brier": 0.2294,
+      "brier_base": 0.2364,
+      "n_calib": 120,
+      "n_fit": 970,
+      "n_test": 365,
+      "pr_auc": 0.467,
+      "reliability": [
+        {
+          "bin": "0.0-0.2",
+          "mean_pred": 0.019,
+          "n": 12,
+          "obs_rate": 0.083
+        },
+        {
+          "bin": "0.2-0.4",
+          "mean_pred": 0.353,
+          "n": 348,
+          "obs_rate": 0.388
+        },
+        {
+          "bin": "0.6-0.8",
+          "mean_pred": 0.714,
+          "n": 2,
+          "obs_rate": 0.5
+        },
+        {
+          "bin": "0.8-1.0",
+          "mean_pred": 1.0,
+          "n": 3,
+          "obs_rate": 1.0
+        }
+      ],
+      "risk_buckets": {
+        "high": {
+          "n": 5,
+          "obs_rate": 0.8
+        },
+        "low": {
+          "n": 63,
+          "obs_rate": 0.222
+        },
+        "mid": {
+          "n": 297,
+          "obs_rate": 0.411
+        }
+      },
+      "roc_auc": 0.558,
+      "split": "2023-01-01_to_2023-12-31",
+      "top_decile_lift": 1.38,
+      "top_decile_rate": 0.528
+    },
+    {
+      "_brier_better": true,
+      "_lift_ge_14": true,
+      "_low_le_08base": true,
+      "_pr_gt_base": true,
+      "base_rate_test": 0.378,
+      "base_rate_train": 0.382,
+      "brier": 0.2188,
+      "brier_base": 0.2352,
+      "n_calib": 120,
+      "n_fit": 1335,
+      "n_test": 365,
+      "pr_auc": 0.548,
+      "reliability": [
+        {
+          "bin": "0.0-0.2",
+          "mean_pred": 0.031,
+          "n": 10,
+          "obs_rate": 0.2
+        },
+        {
+          "bin": "0.2-0.4",
+          "mean_pred": 0.35,
+          "n": 262,
+          "obs_rate": 0.313
+        },
+        {
+          "bin": "0.4-0.6",
+          "mean_pred": 0.523,
+          "n": 82,
+          "obs_rate": 0.561
+        },
+        {
+          "bin": "0.6-0.8",
+          "mean_pred": 0.654,
+          "n": 1,
+          "obs_rate": 1.0
+        },
+        {
+          "bin": "0.8-1.0",
+          "mean_pred": 0.918,
+          "n": 10,
+          "obs_rate": 0.7
+        }
+      ],
+      "risk_buckets": {
+        "high": {
+          "n": 84,
+          "obs_rate": 0.583
+        },
+        "low": {
+          "n": 24,
+          "obs_rate": 0.125
+        },
+        "mid": {
+          "n": 257,
+          "obs_rate": 0.335
+        }
+      },
+      "roc_auc": 0.663,
+      "split": "2024-01-01_to_2024-12-30",
+      "top_decile_lift": 1.62,
+      "top_decile_rate": 0.611
+    },
+    {
+      "_brier_better": true,
+      "_lift_ge_14": false,
+      "_low_le_08base": true,
+      "_pr_gt_base": true,
+      "base_rate_test": 0.359,
+      "base_rate_train": 0.386,
+      "brier": 0.2139,
+      "brier_base": 0.2308,
+      "n_calib": 120,
+      "n_fit": 1701,
+      "n_test": 365,
+      "pr_auc": 0.505,
+      "reliability": [
+        {
+          "bin": "0.0-0.2",
+          "mean_pred": 0.167,
+          "n": 87,
+          "obs_rate": 0.161
+        },
+        {
+          "bin": "0.2-0.4",
+          "mean_pred": 0.265,
+          "n": 184,
+          "obs_rate": 0.348
+        },
+        {
+          "bin": "0.4-0.6",
+          "mean_pred": 0.522,
+          "n": 94,
+          "obs_rate": 0.564
+        }
+      ],
+      "risk_buckets": {
+        "high": {
+          "n": 94,
+          "obs_rate": 0.564
+        },
+        "low": {
+          "n": 244,
+          "obs_rate": 0.279
+        },
+        "mid": {
+          "n": 27,
+          "obs_rate": 0.37
+        }
+      },
+      "roc_auc": 0.67,
+      "split": "2025-01-01_to_2025-12-31",
+      "top_decile_lift": 1.39,
+      "top_decile_rate": 0.5
+    }
+  ],
+  "target": "material_late_warming(k_eod-k_cp>=2)",
+  "usage": "DIAGNOSTIC only (prob + risk_bucket); does NOT modify p50 or conformal here."
+}
