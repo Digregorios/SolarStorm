@@ -63,6 +63,7 @@ class LateWarmingRiskModel:
     isotonic: IsotonicRegression | None
     feat_means: np.ndarray
     feat_stds: np.ndarray
+    feats: tuple[str, ...] = FEATURE_NAMES
 
 
 def build_features(obs: pl.DataFrame, labels: pl.DataFrame, tz: str, cp_hhmm: str) -> pl.DataFrame:
@@ -103,6 +104,13 @@ def build_features(obs: pl.DataFrame, labels: pl.DataFrame, tz: str, cp_hhmm: st
             if q is not None:
                 cnt[q] = cnt.get(q, 0) + 1
         q_cp = max(cnt.items(), key=lambda kv: kv[1])[0] if cnt else None
+        # overnight modal quadrant (00-06 local) for the s_to_n transition feature (v0.1b)
+        on_quads = [_quadrant(drct[i]) for i in range(len(loc_h)) if loc_h[i] < 6]
+        on_cnt: dict[str, int] = {}
+        for q in on_quads:
+            if q is not None:
+                on_cnt[q] = on_cnt.get(q, 0) + 1
+        q_overnight = max(on_cnt.items(), key=lambda kv: kv[1])[0] if on_cnt else None
 
         def _win_rain(lo, hi):
             idx = [i for i, h in enumerate(loc_h) if lo <= h < hi]
@@ -114,6 +122,7 @@ def build_features(obs: pl.DataFrame, labels: pl.DataFrame, tz: str, cp_hhmm: st
             "delta_06_to_cp": delta_06_cp,
             "southerly_at_cp": int(q_cp == "S"),
             "rain_persistence_path": int(rain_path),
+            "s_to_n": int(q_overnight == "S" and q_cp == "N"),
             "month_sin": math.sin(2 * math.pi * d.month / 12.0),
             "month_cos": math.cos(2 * math.pi * d.month / 12.0),
             "target": int((int(lr["tmax_int"]) - int(kcp)) >= 2),
@@ -121,17 +130,18 @@ def build_features(obs: pl.DataFrame, labels: pl.DataFrame, tz: str, cp_hhmm: st
     return pl.DataFrame(rows)
 
 
-def _matrix(df: pl.DataFrame) -> np.ndarray:
+def _matrix(df: pl.DataFrame, feats: Sequence[str] = FEATURE_NAMES) -> np.ndarray:
     cols = []
-    for c in FEATURE_NAMES:
+    for c in feats:
         v = df[c].to_numpy().astype(float)
         cols.append(np.where(np.isnan(v), np.nan, v))
     return np.column_stack(cols)
 
 
-def fit_risk_model(train: pl.DataFrame, *, calib: pl.DataFrame | None = None, seed: int = 42) -> LateWarmingRiskModel:
+def fit_risk_model(train: pl.DataFrame, *, calib: pl.DataFrame | None = None, seed: int = 42,
+                   feats: Sequence[str] = FEATURE_NAMES) -> LateWarmingRiskModel:
     """Fit logistic on TRAIN; calibrate probabilities (isotonic) on held-out CALIB if given."""
-    X = _matrix(train)
+    X = _matrix(train, feats)
     y = train["target"].to_numpy().astype(int)
     means = np.nanmean(X, axis=0)
     means = np.where(np.isnan(means), 0.0, means)
@@ -143,7 +153,7 @@ def fit_risk_model(train: pl.DataFrame, *, calib: pl.DataFrame | None = None, se
     lr.fit(Xs, y)
     iso = None
     if calib is not None and calib.height >= 50:
-        Xc = _matrix(calib)
+        Xc = _matrix(calib, feats)
         Xc = np.where(np.isnan(Xc), means, Xc)
         Xcs = (Xc - means) / stds
         raw = lr.predict_proba(Xcs)[:, 1]
@@ -151,11 +161,12 @@ def fit_risk_model(train: pl.DataFrame, *, calib: pl.DataFrame | None = None, se
         if np.unique(yc).size == 2:
             iso = IsotonicRegression(y_min=0.0, y_max=1.0, out_of_bounds="clip")
             iso.fit(raw, yc)
-    return LateWarmingRiskModel(logistic=lr, isotonic=iso, feat_means=means, feat_stds=stds)
+    return LateWarmingRiskModel(logistic=lr, isotonic=iso, feat_means=means, feat_stds=stds,
+                                feats=tuple(feats))
 
 
 def predict_risk(model: LateWarmingRiskModel, df: pl.DataFrame) -> np.ndarray:
-    X = _matrix(df)
+    X = _matrix(df, model.feats)
     X = np.where(np.isnan(X), model.feat_means, X)
     Xs = (X - model.feat_means) / model.feat_stds
     p = model.logistic.predict_proba(Xs)[:, 1]

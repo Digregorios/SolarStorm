@@ -160,7 +160,9 @@ def main() -> int:
         print(f"  {s['split']}: brier {s['brier']} (base {s['brier_base']}) pr_auc {s['pr_auc']} "
               f"roc {s['roc_auc']} lift@10 {s['top_decile_lift']} | buckets "
               f"low {rb['low']['obs_rate']} mid {rb['mid']['obs_rate']} high {rb['high']['obs_rate']}")
-    return 0 if go else 1
+    # GO=False is an HONEST diagnostic outcome, not a run failure -> exit 0 once the report is
+    # written (so CI/automation does not read 'experiment did not pass' as 'script broke').
+    return 0
 
 
 def _render(out: dict) -> str:
