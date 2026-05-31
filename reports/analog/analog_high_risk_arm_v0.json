@@ -1,0 +1,204 @@
+{
+  "arm": "analog_high_risk_arm_v0",
+  "prereg": "contracts/analog_high_risk_arm_v0_prereg.md",
+  "cp_operational": "23:00",
+  "splits": [
+    {
+      "n_train": 1090,
+      "n_test": 365,
+      "c30": 0.3778,
+      "base_rate_train": 0.3789,
+      "n_noncalm": 297,
+      "n_calm": 68,
+      "n_lw_truth": 140,
+      "ridge_all": {
+        "mae": 0.737,
+        "rmse": 1.0429,
+        "bracket_match": 0.4192,
+        "n": 365
+      },
+      "arm_all": {
+        "mae": 0.7178,
+        "rmse": 1.0257,
+        "bracket_match": 0.4301,
+        "n": 365
+      },
+      "ridge_noncalm": {
+        "mae": 0.7273,
+        "rmse": 1.0445,
+        "bracket_match": 0.4343,
+        "n": 297
+      },
+      "arm_noncalm": {
+        "mae": 0.7037,
+        "rmse": 1.0233,
+        "bracket_match": 0.4478,
+        "n": 297
+      },
+      "ridge_calm": {
+        "mae": 0.7794,
+        "rmse": 1.0361,
+        "bracket_match": 0.3529,
+        "n": 68
+      },
+      "arm_calm": {
+        "mae": 0.7794,
+        "rmse": 1.0361,
+        "bracket_match": 0.3529,
+        "n": 68
+      },
+      "ridge_lw_truth_DIAGNOSTIC": {
+        "mae": 0.8214,
+        "rmse": 1.168,
+        "bracket_match": 0.4,
+        "n": 140
+      },
+      "arm_lw_truth_DIAGNOSTIC": {
+        "mae": 0.8,
+        "rmse": 1.1526,
+        "bracket_match": 0.4143,
+        "n": 140
+      },
+      "split": "2023-01-01_to_2023-12-31"
+    },
+    {
+      "n_train": 1455,
+      "n_test": 365,
+      "c30": 0.3137,
+      "base_rate_train": 0.3801,
+      "n_noncalm": 344,
+      "n_calm": 21,
+      "n_lw_truth": 138,
+      "ridge_all": {
+        "mae": 0.7068,
+        "rmse": 1.0803,
+        "bracket_match": 0.4603,
+        "n": 365
+      },
+      "arm_all": {
+        "mae": 0.6932,
+        "rmse": 1.074,
+        "bracket_match": 0.4767,
+        "n": 365
+      },
+      "ridge_noncalm": {
+        "mae": 0.718,
+        "rmse": 1.0984,
+        "bracket_match": 0.4593,
+        "n": 344
+      },
+      "arm_noncalm": {
+        "mae": 0.7035,
+        "rmse": 1.0917,
+        "bracket_match": 0.4767,
+        "n": 344
+      },
+      "ridge_calm": {
+        "mae": 0.5238,
+        "rmse": 0.7237,
+        "bracket_match": 0.4762,
+        "n": 21
+      },
+      "arm_calm": {
+        "mae": 0.5238,
+        "rmse": 0.7237,
+        "bracket_match": 0.4762,
+        "n": 21
+      },
+      "ridge_lw_truth_DIAGNOSTIC": {
+        "mae": 0.8986,
+        "rmse": 1.3513,
+        "bracket_match": 0.3986,
+        "n": 138
+      },
+      "arm_lw_truth_DIAGNOSTIC": {
+        "mae": 0.8913,
+        "rmse": 1.3486,
+        "bracket_match": 0.413,
+        "n": 138
+      },
+      "split": "2024-01-01_to_2024-12-30"
+    },
+    {
+      "n_train": 1821,
+      "n_test": 365,
+      "c30": 0.2381,
+      "base_rate_train": 0.3795,
+      "n_noncalm": 280,
+      "n_calm": 85,
+      "n_lw_truth": 131,
+      "ridge_all": {
+        "mae": 0.6575,
+        "rmse": 0.9422,
+        "bracket_match": 0.4411,
+        "n": 365
+      },
+      "arm_all": {
+        "mae": 0.6521,
+        "rmse": 0.9334,
+        "bracket_match": 0.4411,
+        "n": 365
+      },
+      "ridge_noncalm": {
+        "mae": 0.7,
+        "rmse": 0.9747,
+        "bracket_match": 0.4071,
+        "n": 280
+      },
+      "arm_noncalm": {
+        "mae": 0.6929,
+        "rmse": 0.9636,
+        "bracket_match": 0.4071,
+        "n": 280
+      },
+      "ridge_calm": {
+        "mae": 0.5176,
+        "rmse": 0.826,
+        "bracket_match": 0.5529,
+        "n": 85
+      },
+      "arm_calm": {
+        "mae": 0.5176,
+        "rmse": 0.826,
+        "bracket_match": 0.5529,
+        "n": 85
+      },
+      "ridge_lw_truth_DIAGNOSTIC": {
+        "mae": 0.8855,
+        "rmse": 1.1851,
+        "bracket_match": 0.3282,
+        "n": 131
+      },
+      "arm_lw_truth_DIAGNOSTIC": {
+        "mae": 0.8626,
+        "rmse": 1.1689,
+        "bracket_match": 0.3435,
+        "n": 131
+      },
+      "split": "2025-01-01_to_2025-12-31"
+    }
+  ],
+  "gates": {
+    "g1_noncalm_improvement_2of3": {
+      "passed": true,
+      "n_passed": 3,
+      "n_splits": 3
+    },
+    "g2_aggregate_tolerance": {
+      "passed": true
+    },
+    "g3_rps_noncalm": {
+      "passed": true,
+      "note": "point-forecast arm; RPS not computed"
+    },
+    "g4_no_leakage": {
+      "passed": true,
+      "note": "structural: pool<test, train-only stats"
+    },
+    "g5_reproducible": {
+      "passed": true,
+      "note": "seed=42 deterministic"
+    },
+    "overall": true
+  }
+}

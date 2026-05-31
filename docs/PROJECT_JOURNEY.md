@@ -212,6 +212,11 @@ high-risk + Ridge center + conformal) and blending / conditional conformal can b
   MAE in 3/3 splits at all 4 CPs; CP23 MAE ~0.70 degC / RMSE ~1.02 / bracket-match 0.441. Edge is
   concentrated on late-warming days (MAE 0.87 vs persistence 2.55), ties on stable days, loses on
   Tmax-already-reached days. The core IS validated; the execution layer is FROZEN behind it.**
+- **Phase 9 (predictor improvement) T-9-1 analog_high_risk_arm_v0: GO** - blends an analog point
+  estimate into Ridge on EX-ANTE non-calm days (predicted risk>=c30, causal; not truth-derived).
+  Non-calm MAE improves 3/3 splits, aggregate holds; anti-leakage review 10/10. Built via a 3-agent
+  pipeline (my prereg + subagent impl/review + my re-verification). Gain is REAL but SMALL - the
+  bigger open gap is the conditional distribution/interval (T-9-3), not the point.
 - CLOSED not-ready: Phase 5 interval calibration (diagnostic-only, fenced from trading).
 - Ensemble-evolution track: ridge_conformal_minimal IC defensible; precursors validated (Etapa 2
   GO); risk_model v0/v0.1 GO=False (diagnostic); calm_day_filter_v0 GO=True (protective low side);

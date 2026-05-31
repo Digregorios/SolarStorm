@@ -4,6 +4,27 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase9:T-9-1] - 2026-05-31 - analog_high_risk_arm_v0 GO (predictor improvement; ex-ante gate)
+
+First Phase-9 (predictor-improvement) arm. Prereg `contracts/analog_high_risk_arm_v0_prereg.md`
+(prereg_version 1.0). Blends an analog point estimate into Ridge ONLY on EX-ANTE non-calm days
+(predicted late-warming risk >= train-P30 c30 cutpoint - causal, available at CP; NEVER the
+truth-derived late-warming stratum, which stays diagnostic-only). `analog_pred = k_cp +
+Laplace-smoothed neighbor mean(tmax_int-k_cp)` over K=50 train-pool neighbors (date<test,
+train-only standardizer), `blend = Q((1-w)*ridge + w*analog)`, `w = 0.5*clip(analog_conf/0.20,0,1)`,
+frozen constants (no per-split tuning).
+
+Built via a 3-agent pipeline (I wrote the prereg; subagents did impl + anti-leakage review; I
+re-verified independently). **VERDICT GO**: non-calm MAE improves 3/3 splits
+(0.727->0.704, 0.718->0.704, 0.700->0.693); non-calm bracket-match improves 2/3 (tied 2025);
+aggregate improves or holds every split (within tolerance). Anti-leakage review PASS 10/10 incl
+the critical ex-ante-gate check; full suite 367 green; all guards pass.
+
+**HONEST CAVEAT:** the gain is REAL but SMALL (conservative confidence-weighted blend, w<=0.5).
+Consistent with `core_predictor_status` - the point forecast is already strong; the bigger open
+gap is the DISTRIBUTION/interval (conditional calibration, T-9-3), not the point. Predictor-only:
+no execution/Polymarket/IC change. `reports/analog/analog_high_risk_arm_v0.md` (+ `_review.md`).
+
 ## [reorientation:core-first] - 2026-05-31 - FREEZE the execution layer; prove the core predictor
 
 Course-correction (reviewer-directed): the project was drifting into execution/presentation

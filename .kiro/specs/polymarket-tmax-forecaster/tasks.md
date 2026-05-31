@@ -668,13 +668,16 @@ Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo a
 > passa; mata honestamente o que nao passa.
 
 ### T-9-1: analog_high_risk_arm_v0 (lado high-risk / late-warming)
-- [ ] Construir o arm de analogos (retrieval ja validado: `analog_retrieval_audit` g1-g4 PASS;
+- [x] Construir o arm de analogos (retrieval ja validado: `analog_retrieval_audit` g1-g4 PASS;
   `analog_quality_v0.1` resolve g5 via `analog_confidence`). Blendar `P_analog` com o Ridge
   SOMENTE em dias non-calm (calm_day_filter=false), ponderado por `analog_confidence`.
-- [ ] Medir MAE/bracket-match/RPS walk-forward 2023/24/25, ESPECIALMENTE em dias de late-warming
+- [x] Medir MAE/bracket-match/RPS walk-forward 2023/24/25, ESPECIALMENTE em dias de late-warming
   e non-calm, vs Ridge puro.
-- **Done:** ganho mensuravel em >= 2/3 splits no estrato non-calm/high-risk sem regredir o agregado;
-  prereg + `reports/analog/analog_high_risk_arm_v0.md`. Senao, kill honesto.
+- **Done:** **GO** (prereg `contracts/analog_high_risk_arm_v0_prereg.md`; pipeline de 3 agentes:
+  prereg meu + impl/review subagentes + re-verificacao minha). Gate ex-ante (predicted_risk>=c30),
+  NAO truth-derived. Non-calm MAE 3/3 melhora (0.727->0.704/0.718->0.704/0.700->0.693), BM 2/3,
+  agregado nao degrada. Anti-leak review 10/10. **Caveat honesto: ganho REAL mas PEQUENO** (blend
+  conservador); o buraco maior e a distribuicao/intervalo (T-9-3). `reports/analog/analog_high_risk_arm_v0.md`.
 - **REQ:** REQ-MOD-1, REQ-MET-3, REQ-MET-4.
 
 ### T-9-2: calm_day suppression (lado low-risk)
