@@ -1,0 +1,817 @@
+{
+  "audit": "core_predictor_status",
+  "cp_set": [
+    "20:00",
+    "21:00",
+    "22:00",
+    "23:00"
+  ],
+  "note": "Read-only. Execution layer (Kelly/EV/decision-line/brackets) FROZEN pending this. Regime masks group the evaluation by truth-derived strata (legitimate for a diagnostic breakdown; not a feature). Climatology refit per split (train-only).",
+  "operational_cp": "23:00",
+  "per_cp": {
+    "20:00": {
+      "n_splits": 3,
+      "ridge_beats_best_baseline_mae": 3,
+      "splits": [
+        {
+          "climatology": {
+            "bracket_match": 0.1671,
+            "mae": 1.811,
+            "n": 365,
+            "rmse": 2.251
+          },
+          "persistence": {
+            "bracket_match": 0.1534,
+            "mae": 2.871,
+            "n": 365,
+            "rmse": 3.53
+          },
+          "regimes": {
+            "all": {
+              "n": 365,
+              "pers_bm": 0.153,
+              "pers_mae": 2.871,
+              "ridge_bm": 0.373,
+              "ridge_mae": 0.94
+            },
+            "material late-warming (truth-kcp>=2)": {
+              "n": 268,
+              "pers_bm": 0.0,
+              "pers_mae": 3.757,
+              "ridge_bm": 0.403,
+              "ridge_mae": 0.873
+            },
+            "stable (no material late-warming)": {
+              "n": 97,
+              "pers_bm": 0.577,
+              "pers_mae": 0.423,
+              "ridge_bm": 0.289,
+              "ridge_mae": 1.124
+            },
+            "summer (DJF)": {
+              "n": 90,
+              "pers_bm": 0.1,
+              "pers_mae": 3.033,
+              "ridge_bm": 0.311,
+              "ridge_mae": 1.211
+            },
+            "tmax already reached at CP (kcp==truth)": {
+              "n": 56,
+              "pers_bm": 1.0,
+              "pers_mae": 0.0,
+              "ridge_bm": 0.321,
+              "ridge_mae": 1.089
+            },
+            "winter (JJA)": {
+              "n": 92,
+              "pers_bm": 0.217,
+              "pers_mae": 2.739,
+              "ridge_bm": 0.391,
+              "ridge_mae": 0.837
+            }
+          },
+          "ridge": {
+            "bracket_match": 0.3726,
+            "mae": 0.94,
+            "n": 365,
+            "rmse": 1.331
+          },
+          "split": "2023-01-01"
+        },
+        {
+          "climatology": {
+            "bracket_match": 0.1639,
+            "mae": 1.749,
+            "n": 366,
+            "rmse": 2.241
+          },
+          "persistence": {
+            "bracket_match": 0.0984,
+            "mae": 3.087,
+            "n": 366,
+            "rmse": 3.731
+          },
+          "regimes": {
+            "all": {
+              "n": 366,
+              "pers_bm": 0.098,
+              "pers_mae": 3.087,
+              "ridge_bm": 0.311,
+              "ridge_mae": 1.019
+            },
+            "material late-warming (truth-kcp>=2)": {
+              "n": 272,
+              "pers_bm": 0.0,
+              "pers_mae": 3.941,
+              "ridge_bm": 0.331,
+              "ridge_mae": 0.985
+            },
+            "stable (no material late-warming)": {
+              "n": 94,
+              "pers_bm": 0.383,
+              "pers_mae": 0.617,
+              "ridge_bm": 0.255,
+              "ridge_mae": 1.117
+            },
+            "summer (DJF)": {
+              "n": 91,
+              "pers_bm": 0.066,
+              "pers_mae": 3.78,
+              "ridge_bm": 0.286,
+              "ridge_mae": 1.132
+            },
+            "tmax already reached at CP (kcp==truth)": {
+              "n": 36,
+              "pers_bm": 1.0,
+              "pers_mae": 0.0,
+              "ridge_bm": 0.222,
+              "ridge_mae": 1.278
+            },
+            "winter (JJA)": {
+              "n": 92,
+              "pers_bm": 0.141,
+              "pers_mae": 2.435,
+              "ridge_bm": 0.359,
+              "ridge_mae": 0.87
+            }
+          },
+          "ridge": {
+            "bracket_match": 0.3115,
+            "mae": 1.019,
+            "n": 366,
+            "rmse": 1.388
+          },
+          "split": "2024-01-01"
+        },
+        {
+          "climatology": {
+            "bracket_match": 0.1616,
+            "mae": 1.786,
+            "n": 365,
+            "rmse": 2.212
+          },
+          "persistence": {
+            "bracket_match": 0.1425,
+            "mae": 2.866,
+            "n": 365,
+            "rmse": 3.522
+          },
+          "regimes": {
+            "all": {
+              "n": 365,
+              "pers_bm": 0.142,
+              "pers_mae": 2.866,
+              "ridge_bm": 0.323,
+              "ridge_mae": 0.921
+            },
+            "material late-warming (truth-kcp>=2)": {
+              "n": 268,
+              "pers_bm": 0.0,
+              "pers_mae": 3.735,
+              "ridge_bm": 0.34,
+              "ridge_mae": 0.914
+            },
+            "stable (no material late-warming)": {
+              "n": 97,
+              "pers_bm": 0.536,
+              "pers_mae": 0.464,
+              "ridge_bm": 0.278,
+              "ridge_mae": 0.938
+            },
+            "summer (DJF)": {
+              "n": 90,
+              "pers_bm": 0.122,
+              "pers_mae": 3.144,
+              "ridge_bm": 0.267,
+              "ridge_mae": 1.056
+            },
+            "tmax already reached at CP (kcp==truth)": {
+              "n": 52,
+              "pers_bm": 1.0,
+              "pers_mae": 0.0,
+              "ridge_bm": 0.192,
+              "ridge_mae": 1.115
+            },
+            "winter (JJA)": {
+              "n": 92,
+              "pers_bm": 0.228,
+              "pers_mae": 2.565,
+              "ridge_bm": 0.391,
+              "ridge_mae": 0.837
+            }
+          },
+          "ridge": {
+            "bracket_match": 0.3233,
+            "mae": 0.921,
+            "n": 365,
+            "rmse": 1.243
+          },
+          "split": "2025-01-01"
+        }
+      ]
+    },
+    "21:00": {
+      "n_splits": 3,
+      "ridge_beats_best_baseline_mae": 3,
+      "splits": [
+        {
+          "climatology": {
+            "bracket_match": 0.1671,
+            "mae": 1.811,
+            "n": 365,
+            "rmse": 2.251
+          },
+          "persistence": {
+            "bracket_match": 0.1644,
+            "mae": 2.468,
+            "n": 365,
+            "rmse": 3.039
+          },
+          "regimes": {
+            "all": {
+              "n": 365,
+              "pers_bm": 0.164,
+              "pers_mae": 2.468,
+              "ridge_bm": 0.353,
+              "ridge_mae": 0.885
+            },
+            "material late-warming (truth-kcp>=2)": {
+              "n": 255,
+              "pers_bm": 0.0,
+              "pers_mae": 3.337,
+              "ridge_bm": 0.4,
+              "ridge_mae": 0.839
+            },
+            "stable (no material late-warming)": {
+              "n": 110,
+              "pers_bm": 0.545,
+              "pers_mae": 0.455,
+              "ridge_bm": 0.245,
+              "ridge_mae": 0.991
+            },
+            "summer (DJF)": {
+              "n": 90,
+              "pers_bm": 0.111,
+              "pers_mae": 2.489,
+              "ridge_bm": 0.4,
+              "ridge_mae": 0.878
+            },
+            "tmax already reached at CP (kcp==truth)": {
+              "n": 60,
+              "pers_bm": 1.0,
+              "pers_mae": 0.0,
+              "ridge_bm": 0.267,
+              "ridge_mae": 1.0
+            },
+            "winter (JJA)": {
+              "n": 92,
+              "pers_bm": 0.217,
+              "pers_mae": 2.5,
+              "ridge_bm": 0.359,
+              "ridge_mae": 0.87
+            }
+          },
+          "ridge": {
+            "bracket_match": 0.3534,
+            "mae": 0.885,
+            "n": 365,
+            "rmse": 1.217
+          },
+          "split": "2023-01-01"
+        },
+        {
+          "climatology": {
+            "bracket_match": 0.1639,
+            "mae": 1.749,
+            "n": 366,
+            "rmse": 2.241
+          },
+          "persistence": {
+            "bracket_match": 0.112,
+            "mae": 2.623,
+            "n": 366,
+            "rmse": 3.174
+          },
+          "regimes": {
+            "all": {
+              "n": 366,
+              "pers_bm": 0.112,
+              "pers_mae": 2.623,
+              "ridge_bm": 0.333,
+              "ridge_mae": 0.932
+            },
+            "material late-warming (truth-kcp>=2)": {
+              "n": 261,
+              "pers_bm": 0.0,
+              "pers_mae": 3.433,
+              "ridge_bm": 0.337,
+              "ridge_mae": 0.923
+            },
+            "stable (no material late-warming)": {
+              "n": 105,
+              "pers_bm": 0.39,
+              "pers_mae": 0.61,
+              "ridge_bm": 0.324,
+              "ridge_mae": 0.952
+            },
+            "summer (DJF)": {
+              "n": 91,
+              "pers_bm": 0.088,
+              "pers_mae": 3.0,
+              "ridge_bm": 0.33,
+              "ridge_mae": 1.077
+            },
+            "tmax already reached at CP (kcp==truth)": {
+              "n": 41,
+              "pers_bm": 1.0,
+              "pers_mae": 0.0,
+              "ridge_bm": 0.268,
+              "ridge_mae": 1.171
+            },
+            "winter (JJA)": {
+              "n": 92,
+              "pers_bm": 0.152,
+              "pers_mae": 2.283,
+              "ridge_bm": 0.413,
+              "ridge_mae": 0.739
+            }
+          },
+          "ridge": {
+            "bracket_match": 0.3333,
+            "mae": 0.932,
+            "n": 366,
+            "rmse": 1.281
+          },
+          "split": "2024-01-01"
+        },
+        {
+          "climatology": {
+            "bracket_match": 0.1616,
+            "mae": 1.786,
+            "n": 365,
+            "rmse": 2.212
+          },
+          "persistence": {
+            "bracket_match": 0.1452,
+            "mae": 2.414,
+            "n": 365,
+            "rmse": 2.989
+          },
+          "regimes": {
+            "all": {
+              "n": 365,
+              "pers_bm": 0.145,
+              "pers_mae": 2.414,
+              "ridge_bm": 0.378,
+              "ridge_mae": 0.836
+            },
+            "material late-warming (truth-kcp>=2)": {
+              "n": 243,
+              "pers_bm": 0.0,
+              "pers_mae": 3.342,
+              "ridge_bm": 0.387,
+              "ridge_mae": 0.848
+            },
+            "stable (no material late-warming)": {
+              "n": 122,
+              "pers_bm": 0.434,
+              "pers_mae": 0.566,
+              "ridge_bm": 0.361,
+              "ridge_mae": 0.811
+            },
+            "summer (DJF)": {
+              "n": 90,
+              "pers_bm": 0.122,
+              "pers_mae": 2.533,
+              "ridge_bm": 0.356,
+              "ridge_mae": 0.867
+            },
+            "tmax already reached at CP (kcp==truth)": {
+              "n": 53,
+              "pers_bm": 1.0,
+              "pers_mae": 0.0,
+              "ridge_bm": 0.208,
+              "ridge_mae": 1.019
+            },
+            "winter (JJA)": {
+              "n": 92,
+              "pers_bm": 0.239,
+              "pers_mae": 2.359,
+              "ridge_bm": 0.402,
+              "ridge_mae": 0.815
+            }
+          },
+          "ridge": {
+            "bracket_match": 0.3781,
+            "mae": 0.836,
+            "n": 365,
+            "rmse": 1.165
+          },
+          "split": "2025-01-01"
+        }
+      ]
+    },
+    "22:00": {
+      "n_splits": 3,
+      "ridge_beats_best_baseline_mae": 3,
+      "splits": [
+        {
+          "climatology": {
+            "bracket_match": 0.1671,
+            "mae": 1.811,
+            "n": 365,
+            "rmse": 2.251
+          },
+          "persistence": {
+            "bracket_match": 0.1836,
+            "mae": 1.904,
+            "n": 365,
+            "rmse": 2.372
+          },
+          "regimes": {
+            "all": {
+              "n": 365,
+              "pers_bm": 0.184,
+              "pers_mae": 1.904,
+              "ridge_bm": 0.364,
+              "ridge_mae": 0.819
+            },
+            "material late-warming (truth-kcp>=2)": {
+              "n": 216,
+              "pers_bm": 0.0,
+              "pers_mae": 2.838,
+              "ridge_bm": 0.389,
+              "ridge_mae": 0.806
+            },
+            "stable (no material late-warming)": {
+              "n": 149,
+              "pers_bm": 0.45,
+              "pers_mae": 0.55,
+              "ridge_bm": 0.329,
+              "ridge_mae": 0.839
+            },
+            "summer (DJF)": {
+              "n": 90,
+              "pers_bm": 0.156,
+              "pers_mae": 1.911,
+              "ridge_bm": 0.356,
+              "ridge_mae": 0.878
+            },
+            "tmax already reached at CP (kcp==truth)": {
+              "n": 67,
+              "pers_bm": 1.0,
+              "pers_mae": 0.0,
+              "ridge_bm": 0.343,
+              "ridge_mae": 0.896
+            },
+            "winter (JJA)": {
+              "n": 92,
+              "pers_bm": 0.217,
+              "pers_mae": 2.011,
+              "ridge_bm": 0.348,
+              "ridge_mae": 0.815
+            }
+          },
+          "ridge": {
+            "bracket_match": 0.3644,
+            "mae": 0.819,
+            "n": 365,
+            "rmse": 1.117
+          },
+          "split": "2023-01-01"
+        },
+        {
+          "climatology": {
+            "bracket_match": 0.1639,
+            "mae": 1.749,
+            "n": 366,
+            "rmse": 2.241
+          },
+          "persistence": {
+            "bracket_match": 0.1503,
+            "mae": 1.989,
+            "n": 366,
+            "rmse": 2.458
+          },
+          "regimes": {
+            "all": {
+              "n": 366,
+              "pers_bm": 0.15,
+              "pers_mae": 1.989,
+              "ridge_bm": 0.399,
+              "ridge_mae": 0.803
+            },
+            "material late-warming (truth-kcp>=2)": {
+              "n": 216,
+              "pers_bm": 0.0,
+              "pers_mae": 2.931,
+              "ridge_bm": 0.407,
+              "ridge_mae": 0.819
+            },
+            "stable (no material late-warming)": {
+              "n": 150,
+              "pers_bm": 0.367,
+              "pers_mae": 0.633,
+              "ridge_bm": 0.387,
+              "ridge_mae": 0.78
+            },
+            "summer (DJF)": {
+              "n": 91,
+              "pers_bm": 0.154,
+              "pers_mae": 2.176,
+              "ridge_bm": 0.385,
+              "ridge_mae": 0.967
+            },
+            "tmax already reached at CP (kcp==truth)": {
+              "n": 55,
+              "pers_bm": 1.0,
+              "pers_mae": 0.0,
+              "ridge_bm": 0.273,
+              "ridge_mae": 1.036
+            },
+            "winter (JJA)": {
+              "n": 92,
+              "pers_bm": 0.185,
+              "pers_mae": 1.87,
+              "ridge_bm": 0.424,
+              "ridge_mae": 0.674
+            }
+          },
+          "ridge": {
+            "bracket_match": 0.3989,
+            "mae": 0.803,
+            "n": 366,
+            "rmse": 1.159
+          },
+          "split": "2024-01-01"
+        },
+        {
+          "climatology": {
+            "bracket_match": 0.1616,
+            "mae": 1.786,
+            "n": 365,
+            "rmse": 2.212
+          },
+          "persistence": {
+            "bracket_match": 0.1753,
+            "mae": 1.827,
+            "n": 365,
+            "rmse": 2.283
+          },
+          "regimes": {
+            "all": {
+              "n": 365,
+              "pers_bm": 0.175,
+              "pers_mae": 1.827,
+              "ridge_bm": 0.43,
+              "ridge_mae": 0.745
+            },
+            "material late-warming (truth-kcp>=2)": {
+              "n": 203,
+              "pers_bm": 0.0,
+              "pers_mae": 2.803,
+              "ridge_bm": 0.443,
+              "ridge_mae": 0.768
+            },
+            "stable (no material late-warming)": {
+              "n": 162,
+              "pers_bm": 0.395,
+              "pers_mae": 0.605,
+              "ridge_bm": 0.414,
+              "ridge_mae": 0.716
+            },
+            "summer (DJF)": {
+              "n": 90,
+              "pers_bm": 0.167,
+              "pers_mae": 1.833,
+              "ridge_bm": 0.367,
+              "ridge_mae": 0.878
+            },
+            "tmax already reached at CP (kcp==truth)": {
+              "n": 64,
+              "pers_bm": 1.0,
+              "pers_mae": 0.0,
+              "ridge_bm": 0.25,
+              "ridge_mae": 0.953
+            },
+            "winter (JJA)": {
+              "n": 92,
+              "pers_bm": 0.272,
+              "pers_mae": 1.837,
+              "ridge_bm": 0.424,
+              "ridge_mae": 0.707
+            }
+          },
+          "ridge": {
+            "bracket_match": 0.4301,
+            "mae": 0.745,
+            "n": 365,
+            "rmse": 1.075
+          },
+          "split": "2025-01-01"
+        }
+      ]
+    },
+    "23:00": {
+      "n_splits": 3,
+      "ridge_beats_best_baseline_mae": 3,
+      "splits": [
+        {
+          "climatology": {
+            "bracket_match": 0.1671,
+            "mae": 1.811,
+            "n": 365,
+            "rmse": 2.251
+          },
+          "persistence": {
+            "bracket_match": 0.2493,
+            "mae": 1.329,
+            "n": 365,
+            "rmse": 1.743
+          },
+          "regimes": {
+            "all": {
+              "n": 365,
+              "pers_bm": 0.249,
+              "pers_mae": 1.329,
+              "ridge_bm": 0.419,
+              "ridge_mae": 0.737
+            },
+            "material late-warming (truth-kcp>=2)": {
+              "n": 140,
+              "pers_bm": 0.0,
+              "pers_mae": 2.507,
+              "ridge_bm": 0.4,
+              "ridge_mae": 0.821
+            },
+            "stable (no material late-warming)": {
+              "n": 225,
+              "pers_bm": 0.404,
+              "pers_mae": 0.596,
+              "ridge_bm": 0.431,
+              "ridge_mae": 0.684
+            },
+            "summer (DJF)": {
+              "n": 90,
+              "pers_bm": 0.211,
+              "pers_mae": 1.433,
+              "ridge_bm": 0.389,
+              "ridge_mae": 0.833
+            },
+            "tmax already reached at CP (kcp==truth)": {
+              "n": 91,
+              "pers_bm": 1.0,
+              "pers_mae": 0.0,
+              "ridge_bm": 0.231,
+              "ridge_mae": 0.989
+            },
+            "winter (JJA)": {
+              "n": 92,
+              "pers_bm": 0.261,
+              "pers_mae": 1.402,
+              "ridge_bm": 0.446,
+              "ridge_mae": 0.717
+            }
+          },
+          "ridge": {
+            "bracket_match": 0.4192,
+            "mae": 0.737,
+            "n": 365,
+            "rmse": 1.043
+          },
+          "split": "2023-01-01"
+        },
+        {
+          "climatology": {
+            "bracket_match": 0.1639,
+            "mae": 1.749,
+            "n": 366,
+            "rmse": 2.241
+          },
+          "persistence": {
+            "bracket_match": 0.2322,
+            "mae": 1.374,
+            "n": 366,
+            "rmse": 1.828
+          },
+          "regimes": {
+            "all": {
+              "n": 366,
+              "pers_bm": 0.232,
+              "pers_mae": 1.374,
+              "ridge_bm": 0.462,
+              "ridge_mae": 0.705
+            },
+            "material late-warming (truth-kcp>=2)": {
+              "n": 138,
+              "pers_bm": 0.0,
+              "pers_mae": 2.609,
+              "ridge_bm": 0.399,
+              "ridge_mae": 0.899
+            },
+            "stable (no material late-warming)": {
+              "n": 228,
+              "pers_bm": 0.373,
+              "pers_mae": 0.627,
+              "ridge_bm": 0.5,
+              "ridge_mae": 0.588
+            },
+            "summer (DJF)": {
+              "n": 91,
+              "pers_bm": 0.22,
+              "pers_mae": 1.538,
+              "ridge_bm": 0.44,
+              "ridge_mae": 0.857
+            },
+            "tmax already reached at CP (kcp==truth)": {
+              "n": 85,
+              "pers_bm": 1.0,
+              "pers_mae": 0.0,
+              "ridge_bm": 0.247,
+              "ridge_mae": 0.953
+            },
+            "winter (JJA)": {
+              "n": 92,
+              "pers_bm": 0.228,
+              "pers_mae": 1.359,
+              "ridge_bm": 0.543,
+              "ridge_mae": 0.554
+            }
+          },
+          "ridge": {
+            "bracket_match": 0.4617,
+            "mae": 0.705,
+            "n": 366,
+            "rmse": 1.079
+          },
+          "split": "2024-01-01"
+        },
+        {
+          "climatology": {
+            "bracket_match": 0.1616,
+            "mae": 1.786,
+            "n": 365,
+            "rmse": 2.212
+          },
+          "persistence": {
+            "bracket_match": 0.2822,
+            "mae": 1.263,
+            "n": 365,
+            "rmse": 1.694
+          },
+          "regimes": {
+            "all": {
+              "n": 365,
+              "pers_bm": 0.282,
+              "pers_mae": 1.263,
+              "ridge_bm": 0.441,
+              "ridge_mae": 0.658
+            },
+            "material late-warming (truth-kcp>=2)": {
+              "n": 131,
+              "pers_bm": 0.0,
+              "pers_mae": 2.519,
+              "ridge_bm": 0.328,
+              "ridge_mae": 0.885
+            },
+            "stable (no material late-warming)": {
+              "n": 234,
+              "pers_bm": 0.44,
+              "pers_mae": 0.56,
+              "ridge_bm": 0.504,
+              "ridge_mae": 0.53
+            },
+            "summer (DJF)": {
+              "n": 90,
+              "pers_bm": 0.267,
+              "pers_mae": 1.322,
+              "ridge_bm": 0.378,
+              "ridge_mae": 0.756
+            },
+            "tmax already reached at CP (kcp==truth)": {
+              "n": 103,
+              "pers_bm": 1.0,
+              "pers_mae": 0.0,
+              "ridge_bm": 0.291,
+              "ridge_mae": 0.757
+            },
+            "winter (JJA)": {
+              "n": 92,
+              "pers_bm": 0.326,
+              "pers_mae": 1.228,
+              "ridge_bm": 0.511,
+              "ridge_mae": 0.576
+            }
+          },
+          "ridge": {
+            "bracket_match": 0.4411,
+            "mae": 0.658,
+            "n": 365,
+            "rmse": 0.942
+          },
+          "split": "2025-01-01"
+        }
+      ]
+    }
+  }
+}

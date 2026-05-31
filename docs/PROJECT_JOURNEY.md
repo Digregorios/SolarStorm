@@ -198,12 +198,20 @@ high-risk + Ridge center + conformal) and blending / conditional conformal can b
   `update.txt`), the delivered state is tagged with an annotated git tag `session-YYYY-MM-DD[-n]` so
   the reviewer can check out and inspect the exact code, not only the reports. The working tree must
   be clean (only `references/code-reviews/update.txt`, the message channel, may differ) before tagging.**
+- **Core-first FREEZE (2026-05-31 onward): NO new Polymarket/trading/execution delivery (Kelly, EV,
+  sizing, decision-line, brackets, resolver, trading states) until a report shows the Tmax model beats
+  strong baselines in causal walk-forward. The execution layer is frozen except for the minimum to keep
+  existing contracts/tests green. `reports/core_predictor_status.md` is the gating evidence.**
 
 ## Current status snapshot (2026-05-31)
 
 - DONE/green: Phases 0-4 (point forecast), Phase 7 (spike), Phase 8 offline logic + live odds +
-  live METAR fetch (`ingest-live` + health-check). Full test suite green (361). Live `decide`
+  live METAR fetch (`ingest-live` + health-check). Full test suite green (367). Live `decide`
   hardened for resolved/boundary-price markets; EV/Kelly sizing follows the engine state.
+- **Core predictor (2026-05-31, `reports/core_predictor_status.md`): Ridge beats the best baseline by
+  MAE in 3/3 splits at all 4 CPs; CP23 MAE ~0.70 degC / RMSE ~1.02 / bracket-match 0.441. Edge is
+  concentrated on late-warming days (MAE 0.87 vs persistence 2.55), ties on stable days, loses on
+  Tmax-already-reached days. The core IS validated; the execution layer is FROZEN behind it.**
 - CLOSED not-ready: Phase 5 interval calibration (diagnostic-only, fenced from trading).
 - Ensemble-evolution track: ridge_conformal_minimal IC defensible; precursors validated (Etapa 2
   GO); risk_model v0/v0.1 GO=False (diagnostic); calm_day_filter_v0 GO=True (protective low side);

@@ -4,6 +4,32 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [reorientation:core-first] - 2026-05-31 - FREEZE the execution layer; prove the core predictor
+
+Course-correction (reviewer-directed): the project was drifting into execution/presentation
+sophistication (Kelly, EV, decision-line, brackets, resolver) on top of a predictor whose core
+evidence was scattered. New standing rule:
+
+> **No new Polymarket/trading/execution delivery until a report shows the Tmax model beats strong
+> baselines in causal walk-forward.** The execution layer (Kelly/EV/sizing, decision-line, brackets,
+> resolver, trading states) is FROZEN except for the minimum needed to keep existing contracts/tests green.
+
+Delivered `reports/core_predictor_status.md` answering the 7 core questions, consolidating the
+validated Phase 0-4 evidence and FILLING the genuine gaps the prior reports lacked:
+- **MAE/RMSE in degC** added to `core/eval/metrics.py` (was absent; test `test_metrics_degc.py`).
+- **Per-CP point forecast** (20/21/22/23 UTC), not only the operational CP, via
+  `scripts/core_predictor_status.py` (reuses `build_training_panel` + `fit_ridge_band`, per-split
+  train-only climatology, walk-forward 2023/24/25).
+- **Per-regime** breakdown (stable / material late-warming / summer / winter / Tmax-already-reached).
+
+Findings (honest, incl. the unflattering): Ridge beats the best baseline by MAE in 3/3 splits at ALL
+four CPs (CP23 MAE ~0.70 degC, RMSE ~1.02, bracket-match 0.441 - RECONCILES with model_metrics_summary
+0.419/0.460/0.441 and REQ-MET-4). The edge is CONCENTRATED: crushes persistence on late-warming days
+(MAE 0.87 vs 2.55), ties on stable days (0.60 vs 0.59), and LOSES on Tmax-already-reached days (0.90
+vs 0.00 - persistence is the truth there). Distribution: point forecast strong, but the calibrated
+interval (Phase 5 conditional coverage) remains the open problem. Read-only audit; no model/threshold/
+contract change. Suite 367 green.
+
 ## [fix:decision-line] - 2026-05-31 - live decide robustness + sizing/engine coherence
 
 Surfaced while producing a real `decision_line.json` for reviewer audit (a resolved Wellington

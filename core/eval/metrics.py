@@ -71,6 +71,28 @@ def per_row_squared_error(pred: np.ndarray, truth: np.ndarray) -> np.ndarray:
     return (p - t) ** 2
 
 
+def mae(pred: np.ndarray, truth: np.ndarray) -> float:
+    """Mean absolute error in degC between point forecast and truth."""
+    p = np.asarray(pred, dtype=float)
+    t = np.asarray(truth, dtype=float)
+    if p.size != t.size:
+        raise ValueError("pred and truth length mismatch")
+    if p.size == 0:
+        return float("nan")
+    return float(np.mean(np.abs(p - t)))
+
+
+def rmse(pred: np.ndarray, truth: np.ndarray) -> float:
+    """Root mean squared error in degC between point forecast and truth."""
+    p = np.asarray(pred, dtype=float)
+    t = np.asarray(truth, dtype=float)
+    if p.size != t.size:
+        raise ValueError("pred and truth length mismatch")
+    if p.size == 0:
+        return float("nan")
+    return float(np.sqrt(np.mean((p - t) ** 2)))
+
+
 def corr(a: np.ndarray, b: np.ndarray) -> float:
     """Pearson correlation; NaN if degenerate."""
     a = np.asarray(a, dtype=float)
@@ -105,6 +127,8 @@ __all__ = [
     "bracket_match_at_coverage",
     "skill_score",
     "per_row_squared_error",
+    "mae",
+    "rmse",
     "corr",
     "rps",
 ]
