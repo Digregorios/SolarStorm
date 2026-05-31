@@ -4,6 +4,17 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:T-11-8 PLANNED] - 2026-06-01 - CQR / LightGBM-quantile prereg (new calibration hypothesis)
+
+Planning-only (no code). Registered `contracts/cqr_lightgbm_quantile_v0_prereg.md` (prereg_version 1.0)
+as a PLANNED, research-backed calibration hypothesis. CQR changes the OBJECT LEARNED - adaptive quantile
+bounds (LightGBM quantile loss) conformalized on the BOUNDS - rather than a post-hoc band around a
+center. This reopens calibration as a NEW hypothesis WITHOUT contradicting the closure (which killed the
+center+band paradigm) and WITHOUT loosening REQ-AUD-5. Honest caveat recorded: the integer-granularity
+limit (T-9-5) persists, so CQR may improve shape yet still not pass the het gate. Queue: execute LAST,
+after T-11-5 (ECMWF point gain) + T-11-6 (two-model spread), fed the best feature set (obs+GFS+ECMWF+
+spread) - CQR is underestimated if run before the new NWP features exist. NOT executed this session.
+
 ## [phase11:T-11-7] - 2026-06-01 - ECMWF daily-per-CP coverage audit GO (base hardened)
 
 `scripts/ecmwf_daily_cp_coverage_audit.py` (read-only, no fetch): the reviewer asked to upgrade the

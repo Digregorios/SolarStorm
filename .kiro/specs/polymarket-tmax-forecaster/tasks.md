@@ -815,6 +815,17 @@ Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo a
   `reports/nwp/ecmwf_full_daily_cp_coverage.md`.
 - **REQ:** REQ-DAT-5, REQ-AUD-4.
 
+### T-11-8: cqr_lightgbm_quantile_v0 (calibracao - hipotese NOVA) - **PLANNED**
+- [ ] **NAO executar antes de T-11-5/T-11-6.** Prereg congelado
+  (`contracts/cqr_lightgbm_quantile_v0_prereg.md`). CQR muda o OBJETO aprendido: limites quantilicos
+  adaptativos (LightGBM quantile loss) + conformalizacao dos BOUNDS, NAO banda pos-hoc em torno do
+  centro. Reabre calibracao como hipotese nova baseada em literatura (Romano 2019), SEM contradizer o
+  fechamento (que mata center+band) e SEM afrouxar REQ-AUD-5. Caveat honesto: granularidade inteira
+  persiste; pode melhorar shape e ainda assim nao passar o het gate.
+- **Fila:** rodar POR ULTIMO, alimentado com o melhor feature set (obs + GFS + ECMWF + spread se T-11-6
+  GO) - CQR e subestimado se rodar antes das features NWP novas.
+- **REQ:** REQ-MOD-4, REQ-AUD-5, REQ-CONF-1.
+
 ---
 
 ## Tasks transversais (qualquer momento)
