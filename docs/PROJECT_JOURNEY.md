@@ -240,6 +240,10 @@ high-risk + Ridge center + conformal) and blending / conditional conformal can b
   T-11-2 non_calm/high-delta targeted model prereg (design-first, H1 regime-split residual, gate must
   beat the analog arm); T-11-3 NWP early-lead candidate memo (NWP-residual candidate at CP20-22, no
   auto-promote without a per-CP comparison matrix). Execution + calibration unchanged.**
+- **Phase 11 T-11-4 ECMWF full backfill: GO (2026-05-31)** - 1342/1342 causal ECMWF single-runs
+  (2024-03..2025-12, 00Z/12Z, 0 failures, causal at all 4 CPs every month; gitignored). The 2nd causal
+  NWP source is landed; unblocks T-11-5 (ECMWF/ensemble point gain) and T-11-6 (two-model spread, the
+  first real NWP-spread axis - the only lever that could reopen calibration).
 - CLOSED not-ready: Phase 5 interval calibration (diagnostic-only, fenced from trading).
 - Ensemble-evolution track: ridge_conformal_minimal IC defensible; precursors validated (Etapa 2
   GO); risk_model v0/v0.1 GO=False (diagnostic); calm_day_filter_v0 GO=True (protective low side);

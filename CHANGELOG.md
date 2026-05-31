@@ -4,6 +4,17 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:T-11-4] - 2026-05-31 - ECMWF full backfill GO (2nd causal NWP source landed)
+
+`scripts/ecmwf_backfill_full.py` (controlled, idempotent, resumable, rate-limited with retry/backoff,
+per-invocation `--max-runs` cap so no single run times out). Backfilled causal ECMWF IFS HRES
+single-runs for 2024-03-01..2025-12-31, cycles 00Z+12Z. **GO: 1342/1342 runs (100%), 0 failures**, and
+the causal-coverage audit confirms a selectable run (`run_time <= cp-60min`) at all 4 CPs in every one
+of the 22 months. No GRIB/eccodes; every row carries run_time/valid_time/lead_h. Data + audit only -
+no model, no calibration, no execution. Snapshots in `artifacts/raw/nwp` (gitignored).
+`reports/nwp/ecmwf_backfill_full.md`. Unblocks T-11-5 (ECMWF point gain / 2-model ensemble) and T-11-6
+(two-model spread feasibility - the first real NWP-spread axis).
+
 ## [phase11:ecmwf+targeted] - 2026-05-31 - T-11-1 ECMWF pilot GO, T-11-2 prereg, T-11-3 decision memo
 
 Data-first round (reviewer-directed): bring new causal NWP data + design the targeted predictor, no

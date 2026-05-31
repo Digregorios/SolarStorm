@@ -800,6 +800,14 @@ Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo a
   `docs/decisions/nwp_early_lead_candidate.md`.
 - **REQ:** REQ-MOD-3, REQ-MET-1.
 
+### T-11-4: ecmwf_causal_backfill_full (2a fonte NWP - dado)
+- [x] Backfill controlado/idempotente/retomavel (`scripts/ecmwf_backfill_full.py`, cap --max-runs).
+  **GO**: 1342/1342 runs (100%), 0 falhas; audit causal confirma run selecionavel (run_time<=cp-60min)
+  nos 4 CPs em todos os 22 meses; sem GRIB. Snapshots gitignored. `reports/nwp/ecmwf_backfill_full.md`.
+- **Next:** T-11-5 ECMWF point gain (Ridge/GFS-res/ECMWF-res/ensemble) + T-11-6 two-model spread
+  feasibility (`|GFS-ECMWF|`, std) - so entao reabrir calibracao se houver sinal de spread.
+- **REQ:** REQ-DAT-5, REQ-MOD-3, OPN-5a.
+
 ---
 
 ## Tasks transversais (qualquer momento)
