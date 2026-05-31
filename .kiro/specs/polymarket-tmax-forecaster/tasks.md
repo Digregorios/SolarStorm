@@ -808,6 +808,13 @@ Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo a
   feasibility (`|GFS-ECMWF|`, std) - so entao reabrir calibracao se houver sinal de spread.
 - **REQ:** REQ-DAT-5, REQ-MOD-3, OPN-5a.
 
+### T-11-7: ecmwf_daily_cp_coverage_audit (fortalecer a base)
+- [x] Auditoria diaria completa (todos os dias x 4 CPs, sem fetch). **GO**: 671/671 dias causais nos 4
+  CPs (100%), 0 buracos, lead_h consistente 8/9/10/11h. A auditoria pegou 1 buraco de borda (2024-03-01
+  precisava do run 2024-02-29 12Z, antes do START) - fechado buscando os 2 runs de borda.
+  `reports/nwp/ecmwf_full_daily_cp_coverage.md`.
+- **REQ:** REQ-DAT-5, REQ-AUD-4.
+
 ---
 
 ## Tasks transversais (qualquer momento)

@@ -4,6 +4,17 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:T-11-7] - 2026-06-01 - ECMWF daily-per-CP coverage audit GO (base hardened)
+
+`scripts/ecmwf_daily_cp_coverage_audit.py` (read-only, no fetch): the reviewer asked to upgrade the
+backfill's monthly-sample audit to a FULL daily-per-CP audit before any modeling. Every local date
+2024-03-01..2025-12-31 x 4 CPs was checked via `select_nwp_v1` (`run_time <= cp-60min`). The full audit
+CAUGHT a 1-day boundary gap the monthly sample missed - 2024-03-01 needs the 2024-02-29 12Z run, which
+predated the backfill START. Closed it by fetching the 2 boundary runs (2024-02-29 00Z/12Z). **GO:
+671/671 days causal at all 4 CPs (100%), 0 gaps**, consistent lead_h (8/9/10/11h = prev-day 12Z run
+feeding 20/21/22/23Z). ECMWF data is solid for T-11-5 (point gain) / T-11-6 (two-model spread). No
+model/calibration/execution. `reports/nwp/ecmwf_full_daily_cp_coverage.md`.
+
 ## [phase11:T-11-4] - 2026-05-31 - ECMWF full backfill GO (2nd causal NWP source landed)
 
 `scripts/ecmwf_backfill_full.py` (controlled, idempotent, resumable, rate-limited with retry/backoff,
