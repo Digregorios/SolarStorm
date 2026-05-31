@@ -199,6 +199,9 @@ def _edge_snapshot(city, d, cp_utc, **kwargs):
             # contract "14": fairly priced -> no edge -> stay out, side None, stake 0.
             OddsBracket(contract=ContractRange(14, 14), label="14",
                         price_yes=0.50, price_no=0.50, best_ask=None),
+            # contract ">=14": model p_yes=0.9, YES underpriced @0.50 -> OPPORTUNITY_ASSYMETRIC/BUY_YES.
+            OddsBracket(contract=ContractRange(14, None), label="14 or higher",
+                        price_yes=0.50, price_no=0.50, best_ask=None),
         ),
     )
 
@@ -213,6 +216,9 @@ def test_sizing_follows_engine_state(tmp_path, monkeypatch):
     hi = by_label["16 or higher"]
     assert hi["decide_state"] == "BUY_NO" and hi["side"] == "BUY_NO"
     assert hi["ev"] is not None and hi["stake"] == 1.0
+    yes = by_label["14 or higher"]
+    assert yes["decide_state"] == "OPPORTUNITY_ASSYMETRIC" and yes["side"] == "BUY_YES"
+    assert yes["ev"] is not None and yes["stake"] > 0.0
     lo = by_label["14"]
     assert lo["side"] is None and lo["stake"] == 0.0
     assert lo["ev"] is None
