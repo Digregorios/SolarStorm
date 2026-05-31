@@ -2,11 +2,12 @@
 
 > **Spec version:** 1.0 (Fase 4 sob emenda `criterion_version` 1.1)
 > **Idioma:** PT-BR (ASCII em CLIs/logs/paths)
-> **Status (2026-05-30):** Fases 0-4 DONE (Fase 4 `phase4_ready=True`, anchor GFS s3_grib
-> max-de-trajetoria); Fase 5 CLOSED NOT READY (calibracao IC80/confidence diagnostica, fora do
-> trading); Fase 6 PARCIAL (AR(7) feito, DM-test adiado); Fase 7 DONE (spike PR-AUC ~0.95);
-> Fase 8 logica offline DONE + odds live + fetch METAR live (EV realizado e live-gated). Caminho
-> completo em `docs/PROJECT_JOURNEY.md`.
+> **Status (2026-05-31):** Fases 0-4 DONE (Fase 4 `phase4_ready=True`); Fase 5 CLOSED NOT READY;
+> Fase 6 PARCIAL; Fase 7 DONE (spike PR-AUC ~0.95); Fase 8 logica offline DONE mas **CONGELADA**.
+> **Reorientacao "telhado antes da poltrona" (2026-05-31): FOCO TOTAL no preditor de Tmax (Fase 9 -
+> melhoria do preditor); nenhuma entrega nova de execucao/Polymarket ate o preditor avancar.** O
+> core ja vence baselines (`reports/core_predictor_status.md`). Caminho completo em
+> `docs/PROJECT_JOURNEY.md`; estado reconciliado em `tasks.md` (banner no topo).
 
 Este diretorio contem os quatro artefatos que governam a construcao do **Polymarket Tmax Forecaster** para a estacao **NZWN (Wellington)**: previsao intraday do Tmax inteiro em °C com forecast por checkpoint (CP), confianca calibrada, modulo de late spike e auditoria forense anti-nowcaster.
 

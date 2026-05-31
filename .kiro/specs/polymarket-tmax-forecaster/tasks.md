@@ -14,6 +14,52 @@ Backlog acionavel agrupado por fase. Cada task tem:
 
 ---
 
+## STATUS RECONCILIADO (2026-05-31) - leia antes de tudo
+
+> O plano abaixo ficou dessincronizado da realidade (checkboxes de Fases 0-2 ainda `[ ]`
+> embora o codigo e os relatorios existam ha tempo). Esta secao e a fonte de verdade do
+> estado real; os checkboxes por-task foram atualizados para refleti-la.
+
+| Fase | Estado real | Evidencia |
+|------|-------------|-----------|
+| 0 Setup + contratos | **DONE** | repo + contratos congelados + guards (ascii/reverse-import/contract-version) em CI |
+| 1 Data + labels + **EDA** | **DONE** | `reports/eda/*` (tmax-hour, early-peak, coverage, decimal-vs-int) + EDA rica Etapa 1 (`reports/eda/`, `reports/regime/`). 99.7% day_complete, 0% fallback, 0% discrepancia decimal-vs-int (kill criteria PASS) |
+| 2 Baselines + harness H0 | **DONE** | persistencia>climatologia perto do EOD; `reports/h0_verdict.json` |
+| 3 Ridge band-aware | **DONE** | `reports/phase3.md`; REQ-MET-4 PASS 3/3; corr_diff diagnostico |
+| 4 NWP residual | **DONE** | `reports/phase4.md`; phase4_ready=True; ablation pareado pooled 3/3 |
+| 5 Calibracao/confidence | **CLOSED NOT READY** | `reports/phase5_closure.md`; het gate REQ-AUD-5 nunca passou; IC80/confidence diagnostico, fora do trading |
+| 6 AR online | PARCIAL | AR(7)+estado feitos; DM-test (T-6-3) adiado |
+| 7 Late spike | **DONE** | `reports/spike/*`; REQ-SPK-3 PASS 3/3 (PR-AUC ~0.95) |
+| 8 Decisao + odds live | OFFLINE DONE | logica + sizing + odds live; EV realizado e live-gated. **CONGELADO (ver abaixo)** |
+
+### FOCO TOTAL: o preditor de Tmax (regra de governanca, 2026-05-31)
+
+> **Telhado antes da poltrona.** Nenhuma entrega nova de execucao/Polymarket (Kelly, EV,
+> decision-line, brackets, resolver, trading states) ate o preditor avancar. A Fase 8 esta
+> CONGELADA exceto o minimo para nao quebrar contratos/testes. O preditor de Tmax e o unico
+> foco ate o proximo gate de modelo ser batido.
+
+O core JA vence baselines (REQ-MET-4 PASS; `reports/core_predictor_status.md`: Ridge bate o
+melhor baseline por MAE 3/3 splits em todos os 4 CPs; CP23 MAE ~0.70 degC). A frente de preditor
+agora e **melhorar o sinal**, nao re-provar o core nem polir execucao. Problemas abertos REAIS,
+em ordem de prioridade:
+
+1. **Lado high-risk (late-warming):** o `analog_retrieval_audit` mostrou que analogos capturam o
+   que o Ridge/logistico erram (non-calm high-risk lift 1.34-1.42; analog_confidence resolve g5).
+   Proximo: construir o `analog_high_risk_arm_v0` (elegivel) e medir ganho de MAE/bracket-match em
+   dias non-calm, walk-forward. Isto e PREDITOR, nao execucao.
+2. **Lado low-risk (dias travados):** `calm_day_filter_v0` (GO=True) - usar como gate para nao
+   overcorrigir; medir se estreitar a distribuicao em dias calmos melhora RPS sem perder coverage.
+3. **Distribuicao calibravel (o "telhado"):** Fase 5 condicional (heteroscedastica) e o problema
+   genuinamente aberto. O ponto e forte, o intervalo nao. Sem isto a distribuicao para brackets e
+   fraca. `ridge_conformal_minimal` e um stopgap defensavel (coverage 0.86-0.91), nao um passe.
+4. **NWP em leads mais cedo:** Phase 4 mostrou ganho pooled; o ganho maior esta em 20-22Z. Explorar
+   so depois que 1-3 avancarem.
+
+Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo aviso.
+
+---
+
 ## Fase 0 - Setup e contratos congelados
 
 ### T-0-1: Inicializar repositorio e estrutura de pastas
@@ -124,20 +170,20 @@ Backlog acionavel agrupado por fase. Cada task tem:
 - **REQ:** REQ-DAT-2, REQ-CON-5, REQ-AUD-4.
 
 ### T-1-7: Baselines persistencia + climatologia
-- [ ] `core/baselines/persistence.py`: `t_so_far_max_c_int` projecao via lag direto.
-- [ ] `core/baselines/climatology.py`: tabela horaria smoothed treinada em janela >= 12 meses do train split.
-- **Done:** baselines tem testes unitarios; relatorios em `reports/baselines/<split>.md`.
+- [x] `core/baselines/persistence.py`: `t_so_far_max_c_int` projecao via lag direto.
+- [x] `core/baselines/climatology.py`: tabela horaria smoothed treinada em janela >= 12 meses do train split.
+- **Done:** RECONCILED 2026-05-31 - baselines com testes; usados em phase3/phase4/core_predictor_status.
 - **REQ:** REQ-MET-3.
 
 ### T-1-8: EDA inicial
-- [ ] Script em `experiments/eda/intro.py` que gera **tabelas** (parquet/csv) e markdown:
+- [x] Script em `experiments/eda/intro.py` que gera **tabelas** (parquet/csv) e markdown:
   - tabela `tmax_hour_local_by_month.csv` com `(month, p10, p25, p50, p75, p90)` da hora local do Tmax,
   - tabela `early_peak_by_month.csv` com taxa de early peak (`tmax_hour_local < 12`) e outlier (`tmax_hour_local in [0,6) or [22,24)`),
   - tabela `coverage_by_month.csv` com `n_total, n_complete, ratio_complete` (REQ-CON-7),
   - tabela `tmax_distribution_by_month.csv` com histograma `(month, k, count)`.
-- [ ] `reports/eda/intro.md` com pelo menos 10 numeros chave inline + as 4 tabelas linkadas.
-- [ ] Plots PNG sao **opcionais** e nao fazem parte do criterio de done.
-- **Done:** as 4 tabelas existem e o markdown referencia cada uma; numeros chave conferidos manualmente vs CSV.
+- [x] `reports/eda/intro.md` com pelo menos 10 numeros chave inline + as 4 tabelas linkadas.
+- [x] Plots PNG sao **opcionais** e nao fazem parte do criterio de done.
+- **Done:** RECONCILED 2026-05-31 - 4 tabelas em `reports/eda/` + EDA rica Etapa 1 (3 agentes: morning_predictors, regime_path, month_decade). EDA = Fase 1 CONCLUIDA.
 - **REQ:** REQ-MET-2 (parcial), REQ-CON-7.
 
 ### T-1-9: Golden tests Fase 1
@@ -148,24 +194,24 @@ Backlog acionavel agrupado por fase. Cada task tem:
 - **REQ:** REQ-REP-2.
 
 ### T-1-10: Implementar day_complete (REQ-CON-7)
-- [ ] `core/labels/completeness.py::is_day_complete(date_local) -> tuple[bool, dict]` retorna `(flag, motivos)` com criterios de REQ-CON-7:
+- [x] `core/labels/completeness.py::is_day_complete(date_local) -> tuple[bool, dict]` retorna `(flag, motivos)` com criterios de REQ-CON-7:
   - `n_obs >= 40` em 24h locais,
   - `max_gap_minutes <= 120`,
   - 1 obs em cada um dos 4 quartis do dia local.
-- [ ] Tabela de cobertura mensal em `reports/eda/coverage.md` (markdown + csv com `n_total, n_complete, ratio_complete, motivos_top3`).
-- [ ] Test unit cobre: dia normal, dia com gap longo, dia sem manha, dia incompleto.
-- **Done:** taxa global de `False` <= 5%; senao kill criterion ativo.
+- [x] Tabela de cobertura mensal em `reports/eda/coverage.md` (markdown + csv com `n_total, n_complete, ratio_complete, motivos_top3`).
+- [x] Test unit cobre: dia normal, dia com gap longo, dia sem manha, dia incompleto.
+- **Done:** RECONCILED 2026-05-31 - 99.7% day_complete global (`reports/eda/coverage_by_month.csv`); kill criterion (<=5% False) PASS.
 - **REQ:** REQ-CON-7, REQ-MET-2.
 
 ### T-1-11: Implementar fallback policy + tracking (REQ-CON-8)
-- [ ] `core/labels/parse_metar.py` segue exatamente o pseudocodigo da design 4.1.2.
-- [ ] Tracking: incrementar contadores `parse_ok`, `parse_imputed`, `parse_missing`, `parse_implausible_value` em metricas estruturadas.
-- [ ] Relatorio `reports/eda/decimal_vs_int_check.md` (markdown + csv) com:
+- [x] `core/labels/parse_metar.py` segue exatamente o pseudocodigo da design 4.1.2.
+- [x] Tracking: incrementar contadores `parse_ok`, `parse_imputed`, `parse_missing`, `parse_implausible_value` em metricas estruturadas.
+- [x] Relatorio `reports/eda/decimal_vs_int_check.md` (markdown + csv) com:
   - taxa de discrepancia (`Q(round((tmpf-32)*5/9))` vs `T_obs_int`) por mes,
   - taxa de fallback por mes,
   - exemplos textuais de 5 mensagens com regex falhando.
-- [ ] CI guard `tests/integration/test_fallback_kill.py` que falha se `fallback_rate_global > 0.5%` ou `discrepancia_global > 0.5%` no dataset commitado.
-- **Done:** ambas as taxas reportadas e abaixo dos limiares; senao kill criterion ativo (Fase 1 nao avanca).
+- [x] CI guard `tests/integration/test_fallback_kill.py` que falha se `fallback_rate_global > 0.5%` ou `discrepancia_global > 0.5%` no dataset commitado.
+- **Done:** RECONCILED 2026-05-31 - 0% fallback, 0% discrepancia decimal-vs-int (`reports/eda/decimal_vs_int_check.md`); ambos kill criteria PASS.
 - **REQ:** REQ-CON-8, REQ-CON-3.
 
 ---
@@ -611,6 +657,45 @@ Backlog acionavel agrupado por fase. Cada task tem:
 - [x] Test unit cobre: contract `=k`, contract `[a,b]`, contract aberto `>=k`.
 - **Done:** `p_yes` + `assert_p_yes_normalized` expostos e consumidos por `decision.engine.decide`; `tests/unit/test_market_map.py` (8) cobre =k/[a,b]/>=k/<=k + normalizacao.
 - **REQ:** REQ-DEC-1, design 10.
+
+---
+
+## Fase 9 - Melhoria do preditor (FOCO ATUAL, 2026-05-31)
+
+> O core vence baselines (REQ-MET-4 PASS). Esta fase MELHORA o sinal do preditor de Tmax. Gate
+> de cada arm: ganho de MAE/bracket-match (ou RPS) walk-forward >= 2/3 splits, IC/sem-leak, SEM
+> afrouxar gate, SEM tocar execucao. Cada arm tem prereg + relatorio (rotina). Promove o que
+> passa; mata honestamente o que nao passa.
+
+### T-9-1: analog_high_risk_arm_v0 (lado high-risk / late-warming)
+- [ ] Construir o arm de analogos (retrieval ja validado: `analog_retrieval_audit` g1-g4 PASS;
+  `analog_quality_v0.1` resolve g5 via `analog_confidence`). Blendar `P_analog` com o Ridge
+  SOMENTE em dias non-calm (calm_day_filter=false), ponderado por `analog_confidence`.
+- [ ] Medir MAE/bracket-match/RPS walk-forward 2023/24/25, ESPECIALMENTE em dias de late-warming
+  e non-calm, vs Ridge puro.
+- **Done:** ganho mensuravel em >= 2/3 splits no estrato non-calm/high-risk sem regredir o agregado;
+  prereg + `reports/analog/analog_high_risk_arm_v0.md`. Senao, kill honesto.
+- **REQ:** REQ-MOD-1, REQ-MET-3, REQ-MET-4.
+
+### T-9-2: calm_day suppression (lado low-risk)
+- [ ] Usar `calm_day_filter_v0` (GO=True) para suprimir overcorrection: em dias calmos, confiar
+  mais em Ridge/persistencia e/ou estreitar a distribuicao.
+- [ ] Medir se estreitar em dias calmos melhora RPS sem perder coverage.
+- **Done:** ganho de RPS/coverage walk-forward >= 2/3 ou kill honesto. `reports/...`.
+- **REQ:** REQ-MOD-1, REQ-MET-3.
+
+### T-9-3: distribuicao calibravel condicional (o "telhado")
+- [ ] Atacar o problema aberto da Fase 5: cobertura CONDICIONAL (heteroscedastica). Sem isto a
+  distribuicao para brackets e fraca mesmo com ponto forte.
+- [ ] Explorar conformal condicional por regime calm/high-risk (os dois estratos agora existem).
+- **Done:** REQ-AUD-5 het gate passa em >= 2/3, OU documentar por que continua aberto e qual o
+  proximo candidato. `reports/...`.
+- **REQ:** REQ-MOD-4, REQ-AUD-5, REQ-CONF-1.
+
+### T-9-4: NWP em leads mais cedo (so apos 9-1..9-3)
+- [ ] Explorar o ganho NWP em 20-22Z (Phase 4 mostrou ser onde o ganho e maior).
+- **Done:** ganho walk-forward por CP >= 2/3 ou kill. `reports/...`.
+- **REQ:** REQ-MOD-3, REQ-MET-3.
 
 ---
 

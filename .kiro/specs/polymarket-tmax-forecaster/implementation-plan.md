@@ -23,6 +23,15 @@ Este plano transforma o design em um caminho **incremental, com gates pre-regist
 | 7 | Late spike como alerta | spike_risk calibrado | 1-2 semanas |
 | 8 | Shadow trading + EV | metrica primaria realizada | 2-4 semanas |
 
+> **Atualizacao 2026-05-31 (reorientacao "telhado antes da poltrona"):** Fases 0-7 DONE
+> (Fase 5 CLOSED NOT READY), Fase 8 logica offline DONE. A Fase 8 (execucao/Polymarket) esta
+> **CONGELADA** e foi adicionada a **Fase 9 - Melhoria do preditor** como FOCO atual. Nenhuma
+> entrega nova de execucao ate o preditor avancar. Ver o banner de status em `tasks.md`.
+
+| Fase | Nome | Objetivo principal | Estado |
+|------|------|--------------------|--------|
+| 9 | Melhoria do preditor | analog high-risk arm, calm suppression, distribuicao calibravel condicional, NWP early-lead | FOCO ATUAL |
+
 Tempo total realista (1 dev focado, sem multi-cidade): **3-4 meses** para chegar a Fase 8 com uma metrica primaria realista.
 
 ---
