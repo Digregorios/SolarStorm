@@ -86,6 +86,12 @@ def run(
     bracket_rows: list[dict] = []
     try:
         snap = snapshot_live(city, d, cp_utc)
+    except (ConnectionError, TimeoutError, ValueError, KeyError, OSError) as exc:
+        # Live odds genuinely unavailable (network / parsing). Bugs in decide()/size_side()
+        # below must NOT be masked here -> they run in the else block and are allowed to raise.
+        odds_status = "unavailable"
+        notes.append(f"odds_unavailable:{type(exc).__name__}")
+    else:
         odds_sha256 = snap.sha256
         exec_contract = default_execution_contract()
         thresholds = Thresholds()
@@ -107,25 +113,24 @@ def run(
             }
             # Degenerate price (resolved market / no live quote): never size a boundary price.
             if not (0.0 < b.price_yes < 1.0 and 0.0 < b.price_no < 1.0):
-                row.update(decide_state="NO_TRADE_RESOLVED", ev=None, kelly_fraction=None, stake=0.0)
+                row.update(decide_state="NO_TRADE_RESOLVED", side=None,
+                           ev=None, kelly_fraction=None, stake=0.0)
                 bracket_rows.append(row)
                 continue
             dec = decide(forecast_row, b.contract, b.price_yes, b.price_no, thresholds)
             # EV/Kelly/stake follow the ENGINE's chosen side (single source of truth); 0 otherwise.
+            # size_side takes p_yes and converts to (1-p_yes) for BUY_NO internally.
             side = trade_side.get(dec.state)
             sr = size_side(side, py, b.price_yes if side == "BUY_YES" else b.price_no,
                            contract=exec_contract) if side else None
             row.update(
                 decide_state=dec.state,
+                side=side,
                 ev=round(sr.expected_value, 6) if sr else None,
                 kelly_fraction=round(sr.kelly_fraction, 6) if sr else None,
                 stake=round(sr.stake, 6) if sr else 0.0,
             )
             bracket_rows.append(row)
-    except (ConnectionError, TimeoutError, ValueError, KeyError, OSError) as exc:
-        # Live odds genuinely unavailable (network / parsing). Do NOT swallow other bugs.
-        odds_status = "unavailable"
-        notes.append(f"odds_unavailable:{type(exc).__name__}")
 
     decision_row = {
         "run_id": rid,

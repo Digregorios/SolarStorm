@@ -145,6 +145,8 @@ from core.decision.market_map import ContractRange, p_yes  # noqa: E402
 # Decision states (REQ-DEC-2). NO_TRADE (above) is reused for the stay-out states.
 BLOCK_BUY_NO_LATE_SPIKE = "BLOCK_BUY_NO_LATE_SPIKE"
 NO_TRADE_RESOLVED = "NO_TRADE_RESOLVED"
+# NOTE: "ASSYMETRIC" is a historical (misspelled) identifier frozen in the pre-registered state
+# set; kept as-is to avoid an unmigrated contract change. Do not rename without a migration.
 OPPORTUNITY_ASSYMETRIC = "OPPORTUNITY_ASSYMETRIC"
 BUY_NO = "BUY_NO"
 REASON_NO_EDGE = "no_edge"

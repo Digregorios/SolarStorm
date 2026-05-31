@@ -44,6 +44,14 @@ def test_size_side_buy_no_uses_complement():
     assert r.expected_value > 0.0
 
 
+def test_size_side_buy_no_semantics_from_decision_line():
+    # Reviewer-specified case: contract p_yes=0.026, BUY_NO at no-price 0.605.
+    # size_side takes p_yes and must convert to win-prob 1-0.026=0.974; EV strongly positive.
+    r = size_side("BUY_NO", p_yes=0.026, price=0.605, contract=ExecutionContract(fee_bps=0))
+    assert r.p_model == pytest.approx(0.974)
+    assert r.expected_value == pytest.approx(0.974 - 0.605)  # = 0.369
+
+
 def test_size_side_flat_default_takes_one_unit_on_positive_edge_only():
     pos = size_side("BUY_YES", p_yes=0.70, price=0.50)  # default 1_unit_notional
     assert pos.stake == 1.0

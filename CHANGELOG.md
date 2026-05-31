@@ -13,16 +13,23 @@ market, 2026-05-31). Three real defects fixed (no gate/contract loosened):
   the live `decide` CLI fed them resolved-market prices (winner at 1.0, losers at ~0.0005) and the
   `ValueError` was caught by a blind `except Exception` and mis-reported as `odds_status=unavailable`.
   Now `size_book` and the CLI SKIP degenerate prices (resolved / no live quote) -> `NO_TRADE_RESOLVED`.
-- **Blind except**: narrowed to `(ConnectionError, TimeoutError, ValueError, KeyError, OSError)` with a
-  `odds_unavailable:<Type>` note, so genuine bugs no longer masquerade as missing odds.
+- **Blind except**: the odds fetch (`snapshot_live`) is now isolated in its own `try/except`; the
+  `decide`/`size_side` per-bracket loop runs in the `else` block so a genuine bug there RAISES
+  instead of masquerading as `odds_status=unavailable`. The fetch except is narrowed to
+  `(ConnectionError, TimeoutError, ValueError, KeyError, OSError)` with an `odds_unavailable:<Type>` note.
 - **Sizing<->engine incoherence**: `size_book` chose the best-EV side INDEPENDENTLY of `engine.decide`,
   so a bracket could read `NO_TRADE_RESOLVED` yet carry `ev>0, stake=1.0`. Sizing now FOLLOWS the
   engine state (the pre-registered state machine is the single source of truth): EV/Kelly/stake are
   computed only for the side the engine chose (OPPORTUNITY_ASSYMETRIC->BUY_YES, BUY_NO->BUY_NO), else 0.
+  An explicit `side` field (BUY_YES|BUY_NO|null) is now emitted per bracket for auditability.
 
-Verified on the live 2026-06-02 market: coherent line (BUY_NO on overpriced 17/18/19, NO_TRADE_RESOLVED
-on boundary brackets, prob_dist sums to 1). Regression test `test_resolved_market_no_crash_and_coherent`.
-Suite 361 green.
+Validation: the proof is the regression suite - `test_resolved_market_no_crash_and_coherent` (boundary
+fixture), `test_sizing_follows_engine_state` (BUY_NO sizes NO, no-edge -> side null/stake 0), and
+`test_size_side_buy_no_semantics_from_decision_line` (size_side takes p_yes, converts to 1-p_yes for
+NO). A future open market (2026-06-02) was inspected ONLY as an odds-ingestion / decision-line
+plumbing smoke test - NOT model validation: the nowcast needs same-day intraday info available at CP,
+and that date fell back to climatology. Note: `OPPORTUNITY_ASSYMETRIC` is a frozen (misspelled)
+pre-registered identifier, kept as-is (no unmigrated rename). Suite 363 green.
 
 ## [ensemble-evolution] - 2026-05-31 - incremental track (NOT a from-scratch v1)
 

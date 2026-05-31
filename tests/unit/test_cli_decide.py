@@ -134,7 +134,7 @@ def test_decision_row_ok(tmp_path, monkeypatch):
     # Per-bracket keys
     for b in row["brackets"]:
         for bk in ("label", "contract", "p_yes", "price_yes", "price_no",
-                   "decide_state", "ev", "kelly_fraction", "stake"):
+                   "decide_state", "side", "ev", "kelly_fraction", "stake"):
             assert bk in b, f"missing bracket key: {bk}"
 
 
@@ -180,4 +180,39 @@ def test_resolved_market_no_crash_and_coherent(tmp_path, monkeypatch):
     assert len(row["brackets"]) == 2
     for b in row["brackets"]:
         assert b["decide_state"] == "NO_TRADE_RESOLVED"
+        assert b["side"] is None
         assert b["ev"] is None and b["kelly_fraction"] is None and b["stake"] == 0.0
+
+
+def _edge_snapshot(city, d, cp_utc, **kwargs):
+    """Live (non-degenerate) market designed to exercise BUY_NO and a stay-out side."""
+    return OddsSnapshot(
+        slug="highest-temperature-in-wellington-on-july-15-2025",
+        event_url="https://polymarket.com/event/highest-temperature-in-wellington-on-july-15-2025",
+        cp_utc=cp_utc,
+        ts_utc=datetime(2025, 7, 15, 3, 0, tzinfo=timezone.utc),
+        sha256="abc123" * 8 + "abcdef12",
+        brackets=(
+            # contract ">=16": model p_yes ~ 0.0 (prob_dist mass <=15); NO underpriced @0.50 -> BUY_NO.
+            OddsBracket(contract=ContractRange(16, None), label="16 or higher",
+                        price_yes=0.50, price_no=0.50, best_ask=None),
+            # contract "14": fairly priced -> no edge -> stay out, side None, stake 0.
+            OddsBracket(contract=ContractRange(14, 14), label="14",
+                        price_yes=0.50, price_no=0.50, best_ask=None),
+        ),
+    )
+
+
+def test_sizing_follows_engine_state(tmp_path, monkeypatch):
+    """side/EV/stake must follow engine.decide: BUY_NO sizes the NO side; a no-edge stay-out
+    carries side=None and stake 0 (sizing never competes with the engine)."""
+    result, out_dir = _fake_run(tmp_path, monkeypatch, _edge_snapshot)
+    assert result.exit_code == 0, result.output
+    row = json.loads(list(out_dir.glob("*.json"))[0].read_text(encoding="ascii"))
+    by_label = {b["label"]: b for b in row["brackets"]}
+    hi = by_label["16 or higher"]
+    assert hi["decide_state"] == "BUY_NO" and hi["side"] == "BUY_NO"
+    assert hi["ev"] is not None and hi["stake"] == 1.0
+    lo = by_label["14"]
+    assert lo["side"] is None and lo["stake"] == 0.0
+    assert lo["ev"] is None
