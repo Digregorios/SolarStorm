@@ -146,19 +146,49 @@ het gate, each for an honest, documented reason:
 
 ## Cross-cutting discipline (held throughout)
 
+## Ensemble-evolution track (2026-05-31) - incremental, gated
+
+After Phase 5 closed, the bias audit re-framed the open problem as the CENTER under late-warming,
+not the IC. A pivot to a layered probabilistic ensemble was proposed; judged and reconciled to an
+INCREMENTAL queue (not a from-scratch v1 - that was the quarantine, which failed). Full assessment
++ the 4 conceded reviewer rebuttals in `reports/ensemble_pivot_assessment.md`.
+
+What was tried and what it showed (each gated, honest):
+1. **ridge_conformal_minimal** - per-CP IC80 from the Ridge's own abs-residuals. After two P0
+   fixes (true split-conformal held-out calib; per-split train-only climo) -> coverage 0.86-0.91
+   per CP, non-degenerate. **IC calibration is now defensible.** Not Phase 5.
+2. **late_warming_bias_audit (n=1095)** - Ridge cold bias is narrow + proportional to post-CP
+   warming and shared by ALL centers (causal-horizon limit). Answered "is it a dead end?": no -
+   precursors may exist before the CP even though the realized thermal signal does not.
+3. **Etapa 1 EDA (read-only)** - PRE-CP precursors of material late-warming exist: wind change
+   S->N, morning slope, southerly (suppress), rain-persistence (suppress). "Cold-start=upside"
+   REJECTED. Ridge has no month x decade bias (its bias is regime-specific).
+4. **Etapa 2 precursor audit (walk-forward)** - 3/4 primary precursors survive; t_06 flipped OOS
+   (rejected); S->N high-lift small-n. Verdict GO.
+5. **risk_model_v0 / v0.1** - causal pre-CP logistic. v0 GO=False (top-decile lift just under 1.4,
+   4/5 gates). v0.1 re-gated on bucket separation: also GO=False (high bucket too diluted for
+   1.35x), BUT the LOW protective bucket is robust (~0.13-0.22 vs base ~0.38). **Net: a reliable
+   CALM-DAY detector, not a sharp high-risk hunter.** No gate loosened; stays diagnostic-only.
+
+Open decision (awaiting direction): use the protective low-bucket, open a v0.2 hypothesis, or
+proceed to Etapa 3 (analog_retrieval_audit) leaving the risk model diagnostic.
+
+## Cross-cutting discipline (held throughout)
+
 - ASCII-only source (`tools/ascii_guard.py`), reverse-import guard (eccodes never on runtime
   graph), determinism (frozen seeds; REQ-MOD-6), per-split reporting (pooled only as a labelled
   note), and hashed pre-registration with teeth (the evaluator refuses to run under a drifted
-  contract). No threshold was loosened after seeing a result.
+  contract). No threshold was loosened after seeing a result. **Docs (CHANGELOG + this journey +
+  READMEs) and versioning are updated as part of every delivery, not afterwards.**
 
-## Current status snapshot
+## Current status snapshot (2026-05-31)
 
 - DONE/green: Phases 0-4 (point forecast), Phase 7 (spike), Phase 8 offline logic + live odds +
-  live METAR fetch (`ingest-live`). Full test suite green.
+  live METAR fetch (`ingest-live` + health-check). Full test suite green (360).
 - CLOSED not-ready: Phase 5 interval calibration (diagnostic-only, fenced from trading).
-- Resolved bottleneck: live ingestion (was blocking) -> `ingest-live` shipped.
-- Active bottleneck: the CLI default still serves the Phase-2 baseline. `forecast --model ridge`
-  makes the trained model opt-in; promoting the default and wiring a live GFS anchor for the
-  NWP-residual model are the next deliberate steps.
-- Open/optional: persist trained model to `artifacts/models/` (avoid per-call retrain), 30-min
-  `ingest-live` scheduling, T-8-4 threshold tuning, T-6-3 AR DM-test, live realized-EV.
+- Ensemble-evolution track: ridge_conformal_minimal IC defensible; precursors validated (Etapa 2
+  GO); risk_model v0/v0.1 GO=False (diagnostic; protective low-bucket usable). EDA/audits read-only.
+- Active modeling bottleneck: late-warming CENTER (regime-specific cold bias); the risk model
+  detects calm days well but not high-risk days sharply.
+- Open/optional: protective-bucket use, risk_model v0.2, Etapa 3 analogs, NWP multi-model v0,
+  promote CLI default (still empirical), persist trained model, live realized-EV.

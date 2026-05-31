@@ -27,6 +27,7 @@ The full spec lives under `.kiro/specs/polymarket-tmax-forecaster/`:
 | 6 - AR online | PARTIAL | AR(7) corrector + state/backup/dedupe done; DM-test (T-6-3) deferred |
 | 7 - Late spike | DONE | REQ-SPK-3 PASS 3/3 (PR-AUC ~0.95 vs prevalence ~0.82); spike_risk wired to confidence + decision |
 | 8 - Decision + live odds | OFFLINE DONE | decide() + market_map + sizing (EV/Kelly) + live Polymarket odds snapshot + live METAR fetch; realized-EV is live-gated |
+| Ensemble-evolution | IN PROGRESS | ridge_conformal_minimal IC defensible; Etapa1 EDA + Etapa2 precursor audit GO; risk_model v0/v0.1 GO=False (diagnostic, protective low-bucket usable). See ensemble_pivot_assessment.md |
 
 See `docs/PROJECT_JOURNEY.md` for the full path (attempts, failures, decisions) and
 `reports/model_metrics_summary.md` for consolidated model metrics.

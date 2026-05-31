@@ -4,6 +4,36 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [ensemble-evolution] - 2026-05-31 - incremental track (NOT a from-scratch v1)
+
+Decision: evolve the current forecaster into a layered probabilistic ensemble incrementally
+(each arm gated by walk-forward), NOT a big-bang rewrite. Assessment + reconciled queue in
+`reports/ensemble_pivot_assessment.md`. Quarantine = source of IDEAS not code; PolyWeather =
+engineering recipes (DEB blend, hourly/phase corrector, TAF-as-suppression). Steps so far:
+
+- **ridge_conformal_minimal** (`core/models/ridge_conformal.py`): per-CP IC80 = 80% conformal
+  quantile of the Ridge's OWN integer abs-residuals, hierarchical fallback (cp_specific ->
+  global_cp_pool -> insufficient_data). Fixed to TRUE split-conformal (held-out calib) + per-split
+  train-only climatology after two reviewer P0 corrections. Historical per-CP IC80 coverage
+  0.86-0.91, non-degenerate widths -> IC calibration is DEFENSIBLE. NOT Phase 5.
+- **late_warming_bias_audit** (n=1095 OOS): Ridge near-unbiased overall (mean_err -0.018); cold
+  bias is NARROW + proportional to post-CP warming (+0.39@mag2 .. +2.35@mag4) and shared by ALL
+  centers (causal-horizon limit, not Ridge-specific). The 4 fresh days were a real failure regime,
+  not adversarial.
+- **Etapa 1 EDA (read-only)**: causal-eligible PRE-CP precursors of material late-warming
+  (k_eod-k_cp>=2, base 0.377) DO exist. Tier-1: wind quadrant change S->N (lift 1.70), morning
+  slope delta_06_to_cp, southerly-at-CP (suppress), rain-persistence (suppress). Rejected
+  "cold-start = upside". `reports/eda/etapa1_eda_summary.md`.
+- **Etapa 2 late_warming_precursor_audit (walk-forward)**: 3/4 primary precursors survive the gate
+  (delta_06_to_cp enhance, southerly + rain-persistence suppress, all PASS 3/3); S->N high-lift
+  but small-n; t_06 FLIPPED OOS (rejected). Verdict GO. `reports/spike/late_warming_precursor_audit.md`.
+- **Etapa 5 risk_model_v0 + v0.1** (`core/models/late_warming_risk.py`, prereg
+  `contracts/late_warming_risk_v0_1_prereg.md` prereg_version 1.0): causal pre-CP logistic +
+  isotonic. v0 GO=False (4/5 gates; top-decile lift 1.38/1.62/1.39 < 1.4). v0.1 re-gated on bucket
+  separation: GO=False (g3 high>=1.35x base fails) - but the LOW protective bucket is robust
+  (~0.13-0.22 vs base ~0.38). Net: a reliable CALM-DAY detector, NOT a sharp high-risk hunter.
+  s_to_n did not help. NO gate loosened; stays diagnostic-only. `reports/spike/late_warming_risk_v0*.md`.
+
 ## [live-metar] - 2026-05-30 - Live observation fetch (pipeline gap fixed)
 
 - **Added** `core/ingest/metar_live.py`: fetch raw METAR from aviationweather.gov
