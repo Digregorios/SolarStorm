@@ -235,6 +235,11 @@ high-risk + Ridge center + conformal) and blending / conditional conformal can b
   regime (73% of total error), then high-delta_06 days; T-10-4 diagnostic-IC display fence (doc).
   Next predictor lever, evidence-driven: the non-calm / high-delta_06 regime (where the analog arm + a
   2nd NWP source would help most).**
+- **Phase 11 (data-first, 2026-05-31): T-11-1 ECMWF causal-ingest pilot GO (12/12 clean, no GRIB,
+  causal run selected at CP23 lead 11h; full backfill 2024-03..2025-12 is the next data action);
+  T-11-2 non_calm/high-delta targeted model prereg (design-first, H1 regime-split residual, gate must
+  beat the analog arm); T-11-3 NWP early-lead candidate memo (NWP-residual candidate at CP20-22, no
+  auto-promote without a per-CP comparison matrix). Execution + calibration unchanged.**
 - CLOSED not-ready: Phase 5 interval calibration (diagnostic-only, fenced from trading).
 - Ensemble-evolution track: ridge_conformal_minimal IC defensible; precursors validated (Etapa 2
   GO); risk_model v0/v0.1 GO=False (diagnostic); calm_day_filter_v0 GO=True (protective low side);

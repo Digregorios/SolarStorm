@@ -4,6 +4,32 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:ecmwf+targeted] - 2026-05-31 - T-11-1 ECMWF pilot GO, T-11-2 prereg, T-11-3 decision memo
+
+Data-first round (reviewer-directed): bring new causal NWP data + design the targeted predictor, no
+calibration / no execution / no Polymarket.
+
+- **T-11-1 ecmwf_causal_backfill_pilot (`scripts/ecmwf_backfill_pilot.py`,
+  `reports/nwp/ecmwf_backfill_pilot.md`): GO.** Small controlled pilot (12 ECMWF single-runs across a
+  dense 3-day sequence before two contrasting target CPs, autumn + winter 2024). Live fetch clean 12/12,
+  NO GRIB/eccodes, every row carries `run_time_utc`/`valid_time_utc`/`lead_h`; `select_nwp_v1` picks a
+  CAUSAL run at both CP23 targets (prev-day 12Z run, lead 11h, run_time <= cp-60min). The first attempt
+  was a PAUSE (sparse run-time sampling forced the selector to reach across months) - fixed by fetching
+  a dense local sequence; the PAUSE->GO iteration itself validated the gate. Next: full backfill
+  2024-03..2025-12 (~2680 calls, ~22 partitions), accept split-1 asymmetry, cross-check before promote.
+  Snapshots in `artifacts/raw/nwp` (gitignored).
+- **T-11-2 non_calm_high_delta_model_v0 prereg (`contracts/...prereg.md`, prereg_version 1.0):
+  DESIGN-FIRST.** Turns the T-10-3 error map into ONE pre-registered hypothesis (H1 = regime-split
+  residual on the EX-ANTE non_calm AND high-delta_06 pocket), with a GO gate that requires the pocket
+  gain to EXCEED T-9-1's analog arm. Not implemented yet (frozen design so the later build is not a
+  random search); alternatives explicitly deferred.
+- **T-11-3 nwp_early_lead_candidate decision memo (`docs/decisions/nwp_early_lead_candidate.md`):**
+  the T-10-2 GO -> NWP-residual is the CANDIDATE point model at CP20-22, keep Ridge/analog at CP23; NO
+  auto-promotion without a consolidated per-CP comparison matrix (Ridge vs NWP-residual vs analog vs
+  future regime-residual), which should wait for the ECMWF backfill (2-model ensemble may change it).
+
+Suite 367 green; all guards pass. Predictor/data/design only; execution + calibration unchanged.
+
 ## [phase10:post-calibration] - 2026-05-31 - 4 fronts: ECMWF feasibility, NWP early-lead, error map, IC fence
 
 Calibration is settled-with-stopgap and CLOSED as an active trail. Four parallel post-calibration

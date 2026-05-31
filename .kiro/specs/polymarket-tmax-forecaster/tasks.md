@@ -774,6 +774,34 @@ Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo a
 
 ---
 
+## Fase 11 - ECMWF + melhoria direcionada (data-first; execucao congelada)
+
+> Dado novo + melhoria direcionada no pocket ex-ante. Zero calibracao, zero execucao, zero Polymarket.
+
+### T-11-1: ecmwf_causal_backfill_pilot (dado primeiro)
+- [x] Piloto pequeno e controlado (sem backfill completo). **GO**: 12 single-runs ECMWF (sequencia
+  densa de 3 dias antes de 2 CPs contrastantes, outono+inverno 2024), download 12/12 limpo, SEM GRIB,
+  cada linha com run_time/valid/lead; `select_nwp_v1` pega run CAUSAL no CP23 (lead 11h, run da vespera
+  12Z). 1a tentativa PAUSE (amostragem esparsa fez o seletor cruzar meses) -> corrigido com sequencia
+  densa; a iteracao PAUSE->GO validou o gate. `reports/nwp/ecmwf_backfill_pilot.md`.
+- **Next:** backfill completo 2024-03..2025-12 (~2680 calls, ~22 particoes), assimetria split-1,
+  cross-check T-OPN-5a antes de promover.
+- **REQ:** REQ-DAT-5, OPN-5a.
+
+### T-11-2: non_calm_high_delta_model_v0 prereg (design-first)
+- [x] Prereg congelado (NAO implementado): universo ex-ante non_calm(risk>=c30) AND delta_06>=train-P50;
+  hipotese unica H1 = residual regime-split; gate exige ganho > analog arm (T-9-1); alternativas
+  deferidas. `contracts/non_calm_high_delta_model_v0_prereg.md`.
+- **REQ:** REQ-MOD-1, REQ-MET-3, REQ-MET-4.
+
+### T-11-3: nwp_early_lead_candidate (decisao de modelo)
+- [x] Memo: NWP-residual = candidate point model em CP20-22; manter Ridge/analog em CP23; SEM
+  auto-promocao sem matriz de comparacao por-CP; ECMWF backfill pode mudar o quadro.
+  `docs/decisions/nwp_early_lead_candidate.md`.
+- **REQ:** REQ-MOD-3, REQ-MET-1.
+
+---
+
 ## Tasks transversais (qualquer momento)
 
 ### T-X-1: Documentacao no README
