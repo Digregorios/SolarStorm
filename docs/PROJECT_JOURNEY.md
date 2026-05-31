@@ -194,14 +194,21 @@ high-risk + Ridge center + conformal) and blending / conditional conformal can b
   note), and hashed pre-registration with teeth (the evaluator refuses to run under a drifted
   contract). No threshold was loosened after seeing a result. **Docs (CHANGELOG + this journey +
   READMEs) and versioning are updated as part of every delivery, not afterwards.**
+- **Per-session versioning (2026-05-31 onward): at the END of each session (while awaiting the next
+  `update.txt`), the delivered state is tagged with an annotated git tag `session-YYYY-MM-DD[-n]` so
+  the reviewer can check out and inspect the exact code, not only the reports. The working tree must
+  be clean (only `references/code-reviews/update.txt`, the message channel, may differ) before tagging.**
 
 ## Current status snapshot (2026-05-31)
 
 - DONE/green: Phases 0-4 (point forecast), Phase 7 (spike), Phase 8 offline logic + live odds +
-  live METAR fetch (`ingest-live` + health-check). Full test suite green (360).
+  live METAR fetch (`ingest-live` + health-check). Full test suite green (361). Live `decide`
+  hardened for resolved/boundary-price markets; EV/Kelly sizing follows the engine state.
 - CLOSED not-ready: Phase 5 interval calibration (diagnostic-only, fenced from trading).
 - Ensemble-evolution track: ridge_conformal_minimal IC defensible; precursors validated (Etapa 2
-  GO); risk_model v0/v0.1 GO=False (diagnostic; protective low-bucket usable). EDA/audits read-only.
+  GO); risk_model v0/v0.1 GO=False (diagnostic); calm_day_filter_v0 GO=True (protective low side);
+  analog_retrieval_audit + analog_quality_v0.1 - analogs capture the high-risk side (g1-g5 pass via
+  analog_confidence), analog high-risk arm ELIGIBLE for a separately-gated build. Audits read-only.
 - Active modeling bottleneck: late-warming CENTER (regime-specific cold bias); the risk model
   detects calm days well but not high-risk days sharply.
 - Open/optional: protective-bucket use, risk_model v0.2, Etapa 3 analogs, NWP multi-model v0,
