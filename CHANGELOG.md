@@ -4,6 +4,26 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:T-11-9 P2-coverage-guard] - 2026-06-02 - per-fold coverage gate in routing recommendation
+
+Reviewer P2 (`references/code-reviews/update.txt`): `compute_routing_recommendation` used
+`n_folds = len(results_src)` while pooling MAE and counting folds-won over only the folds each candidate
+happened to have, so a partial-coverage candidate (e.g. 2 of 3 folds) could post a flattering pooled MAE
+and look eligible. Fix in `scripts/evaluate_serving_candidate_matrix.py`:
+
+- Per-fold metrics are now KEYED BY FOLD INDEX (not a flat list), so a missing fold can no longer be
+  silently compared against the incumbent's other folds by list position.
+- A candidate competes for a CP only if it covers the incumbent's (Ridge) folds; otherwise it is recorded
+  `coverage_ok=false` and EXCLUDED from ranking. Pooled MAE/RPS, folds-won and the calm check are all
+  aligned to the incumbent's fold set.
+- `routing_detail` gains `coverage_ok`, `coverage_excluded`, `incumbent_folds`; the JSON
+  `anti_winner_shopping` block gains `coverage_guard` + `all_candidates_full_coverage`; the markdown gains
+  a coverage-guard bullet.
+
+Additive on the current data (all candidates have full coverage): routing is UNCHANGED - CP20-22
+ecmwf_residual (2/2), CP23 ridge (gfs_residual is best_by_mae 2/3 but calm_ok=false). Reports regenerated
+at `n_estimators=500`; suite 387 green; ASCII guard clean.
+
 ## [phase11:T-11-9 Phase3] - 2026-06-02 - serving router wired (--model auto, conservative per-CP, graceful fallback)
 
 Phase 3 (reviewer directive, `references/code-reviews/update.txt`): take serving off the silent
