@@ -254,6 +254,10 @@ high-risk + Ridge center + conformal) and blending / conditional conformal can b
   CP20-21); CP22/23 consistent. I added a cross-fold sign-consistency check to downgrade the lenient
   gate's "FEASIBLE" to the honest "FEASIBLE-CONDITIONAL". Usable ONLY as a season-interacted calibration
   difficulty axis (T-11-8 CQR), NOT standalone, NOT point routing. REQ-AUD-5 unchanged (no auto-reopen).
+- **Phase 11 T-11-9 serving candidate matrix (Phase 2, 2026-06-01):** conservative recommended routing
+  (recommendation, not promotion): CP20-22 -> ECMWF-residual (wins 2/2 folds, no calm regression), CP23 ->
+  Ridge (conservative; ECMWF wins CP23 only 1/2). Ensemble excluded from CP23 (regresses). Spread excluded
+  from routing. Review PASS 10/10. Carried Phase-3 risk: ECMWF inference availability needs a fallback.
 - CLOSED not-ready: Phase 5 interval calibration (diagnostic-only, fenced from trading).
 - Ensemble-evolution track: ridge_conformal_minimal IC defensible; precursors validated (Etapa 2
   GO); risk_model v0/v0.1 GO=False (diagnostic); calm_day_filter_v0 GO=True (protective low side);

@@ -835,6 +835,16 @@ Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo a
   NAO point routing. REQ-AUD-5 intacto. `reports/calibration/two_model_spread_feasibility.md`.
 - **REQ:** REQ-MOD-4, REQ-DAT-5, REQ-AUD-5.
 
+### T-11-9: serving_candidate_matrix (Fase 2 - matriz consolidada)
+- [x] Matriz de 5 candidatos (Ridge/GFS-res/ECMWF-res/analog/ensemble), mesmas linhas, por CP e regime;
+  spread EXCLUIDO de routing (T-11-6 condicional). **Roteamento recomendado (nao promove; Fase 3 liga):**
+  CP20/21/22 -> ECMWF-residual (vence 2/2 folds, margem grande, sem regressao em calm); CP23 -> Ridge
+  (incumbente melhor no conjunto conservador; ECMWF so vence CP23 em 1/2 -> regra conservadora mantem
+  Ridge; ensemble vence CP23 mas e EXCLUIDO por regredir em T-11-5). Janela ECMWF (2 folds) rotulada vs
+  full 2023-2025 (3 folds). Review anti-winner-shopping PASS 10/10. **Risco Fase 3:** disponibilidade
+  ECMWF no inference precisa de fallback gracioso (GFS-res/Ridge). `reports/serving/candidate_matrix_v0.md`.
+- **REQ:** REQ-MOD-3, REQ-MET-3, REQ-MET-4.
+
 ### T-11-8: cqr_lightgbm_quantile_v0 (calibracao - hipotese NOVA) - **PLANNED**
 - [ ] **NAO executar antes de T-11-5/T-11-6.** Prereg congelado
   (`contracts/cqr_lightgbm_quantile_v0_prereg.md`). CQR muda o OBJETO aprendido: limites quantilicos

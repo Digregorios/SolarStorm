@@ -4,6 +4,28 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:T-11-9 Phase2] - 2026-06-01 - serving candidate matrix (conservative per-CP routing)
+
+`scripts/evaluate_serving_candidate_matrix.py` (prereg v1.0). Consolidated comparison of 5 candidate
+POINT models (Ridge, GFS-residual, ECMWF-residual, analog high-risk arm, GFS+ECMWF ensemble) on identical
+rows, walk-forward, per CP and per regime - to INFORM a conservative routing, not auto-promote. Reviewer's
+route adjustment honored: the `|GFS-ECMWF|` spread is EXCLUDED from all routing (T-11-6 FEASIBLE-CONDITIONAL).
+3-agent pipeline (my prereg + impl + anti-winner-shopping review) + my re-verification.
+
+**Recommended routing (recommendation, NOT promotion - Phase 3 wires it):**
+- CP20/21/22 -> ECMWF-residual (wins 2/2 folds, large margin, no calm regression; e.g. CP20 MAE 0.69/0.55
+  vs Ridge 1.03/0.80).
+- CP23 -> Ridge (incumbent best among the conservative set; ECMWF only wins CP23 in 1/2 folds, so the
+  conservative rule keeps Ridge). The ensemble wins CP23 both folds but is EXCLUDED from CP23 per the
+  T-11-5 regression finding + prereg rule.
+CP20-22 decided separately from CP23; ECMWF metrics honestly labelled as the shorter 2-fold window
+(2024-03..2025-12) vs the 3-fold full-window context for Ridge/GFS/analog. Anti-winner-shopping: same
+rows, windows labelled, winner only if >=2/2 (short) or >=2/3 (full) folds. Review PASS 10/10.
+
+**Carried Phase-3 risk (flagged):** ECMWF availability at inference - the CP20-22 routing needs a graceful
+fallback (to GFS-residual or Ridge) for missing/delayed ECMWF runs. Suite 367 green. No execution/calibration.
+`reports/serving/candidate_matrix_v0.md` (+ `_review.md`).
+
 ## [phase11:T-11-6] - 2026-06-01 - two-model spread feasibility FEASIBLE-CONDITIONAL (seasonal reversal)
 
 `scripts/evaluate_two_model_spread_feasibility.py` (prereg v1.0, read-only). Tested whether the real
