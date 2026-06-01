@@ -4,6 +4,38 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:T-11-9 Phase3] - 2026-06-02 - serving router wired (--model auto, conservative per-CP, graceful fallback)
+
+Phase 3 (reviewer directive, `references/code-reviews/update.txt`): take serving off the silent
+`empirical` default by wiring the FROZEN serving-matrix routing behind an opt-in `--model auto`, with a
+graceful fallback path for the carried Phase-2 risk (ECMWF availability at inference).
+
+- **`core/cli/routing.py` (new, pure decision logic):** `recommend_route(cp, *, ecmwf_available,
+  gfs_available, nwp_run_time_utc=None)` encodes the frozen table - CP20/21/22 -> ecmwf_residual when
+  causal NWP is present, else gfs_residual, else ridge; CP23 -> ridge ALWAYS (GFS has the lower pooled
+  MAE there but degrades the calm stratum, calm_ok=false, so it is never promoted). Two invariants are
+  unit-pinned: the `|GFS-ECMWF|` spread is NEVER a routing input (no `spread` parameter; every decision
+  records `spread_used=False`), and CP23 is decided independently of CP20-22. `resolve_servable()` maps a
+  routed model to one the CLI can serve today.
+- **Phase 3 has no live NWP** (that is Phase 5). The CLI passes `ecmwf_available=gfs_available=False`, so
+  `auto` routes to ridge and `resolve_servable` keeps it; if a CP has < 100 training rows the auto path
+  degrades to the empirical floor instead of raising. The router is general - Phase 5 only flips the
+  availability flags and the SAME table routes to the residuals; no logic changes.
+- **`core/cli/forecast.py`:** `--model auto` added next to the unchanged `empirical` (default) and
+  `ridge`. The default is NOT switched silently. A diagnostic banner (chosen route, served model,
+  fallback used/reason, ECMWF/GFS presence, run_time, CP, train window, IC80) is printed to STDERR so
+  `--dry-run` STDOUT stays pure JSON; the emitted row gains a `routing` block when `auto` is used.
+- **`pyproject.toml`:** declared `lightgbm>=4.0` and `httpx>=0.27` (imported by the spike/residual models
+  and the odds/NWP/metar clients but previously undeclared). `pip install -e .` is now self-contained.
+- **Tests:** `tests/unit/test_routing.py` (ECMWF picked at CP20-22 when available; GFS then ridge
+  fallbacks; CP23 stays ridge even with GFS/ECMWF; unknown CP raises; spread never an input;
+  RouteDecision frozen) and `tests/unit/test_cli_auto.py` (`--model auto --dry-run` returns valid JSON
+  with a `routing` block; the <100-row degrade-to-empirical path does not explode).
+
+Conservative by construction: `auto` never serves a residual in Phase 3, never promotes GFS at CP23, and
+never routes on spread. No execution/decision/calibration/odds code touched; no frozen contract changed.
+Suite 387 green; ASCII guard clean. `core/cli/routing.py`, `core/cli/forecast.py`, `docs/serving.md`.
+
 ## [phase11:T-11-9 P2-hygiene] - 2026-06-01 - ECMWF-window causal-climo override + production n_estimators rerun
 
 Hygiene patch before Phase 3 (reviewer P2, `references/code-reviews/update.txt`). (1) Applied the same

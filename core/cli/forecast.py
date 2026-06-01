@@ -23,6 +23,33 @@ from core.io.logging import log_event, new_run_id
 from core.io.timeutil import day_local_window
 from core.labels.tmax import build_tmax_labels
 from core.models.ridge_band import RidgeBandConfig, fit_ridge_band, predict_dist as ridge_predict_dist
+from core.cli.routing import recommend_route, resolve_servable
+
+
+def _join_reason(existing: str | None, new: str) -> str:
+    return f"{existing};{new}" if existing else new
+
+
+def _emit_routing_banner(routing: dict, ic_low: int, ic_high: int) -> None:
+    """Print the --model auto diagnostic to stderr (keeps stdout JSON clean)."""
+    typer.echo(
+        f"[forecast --model auto] CP{routing['cp']} "
+        f"route={routing['model_route']} served={routing['served_model']} "
+        f"fallback={routing['fallback_used']} "
+        f"reason={routing['fallback_reason'] or routing['degraded_reason'] or '-'}",
+        err=True,
+    )
+    typer.echo(
+        f"  nwp: ecmwf={routing['ecmwf_available']} gfs={routing['gfs_available']} "
+        f"run_time={routing['nwp_run_time_utc'] or 'none'} "
+        f"spread_used={routing['spread_used']}",
+        err=True,
+    )
+    typer.echo(
+        f"  train: {routing['train_start']}..{routing['train_end']}  "
+        f"IC80: [{ic_low}, {ic_high}]",
+        err=True,
+    )
 
 
 def run(
@@ -33,14 +60,14 @@ def run(
     train_start: str = typer.Option("2020-01-01", "--train-start"),
     train_end: str | None = typer.Option(None, "--train-end"),
     out_root: Path = typer.Option(Path("artifacts/forecasts"), "--out-root"),
-    model: str = typer.Option("empirical", "--model", help="Forecast model: 'empirical' (default baseline) or 'ridge' (Phase 3 trained)."),
+    model: str = typer.Option("empirical", "--model", help="Forecast model: 'empirical' (default baseline), 'ridge' (Phase 3 trained), or 'auto' (conservative per-CP router)."),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
     """Emit a forecast row. Default model is the Phase-2 empirical baseline; ``--model ridge``
     uses the trained Phase-3 band-aware Ridge. The default is NOT changed silently - the trained
     model is opt-in via the flag until it is promoted deliberately."""
-    if model not in ("empirical", "ridge"):
-        raise typer.BadParameter(f"--model must be 'empirical' or 'ridge'; got {model!r}")
+    if model not in ("empirical", "ridge", "auto"):
+        raise typer.BadParameter(f"--model must be one of 'empirical', 'ridge', 'auto'; got {model!r}")
     rid = new_run_id()
     cfg = load_station_config(station_yaml)
     cp_hhmm = f"{int(cp):02d}:00"
@@ -79,12 +106,21 @@ def run(
     else:
         kcp_for_pred = int(kcp)
 
-    if model == "empirical":
-        prob_dist, source = empirical.predict_dist(
-            month=d.month, cp=cp_hhmm, k_cp=kcp_for_pred, support_k=sk
+    # Resolve the effective servable model. 'auto' consults the conservative
+    # per-CP router; Phase 3 serving has no NWP wired in (Live NWP is Phase 5),
+    # so ECMWF/GFS are unavailable here and the router degrades to ridge. Phase 5
+    # flips the availability flags and the same table routes to the residuals.
+    route = None
+    degraded_reason = None
+    if model == "auto":
+        route = recommend_route(
+            int(cp), ecmwf_available=False, gfs_available=False, nwp_run_time_utc=None
         )
-        model_version = "baseline-empirical-v0.1"
-    else:  # ridge (Phase 3 band-aware, trained on the training panel; clim anchor)
+        effective_model, degraded_reason = resolve_servable(route.model_route)
+    else:
+        effective_model = model
+
+    if effective_model == "ridge":  # Phase 3 band-aware Ridge, clim anchor
         import numpy as np
 
         tpanel = build_training_panel(
@@ -93,21 +129,35 @@ def run(
                    if r is not None and train_start_d <= r <= train_end_d],
         ).filter(pl.col("cp") == cp_hhmm)
         if tpanel.height < 100:
-            raise typer.BadParameter(
-                f"ridge needs >=100 training rows at CP {cp_hhmm}; got {tpanel.height}"
+            if model != "auto":
+                raise typer.BadParameter(
+                    f"ridge needs >=100 training rows at CP {cp_hhmm}; got {tpanel.height}"
+                )
+            # auto: graceful degradation to the empirical floor (do not explode).
+            effective_model = "empirical"
+            degraded_reason = _join_reason(
+                degraded_reason,
+                f"ridge_insufficient_rows_{tpanel.height}_fallback_empirical",
             )
-        cfg_ridge = RidgeBandConfig(feature_columns=tuple(FEATURE_COLUMNS),
-                                    tau=0.5, mode="linear", use_climatology_anchor=True)
-        X_tr = np.column_stack([tpanel[c].to_numpy().astype(float) for c in FEATURE_COLUMNS])
-        y_tr = tpanel["target_tmax_int"].to_numpy().astype(int)
-        clim_tr = np.array([float(climo.tmax_dec_for(dd)) for dd in tpanel["date_local"].to_list()])
-        fitted = fit_ridge_band(X_tr, y_tr, config=cfg_ridge, clim_train=clim_tr)
-        x_row = np.array([[float(feats.features.get(c)) if feats.features.get(c) is not None
-                           else float("nan") for c in FEATURE_COLUMNS]])
-        clim_row = np.array([float(climo.tmax_dec_for(d))])
-        prob_dist = ridge_predict_dist(fitted, x_row, [sk], clim=clim_row)[0]
-        source = f"ridge_band_alpha_{fitted.alpha}"
-        model_version = "phase3-ridge-band-v1.0"
+        else:
+            cfg_ridge = RidgeBandConfig(feature_columns=tuple(FEATURE_COLUMNS),
+                                        tau=0.5, mode="linear", use_climatology_anchor=True)
+            X_tr = np.column_stack([tpanel[c].to_numpy().astype(float) for c in FEATURE_COLUMNS])
+            y_tr = tpanel["target_tmax_int"].to_numpy().astype(int)
+            clim_tr = np.array([float(climo.tmax_dec_for(dd)) for dd in tpanel["date_local"].to_list()])
+            fitted = fit_ridge_band(X_tr, y_tr, config=cfg_ridge, clim_train=clim_tr)
+            x_row = np.array([[float(feats.features.get(c)) if feats.features.get(c) is not None
+                               else float("nan") for c in FEATURE_COLUMNS]])
+            clim_row = np.array([float(climo.tmax_dec_for(d))])
+            prob_dist = ridge_predict_dist(fitted, x_row, [sk], clim=clim_row)[0]
+            source = f"ridge_band_alpha_{fitted.alpha}"
+            model_version = "phase3-ridge-band-v1.0"
+
+    if effective_model == "empirical":
+        prob_dist, source = empirical.predict_dist(
+            month=d.month, cp=cp_hhmm, k_cp=kcp_for_pred, support_k=sk
+        )
+        model_version = "baseline-empirical-v0.1"
     p50 = max(prob_dist.items(), key=lambda kv: kv[1])[0]
     low, high = discrete_ic(prob_dist, p_low=0.10, p_high=0.90)
     forecast_row = {
@@ -127,6 +177,25 @@ def run(
         "tau": None,
         "fallback_rate": stats.fallback_rate,
     }
+
+    if route is not None:
+        forecast_row["model_requested"] = model
+        forecast_row["served_model"] = effective_model
+        forecast_row["routing"] = {
+            "cp": route.cp,
+            "model_route": route.model_route,
+            "served_model": effective_model,
+            "fallback_used": route.fallback_used,
+            "fallback_reason": route.fallback_reason,
+            "degraded_reason": degraded_reason,
+            "ecmwf_available": route.ecmwf_available,
+            "gfs_available": route.gfs_available,
+            "nwp_run_time_utc": route.nwp_run_time_utc,
+            "spread_used": route.spread_used,
+            "train_start": train_start_d.isoformat(),
+            "train_end": train_end_d.isoformat(),
+        }
+        _emit_routing_banner(forecast_row["routing"], int(low), int(high))
 
     log_event(
         "forecast",
