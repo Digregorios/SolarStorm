@@ -4,6 +4,29 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:T-11-6] - 2026-06-01 - two-model spread feasibility FEASIBLE-CONDITIONAL (seasonal reversal)
+
+`scripts/evaluate_two_model_spread_feasibility.py` (prereg v1.0, read-only). Tested whether the real
+two-model spread `|GFS_t2m - ECMWF_t2m|` at the CP predicts the Ridge integer error, walk-forward in the
+ECMWF window (2024-03..2025-12, 2 folds). 3-agent pipeline (my prereg + impl + anti-leakage review +
+decision diagnosis) + my own re-verification.
+
+**VERDICT FEASIBLE-CONDITIONAL.** The lenient any-CP gate was technically met (Spearman positive 2/2,
+Q4>Q1 2/2), BUT I added a cross-fold sign-consistency check that exposes the real story: the
+spread->error sign REVERSES by season. Fold1 (warm) non_calm/high_delta Spearman +0.15..+0.19 at CP20-22
+(high spread = harder); Fold2 (winter) -0.14..-0.22 at CP20-21 (high spread = EASIER). CP20/CP21 flip
+sign across folds; CP22/CP23 are consistent. So the headline is downgraded from FEASIBLE to
+FEASIBLE-CONDITIONAL - not a usable STANDALONE signal and NOT for point routing.
+
+Decision (diagnosis agent, concurred): the spread is a candidate **calibration difficulty axis ONLY**,
+usable solely if INTERACTED with season/regime inside a learned calibrator (T-11-8 CQR), where it can be
+exploited where it helps and suppressed where it reverses. NOT point routing (the seasonal flip would
+make correct calls in summer and wrong calls in winter with no ex-ante discriminator). REQ-AUD-5 stays
+unchanged; any future calibrator using this signal must still pass it (no auto-reopen). Short window (22
+months), no p<0.05 - honest caveats recorded. Anti-leakage review PASS (causal both models, train-only
+edges, ex-ante c30=P30, same rows, no P70 drift). Suite 367 green. No execution/calibration change.
+`reports/calibration/two_model_spread_feasibility.md` (+ `_review.md`, `_diagnosis.md`).
+
 ## [phase11:T-11-5] - 2026-06-01 - ECMWF/ensemble point gain KILL (honest; strong CP20-22 signal flagged)
 
 `scripts/evaluate_ecmwf_ensemble_point_gain.py` (prereg `contracts/ecmwf_ensemble_point_gain_v0_prereg.md`

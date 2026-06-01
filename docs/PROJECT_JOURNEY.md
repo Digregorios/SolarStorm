@@ -249,6 +249,11 @@ high-risk + Ridge center + conformal) and blending / conditional conformal can b
   1/2 folds; ensemble regresses CP23). I fixed a global-vs-per-candidate gate bug in the impl and
   corrected the review agent's wrong "GO". Honest signal: ECMWF-residual IS a strong CP20-22 point
   improver (MAE -0.1..-0.35), worth the T-11-3 consolidated matrix on a longer window; not auto-promoted.
+- **Phase 11 T-11-6 two-model spread feasibility: FEASIBLE-CONDITIONAL (2026-06-01)** - `|GFS-ECMWF|`
+  spread vs error REVERSES sign by season (Fold1 warm +0.15..+0.19, Fold2 winter -0.14..-0.22 at
+  CP20-21); CP22/23 consistent. I added a cross-fold sign-consistency check to downgrade the lenient
+  gate's "FEASIBLE" to the honest "FEASIBLE-CONDITIONAL". Usable ONLY as a season-interacted calibration
+  difficulty axis (T-11-8 CQR), NOT standalone, NOT point routing. REQ-AUD-5 unchanged (no auto-reopen).
 - CLOSED not-ready: Phase 5 interval calibration (diagnostic-only, fenced from trading).
 - Ensemble-evolution track: ridge_conformal_minimal IC defensible; precursors validated (Etapa 2
   GO); risk_model v0/v0.1 GO=False (diagnostic); calm_day_filter_v0 GO=True (protective low side);

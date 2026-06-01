@@ -826,6 +826,15 @@ Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo a
   `reports/nwp/ecmwf_ensemble_point_gain.md`.
 - **REQ:** REQ-MOD-3, REQ-MET-3, REQ-MET-4.
 
+### T-11-6: two_model_spread_feasibility (spread GFS-ECMWF)
+- [x] Testar se `|GFS-ECMWF|` no CP explica o erro (read-only). **FEASIBLE-CONDITIONAL**: o gate lenient
+  passou, mas adicionei um check de consistencia de sinal cross-fold que expoe REVERSAO SAZONAL - Fold1
+  (verao) Spearman +0.15..+0.19 em CP20-22 (spread alto = mais dificil); Fold2 (inverno) -0.14..-0.22 em
+  CP20-21 (spread alto = mais FACIL). CP20/21 invertem sinal; CP22/23 consistentes. Diagnostico: serve
+  como eixo de dificuldade de CALIBRACAO so se INTERAGIDO com estacao/regime (T-11-8 CQR); NAO standalone,
+  NAO point routing. REQ-AUD-5 intacto. `reports/calibration/two_model_spread_feasibility.md`.
+- **REQ:** REQ-MOD-4, REQ-DAT-5, REQ-AUD-5.
+
 ### T-11-8: cqr_lightgbm_quantile_v0 (calibracao - hipotese NOVA) - **PLANNED**
 - [ ] **NAO executar antes de T-11-5/T-11-6.** Prereg congelado
   (`contracts/cqr_lightgbm_quantile_v0_prereg.md`). CQR muda o OBJETO aprendido: limites quantilicos
