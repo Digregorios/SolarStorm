@@ -4,6 +4,33 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:T-11-5] - 2026-06-01 - ECMWF/ensemble point gain KILL (honest; strong CP20-22 signal flagged)
+
+`scripts/evaluate_ecmwf_ensemble_point_gain.py` (prereg `contracts/ecmwf_ensemble_point_gain_v0_prereg.md`
+v1.0). Compared Ridge / GFS-residual / ECMWF-residual / GFS+ECMWF ensemble on identical rows, within the
+ECMWF overlap window (2024-03..2025-12, 2 expanding folds - honestly shorter than the 2023-2025 splits).
+Built via the subagent pipeline (my prereg + impl + anti-leakage review + my own re-verification).
+
+**VERDICT KILL** (per-candidate gate): no single NWP candidate passes all of gates 1-3.
+- ecmwf_residual: gate1 CP20-22 PASS (2/2), gate2 CP23-no-regress PASS, gate3 pocket FAIL (1/2).
+- ensemble: gate1 PASS (2/2), gate2 FAIL (CP23 regress +0.15), gate3 pocket PASS (2/2).
+
+**Two corrections I made during verification (did not rubber-stamp the agents):**
+1. The impl had a real GATE-LOGIC BUG - gate 2 (CP23 non-regression) was evaluated GLOBALLY across all
+   candidates, so the ensemble's CP23 regression failed the gate for everyone. The prereg is PER-CANDIDATE
+   (prefer ecmwf_residual). I rewrote the gate to evaluate each candidate independently.
+2. The anti-leakage review agent then claimed the fix yields "GO, ecmwf_residual passes all 5 gates" -
+   that was WRONG: ecmwf_residual FAILS gate 3 (pocket gain only 1/2 folds; GFS-residual is already
+   strong in the pocket in H2). The corrected per-candidate logic gives the honest KILL.
+
+**Honest signal (not buried under KILL):** ECMWF-residual is a strong CP20-22 POINT improver (gate 1
+PASS 2/2, MAE gains ~-0.10..-0.35 vs best existing, larger than GFS-residual). It just does not ROBUSTLY
+win the non_calm/high_delta pocket across both short-window folds. This is a "do not auto-promote on a
+2-fold window, but a strong candidate for the T-11-3 consolidated per-CP matrix on a longer window" -
+not "ECMWF is useless". Anti-leakage otherwise clean (ex-ante regime canonical c30=P30, causal NWP,
+train-only thresholds, same rows). Suite 367 green. No execution/calibration change.
+`reports/nwp/ecmwf_ensemble_point_gain.md` (+ `_review.md`).
+
 ## [phase11:T-11-8 PLANNED] - 2026-06-01 - CQR / LightGBM-quantile prereg (new calibration hypothesis)
 
 Planning-only (no code). Registered `contracts/cqr_lightgbm_quantile_v0_prereg.md` (prereg_version 1.0)

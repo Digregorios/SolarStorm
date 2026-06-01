@@ -244,6 +244,11 @@ high-risk + Ridge center + conformal) and blending / conditional conformal can b
   (2024-03..2025-12, 00Z/12Z, 0 failures, causal at all 4 CPs every month; gitignored). The 2nd causal
   NWP source is landed; unblocks T-11-5 (ECMWF/ensemble point gain) and T-11-6 (two-model spread, the
   first real NWP-spread axis - the only lever that could reopen calibration).
+- **Phase 11 T-11-5 ECMWF/ensemble point gain: KILL (honest, 2026-06-01)** - per-candidate gate: no
+  single NWP candidate passes gates 1-3 in the short ECMWF window (ecmwf_residual fails the pocket gate
+  1/2 folds; ensemble regresses CP23). I fixed a global-vs-per-candidate gate bug in the impl and
+  corrected the review agent's wrong "GO". Honest signal: ECMWF-residual IS a strong CP20-22 point
+  improver (MAE -0.1..-0.35), worth the T-11-3 consolidated matrix on a longer window; not auto-promoted.
 - CLOSED not-ready: Phase 5 interval calibration (diagnostic-only, fenced from trading).
 - Ensemble-evolution track: ridge_conformal_minimal IC defensible; precursors validated (Etapa 2
   GO); risk_model v0/v0.1 GO=False (diagnostic); calm_day_filter_v0 GO=True (protective low side);

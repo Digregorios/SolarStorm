@@ -815,6 +815,17 @@ Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo a
   `reports/nwp/ecmwf_full_daily_cp_coverage.md`.
 - **REQ:** REQ-DAT-5, REQ-AUD-4.
 
+### T-11-5: ecmwf_ensemble_point_gain (ECMWF/ensemble no ponto)
+- [x] Comparar Ridge / GFS-res / ECMWF-res / GFS+ECMWF ensemble, mesmas linhas, janela ECMWF
+  2024-03..2025-12 (2 folds, mais curta - honesto). **KILL** (gate per-candidate): nenhum candidato
+  passa gates 1-3. ecmwf_residual g1 PASS(2/2) g2 PASS g3 FAIL(1/2); ensemble g1 PASS g2 FAIL(CP23) g3
+  PASS. Corrigi 2 coisas na verificacao: (a) bug de gate GLOBAL->per-candidate no impl; (b) o review
+  agent alegou "GO" erradamente (ecmwf_res falha g3). **Sinal honesto:** ECMWF-res e forte no ponto em
+  CP20-22 (MAE -0.10..-0.35), so nao vence o pocket non_calm/high_delta nos 2 folds curtos -> candidato
+  forte para a matriz consolidada T-11-3 numa janela maior, nao auto-promover.
+  `reports/nwp/ecmwf_ensemble_point_gain.md`.
+- **REQ:** REQ-MOD-3, REQ-MET-3, REQ-MET-4.
+
 ### T-11-8: cqr_lightgbm_quantile_v0 (calibracao - hipotese NOVA) - **PLANNED**
 - [ ] **NAO executar antes de T-11-5/T-11-6.** Prereg congelado
   (`contracts/cqr_lightgbm_quantile_v0_prereg.md`). CQR muda o OBJETO aprendido: limites quantilicos
