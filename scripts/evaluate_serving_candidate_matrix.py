@@ -249,18 +249,29 @@ def _evaluate_one_cp_ecmwf(
     # 1. Ridge base
     X_tr_base, y_tr_base = _arrays(tr_base, tuple(FEATURE_COLUMNS))
     clim_tr = np.array([float(climo.tmax_dec_for(d)) for d in tr_base["date_local"].to_list()])
-    ridge = fit_ridge_band(X_tr_base, y_tr_base, config=cfg_ridge, clim_train=clim_tr)
     X_te_base, y_te = _arrays(te_base_c, tuple(FEATURE_COLUMNS))
     clim_te = np.array([float(climo.tmax_dec_for(d)) for d in te_base_c["date_local"].to_list()])
+    # Causal clim override (reviewer P2 2026-06-01): clim_tmax_c_dec feature was baked with climo_broad;
+    # overwrite with the per-split causal climo so the ECMWF window is eval==serving clean like full-window.
+    _clim_idx = list(FEATURE_COLUMNS).index("clim_tmax_c_dec")
+    X_tr_base[:, _clim_idx] = clim_tr
+    X_te_base[:, _clim_idx] = clim_te
+
+    def _clim_col(df):
+        return np.array([float(climo.tmax_dec_for(d)) for d in df["date_local"].to_list()])
+
+    ridge = fit_ridge_band(X_tr_base, y_tr_base, config=cfg_ridge, clim_train=clim_tr)
     ridge_latent = predict_ridge_latent(ridge, X_te_base, clim=clim_te)
     ridge_int = np.array([Q(float(v)) for v in ridge_latent], dtype=int)
 
     # 2. GFS-residual
     X_tr_gfs, y_tr_gfs = _arrays(tr_gfs_ok, PHASE4_FEATURES)
+    X_tr_gfs[:, _clim_idx] = _clim_col(tr_gfs_ok)
     anchor_tr_gfs = tr_gfs_ok["nwp_t2m_maxtraj_c"].to_numpy().astype(float)
     if tr_gfs_ok.height >= 100:
         lgbm_gfs = fit_residual_lgbm(X_tr_gfs, y_tr_gfs, anchor_tr_gfs, config=cfg_lgbm)
         X_te_gfs, _ = _arrays(te_gfs_c, PHASE4_FEATURES)
+        X_te_gfs[:, _clim_idx] = _clim_col(te_gfs_c)
         anchor_te_gfs = te_gfs_c["nwp_t2m_maxtraj_c"].to_numpy().astype(float)
         gfs_latent = predict_lgbm_latent(lgbm_gfs, X_te_gfs, anchor_te_gfs)
         gfs_int = np.array([Q(float(v)) for v in gfs_latent], dtype=int)
@@ -270,10 +281,12 @@ def _evaluate_one_cp_ecmwf(
 
     # 3. ECMWF-residual
     X_tr_ecmwf, y_tr_ecmwf = _arrays(tr_ecmwf_ok, PHASE4_FEATURES)
+    X_tr_ecmwf[:, _clim_idx] = _clim_col(tr_ecmwf_ok)
     anchor_tr_ecmwf = tr_ecmwf_ok["nwp_t2m_maxtraj_c"].to_numpy().astype(float)
     if tr_ecmwf_ok.height >= 100:
         lgbm_ecmwf = fit_residual_lgbm(X_tr_ecmwf, y_tr_ecmwf, anchor_tr_ecmwf, config=cfg_lgbm)
         X_te_ecmwf, _ = _arrays(te_ecmwf_c, PHASE4_FEATURES)
+        X_te_ecmwf[:, _clim_idx] = _clim_col(te_ecmwf_c)
         anchor_te_ecmwf = te_ecmwf_c["nwp_t2m_maxtraj_c"].to_numpy().astype(float)
         ecmwf_latent = predict_lgbm_latent(lgbm_ecmwf, X_te_ecmwf, anchor_te_ecmwf)
         ecmwf_int = np.array([Q(float(v)) for v in ecmwf_latent], dtype=int)
@@ -283,10 +296,12 @@ def _evaluate_one_cp_ecmwf(
 
     # 4. Ensemble (GFS+ECMWF)
     X_tr_ens, y_tr_ens = _arrays(tr_ens_ok, PHASE4_FEATURES)
+    X_tr_ens[:, _clim_idx] = _clim_col(tr_ens_ok)
     anchor_tr_ens = tr_ens_ok["nwp_t2m_maxtraj_c"].to_numpy().astype(float)
     if tr_ens_ok.height >= 100:
         lgbm_ens = fit_residual_lgbm(X_tr_ens, y_tr_ens, anchor_tr_ens, config=cfg_lgbm)
         X_te_ens, _ = _arrays(te_ens_c, PHASE4_FEATURES)
+        X_te_ens[:, _clim_idx] = _clim_col(te_ens_c)
         anchor_te_ens = te_ens_c["nwp_t2m_maxtraj_c"].to_numpy().astype(float)
         ens_latent = predict_lgbm_latent(lgbm_ens, X_te_ens, anchor_te_ens)
         ens_int = np.array([Q(float(v)) for v in ens_latent], dtype=int)
@@ -905,7 +920,7 @@ def main() -> int:
 
     print("=== T-11-9: Serving Candidate Matrix Evaluation ===")
     print(f"  Seed={SEED}, deterministic=True, num_threads=1")
-    print(f"  LGBM n_estimators={N_ESTIMATORS} (reduced for speed)")
+    print(f"  LGBM n_estimators={N_ESTIMATORS} (production default; eval == serving)")
     print()
 
     print("[0] Loading observations + labels ...")

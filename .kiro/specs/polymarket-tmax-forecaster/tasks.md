@@ -843,10 +843,12 @@ Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo a
   Ridge; ensemble EXCLUIDO de CP23 por regredir em H1 (MAE 0.826 vs Ridge 0.674; so vence em H2)). Janela
   ECMWF (2 folds) rotulada vs full 2023-2025 (3 folds). Review anti-winner-shopping PASS 10/10. **Risco
   Fase 3:** disponibilidade ECMWF no inference precisa de fallback gracioso (GFS-res/Ridge).
-  **P1 (revisor, antes de wired):** CP23 NAO deve ser wired desta matriz ainda - contexto full-window
-  usou climo broad (train_end 2024-12-31) reusado nos splits 2023/2024 -> vazamento de `clim_tmax_c_dec`;
-  router so consumiu janela ECMWF. T-11-9 precisa de patch (climo split-specific, router usa full_results
-  p/ Ridge/GFS/analog, rerun no n_estimators de producao) antes de promover CP23.
+  **P1 RESOLVIDO (patch session-2026-06-01-6 + higiene P2 2026-06-01):** vazamento full-window corrigido -
+  `clim_tmax_c_dec` agora sobrescrito com a climo CAUSAL por split nas DUAS janelas (full E ECMWF), router
+  consome `full_results` (Ridge/GFS/analog) p/ CP23, e a matriz foi re-rodada no `n_estimators=500` de
+  producao (eval == serving). Rerun mantem o roteamento INALTERADO (CP20-22 ECMWF-residual 2/2; CP23 Ridge -
+  GFS e best-by-MAE no full window mas degrada calm -> regra conservadora mantem Ridge). CP23 agora e
+  wired-eligible da janela full leak-free. So as metricas H2 da janela ECMWF mudaram (<= ~0.07 MAE).
   `reports/serving/candidate_matrix_v0.md`.
 - **REQ:** REQ-MOD-3, REQ-MET-3, REQ-MET-4.
 

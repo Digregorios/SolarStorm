@@ -256,8 +256,15 @@ high-risk + Ridge center + conformal) and blending / conditional conformal can b
   difficulty axis (T-11-8 CQR), NOT standalone, NOT point routing. REQ-AUD-5 unchanged (no auto-reopen).
 - **Phase 11 T-11-9 serving candidate matrix (Phase 2, 2026-06-01):** conservative recommended routing
   (recommendation, not promotion): CP20-22 -> ECMWF-residual (wins 2/2 folds, no calm regression), CP23 ->
-  Ridge (conservative; ECMWF wins CP23 only 1/2). Ensemble excluded from CP23 (regresses). Spread excluded
+  Ridge (conservative). Ensemble excluded from CP23 (regresses). Spread excluded
   from routing. Review PASS 10/10. Carried Phase-3 risk: ECMWF inference availability needs a fallback.
+  - **Reviewer P1+P2 patch (session-2026-06-01-6 + hygiene 2026-06-01):** found `clim_tmax_c_dec` was baked
+    with a broad climatology (train_end 2024-12-31) reused across splits. Fix: overwrite that feature with
+    the per-split CAUSAL climo in BOTH the full window and the ECMWF window, route CP23 from `full_results`,
+    and re-run at the production `n_estimators=500` (eval == serving). Routing UNCHANGED. CP23 reason is now
+    stated honestly: GFS-residual is best-by-MAE on the leak-free full window (pooled 0.6643) but degrades
+    the calm stratum, so the conservative rule keeps Ridge; CP23 is now wired-eligible. Only H2 ECMWF-window
+    point metrics moved (<= ~0.07 MAE; H1's causal climo already equalled the broad one).
 - CLOSED not-ready: Phase 5 interval calibration (diagnostic-only, fenced from trading).
 - Ensemble-evolution track: ridge_conformal_minimal IC defensible; precursors validated (Etapa 2
   GO); risk_model v0/v0.1 GO=False (diagnostic); calm_day_filter_v0 GO=True (protective low side);

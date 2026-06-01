@@ -65,26 +65,26 @@ unless a candidate wins clearly with no regression and not only on the short win
 
 | CP | Candidate | MAE | RMSE | BM | RPS | n |
 |----|-----------|-----|------|----|-----|---|
-| 20:00 | ridge | 0.7989 | 1.1349 | 0.4239 | 0.6311 | 184 |
-| 20:00 | gfs_residual | 0.6033 | 0.9119 | 0.4891 | 0.4310 | 184 |
-| 20:00 | ecmwf_residual | 0.5543 | 0.8723 | 0.5435 | 0.4191 | 184 |
-| 20:00 | analog_arm | 0.7989 | 1.1349 | 0.4239 | 0.6311 | 184 |
-| 20:00 | ensemble | 0.5272 | 0.8176 | 0.5435 | 0.3898 | 184 |
-| 21:00 | ridge | 0.8152 | 1.1325 | 0.3804 | 0.5887 | 184 |
-| 21:00 | gfs_residual | 0.5435 | 0.8723 | 0.5543 | 0.4197 | 184 |
-| 21:00 | ecmwf_residual | 0.5435 | 0.8341 | 0.5326 | 0.4116 | 184 |
-| 21:00 | analog_arm | 0.8152 | 1.1325 | 0.3804 | 0.5887 | 184 |
-| 21:00 | ensemble | 0.4837 | 0.7626 | 0.5652 | 0.3686 | 184 |
-| 22:00 | ridge | 0.7283 | 1.0321 | 0.4076 | 0.5018 | 184 |
-| 22:00 | gfs_residual | 0.5761 | 0.8405 | 0.4837 | 0.4091 | 184 |
-| 22:00 | ecmwf_residual | 0.5707 | 0.8373 | 0.4891 | 0.4074 | 184 |
-| 22:00 | analog_arm | 0.7283 | 1.0321 | 0.4076 | 0.5018 | 184 |
-| 22:00 | ensemble | 0.4891 | 0.7445 | 0.5435 | 0.3679 | 184 |
-| 23:00 | ridge | 0.6685 | 0.9059 | 0.4022 | 0.4523 | 184 |
-| 23:00 | gfs_residual | 0.5924 | 0.8502 | 0.4674 | 0.4192 | 184 |
-| 23:00 | ecmwf_residual | 0.5761 | 0.8275 | 0.4783 | 0.3863 | 184 |
-| 23:00 | analog_arm | 0.6739 | 0.9089 | 0.3967 | 0.5027 | 184 |
-| 23:00 | ensemble | 0.5435 | 0.8076 | 0.5109 | 0.3692 | 184 |
+| 20:00 | ridge | 0.8207 | 1.1680 | 0.4185 | 0.6351 | 184 |
+| 20:00 | gfs_residual | 0.6087 | 0.9267 | 0.4946 | 0.4324 | 184 |
+| 20:00 | ecmwf_residual | 0.5489 | 0.8438 | 0.5272 | 0.4084 | 184 |
+| 20:00 | analog_arm | 0.8207 | 1.1680 | 0.4185 | 0.6351 | 184 |
+| 20:00 | ensemble | 0.5163 | 0.8042 | 0.5489 | 0.3866 | 184 |
+| 21:00 | ridge | 0.8478 | 1.1703 | 0.3750 | 0.5938 | 184 |
+| 21:00 | gfs_residual | 0.5707 | 0.8877 | 0.5272 | 0.4186 | 184 |
+| 21:00 | ecmwf_residual | 0.5435 | 0.8275 | 0.5272 | 0.4100 | 184 |
+| 21:00 | analog_arm | 0.8478 | 1.1703 | 0.3750 | 0.5938 | 184 |
+| 21:00 | ensemble | 0.5272 | 0.8042 | 0.5326 | 0.3800 | 184 |
+| 22:00 | ridge | 0.7283 | 1.0321 | 0.4076 | 0.5080 | 184 |
+| 22:00 | gfs_residual | 0.5761 | 0.8470 | 0.4837 | 0.4170 | 184 |
+| 22:00 | ecmwf_residual | 0.5761 | 0.8470 | 0.4891 | 0.4030 | 184 |
+| 22:00 | analog_arm | 0.7283 | 1.0321 | 0.4076 | 0.5080 | 184 |
+| 22:00 | ensemble | 0.5054 | 0.7697 | 0.5380 | 0.3694 | 184 |
+| 23:00 | ridge | 0.6630 | 0.9029 | 0.4076 | 0.4576 | 184 |
+| 23:00 | gfs_residual | 0.5924 | 0.8438 | 0.4620 | 0.4134 | 184 |
+| 23:00 | ecmwf_residual | 0.5761 | 0.8341 | 0.4837 | 0.3876 | 184 |
+| 23:00 | analog_arm | 0.6685 | 0.9059 | 0.4022 | 0.4998 | 184 |
+| 23:00 | ensemble | 0.5435 | 0.7940 | 0.5000 | 0.3679 | 184 |
 
 ## Regime Breakdown (ECMWF Overlap Window)
 
@@ -112,26 +112,26 @@ unless a candidate wins clearly with no regression and not only on the short win
 | 23:00 (ecmwf-2025H1) | ecmwf_residual | 0.6849 | 0.9199 | 73 |
 | 23:00 (ecmwf-2025H1) | analog_arm | 0.7123 | 1.0119 | 73 |
 | 23:00 (ecmwf-2025H1) | ensemble | 0.8356 | 1.0895 | 73 |
-| 20:00 (ecmwf-2025H2) | ridge | 0.8793 | 0.6737 | 58 |
-| 20:00 (ecmwf-2025H2) | gfs_residual | 0.6379 | 0.4803 | 58 |
-| 20:00 (ecmwf-2025H2) | ecmwf_residual | 0.5172 | 0.4104 | 58 |
-| 20:00 (ecmwf-2025H2) | analog_arm | 0.8793 | 0.6737 | 58 |
-| 20:00 (ecmwf-2025H2) | ensemble | 0.5172 | 0.3964 | 58 |
-| 21:00 (ecmwf-2025H2) | ridge | 0.8103 | 0.5689 | 58 |
-| 21:00 (ecmwf-2025H2) | gfs_residual | 0.6034 | 0.4587 | 58 |
-| 21:00 (ecmwf-2025H2) | ecmwf_residual | 0.4828 | 0.4235 | 58 |
-| 21:00 (ecmwf-2025H2) | analog_arm | 0.8103 | 0.5689 | 58 |
-| 21:00 (ecmwf-2025H2) | ensemble | 0.4828 | 0.3868 | 58 |
-| 22:00 (ecmwf-2025H2) | ridge | 0.7414 | 0.4949 | 58 |
-| 22:00 (ecmwf-2025H2) | gfs_residual | 0.6552 | 0.4618 | 58 |
-| 22:00 (ecmwf-2025H2) | ecmwf_residual | 0.5862 | 0.4252 | 58 |
-| 22:00 (ecmwf-2025H2) | analog_arm | 0.7414 | 0.4949 | 58 |
-| 22:00 (ecmwf-2025H2) | ensemble | 0.5000 | 0.3874 | 58 |
-| 23:00 (ecmwf-2025H2) | ridge | 0.5345 | 0.3827 | 58 |
-| 23:00 (ecmwf-2025H2) | gfs_residual | 0.6724 | 0.4808 | 58 |
-| 23:00 (ecmwf-2025H2) | ecmwf_residual | 0.5172 | 0.3894 | 58 |
-| 23:00 (ecmwf-2025H2) | analog_arm | 0.5345 | 0.4252 | 58 |
-| 23:00 (ecmwf-2025H2) | ensemble | 0.5000 | 0.3906 | 58 |
+| 20:00 (ecmwf-2025H2) | ridge | 0.9483 | 0.6818 | 58 |
+| 20:00 (ecmwf-2025H2) | gfs_residual | 0.6379 | 0.4840 | 58 |
+| 20:00 (ecmwf-2025H2) | ecmwf_residual | 0.5517 | 0.4227 | 58 |
+| 20:00 (ecmwf-2025H2) | analog_arm | 0.9483 | 0.6818 | 58 |
+| 20:00 (ecmwf-2025H2) | ensemble | 0.4828 | 0.3983 | 58 |
+| 21:00 (ecmwf-2025H2) | ridge | 0.8621 | 0.5740 | 58 |
+| 21:00 (ecmwf-2025H2) | gfs_residual | 0.6034 | 0.4561 | 58 |
+| 21:00 (ecmwf-2025H2) | ecmwf_residual | 0.5000 | 0.4148 | 58 |
+| 21:00 (ecmwf-2025H2) | analog_arm | 0.8621 | 0.5740 | 58 |
+| 21:00 (ecmwf-2025H2) | ensemble | 0.5000 | 0.3903 | 58 |
+| 22:00 (ecmwf-2025H2) | ridge | 0.7586 | 0.5016 | 58 |
+| 22:00 (ecmwf-2025H2) | gfs_residual | 0.7241 | 0.4854 | 58 |
+| 22:00 (ecmwf-2025H2) | ecmwf_residual | 0.5862 | 0.4240 | 58 |
+| 22:00 (ecmwf-2025H2) | analog_arm | 0.7586 | 0.5016 | 58 |
+| 22:00 (ecmwf-2025H2) | ensemble | 0.5172 | 0.3940 | 58 |
+| 23:00 (ecmwf-2025H2) | ridge | 0.5345 | 0.3863 | 58 |
+| 23:00 (ecmwf-2025H2) | gfs_residual | 0.6207 | 0.4728 | 58 |
+| 23:00 (ecmwf-2025H2) | ecmwf_residual | 0.5690 | 0.3804 | 58 |
+| 23:00 (ecmwf-2025H2) | analog_arm | 0.5345 | 0.4251 | 58 |
+| 23:00 (ecmwf-2025H2) | ensemble | 0.4828 | 0.3870 | 58 |
 
 ### Regime: non_calm
 
@@ -157,26 +157,26 @@ unless a candidate wins clearly with no regression and not only on the short win
 | 23:00 (ecmwf-2025H1) | ecmwf_residual | 0.6762 | 0.5144 | 105 |
 | 23:00 (ecmwf-2025H1) | analog_arm | 0.6762 | 0.5125 | 105 |
 | 23:00 (ecmwf-2025H1) | ensemble | 0.8190 | 0.5872 | 105 |
-| 20:00 (ecmwf-2025H2) | ridge | 0.7619 | 0.6116 | 126 |
-| 20:00 (ecmwf-2025H2) | gfs_residual | 0.5873 | 0.4083 | 126 |
-| 20:00 (ecmwf-2025H2) | ecmwf_residual | 0.5714 | 0.4230 | 126 |
-| 20:00 (ecmwf-2025H2) | analog_arm | 0.7619 | 0.6116 | 126 |
-| 20:00 (ecmwf-2025H2) | ensemble | 0.5317 | 0.3868 | 126 |
-| 21:00 (ecmwf-2025H2) | ridge | 0.8175 | 0.5977 | 126 |
-| 21:00 (ecmwf-2025H2) | gfs_residual | 0.5159 | 0.4018 | 126 |
-| 21:00 (ecmwf-2025H2) | ecmwf_residual | 0.5714 | 0.4061 | 126 |
-| 21:00 (ecmwf-2025H2) | analog_arm | 0.8175 | 0.5977 | 126 |
-| 21:00 (ecmwf-2025H2) | ensemble | 0.4841 | 0.3602 | 126 |
-| 22:00 (ecmwf-2025H2) | ridge | 0.7222 | 0.5049 | 126 |
-| 22:00 (ecmwf-2025H2) | gfs_residual | 0.5397 | 0.3848 | 126 |
-| 22:00 (ecmwf-2025H2) | ecmwf_residual | 0.5635 | 0.3992 | 126 |
-| 22:00 (ecmwf-2025H2) | analog_arm | 0.7222 | 0.5049 | 126 |
-| 22:00 (ecmwf-2025H2) | ensemble | 0.4841 | 0.3589 | 126 |
-| 23:00 (ecmwf-2025H2) | ridge | 0.7302 | 0.4843 | 126 |
-| 23:00 (ecmwf-2025H2) | gfs_residual | 0.5556 | 0.3908 | 126 |
-| 23:00 (ecmwf-2025H2) | ecmwf_residual | 0.6032 | 0.3849 | 126 |
-| 23:00 (ecmwf-2025H2) | analog_arm | 0.7381 | 0.5384 | 126 |
-| 23:00 (ecmwf-2025H2) | ensemble | 0.5635 | 0.3593 | 126 |
+| 20:00 (ecmwf-2025H2) | ridge | 0.7619 | 0.6136 | 126 |
+| 20:00 (ecmwf-2025H2) | gfs_residual | 0.5952 | 0.4087 | 126 |
+| 20:00 (ecmwf-2025H2) | ecmwf_residual | 0.5476 | 0.4018 | 126 |
+| 20:00 (ecmwf-2025H2) | analog_arm | 0.7619 | 0.6136 | 126 |
+| 20:00 (ecmwf-2025H2) | ensemble | 0.5317 | 0.3812 | 126 |
+| 21:00 (ecmwf-2025H2) | ridge | 0.8413 | 0.6028 | 126 |
+| 21:00 (ecmwf-2025H2) | gfs_residual | 0.5556 | 0.4013 | 126 |
+| 21:00 (ecmwf-2025H2) | ecmwf_residual | 0.5635 | 0.4078 | 126 |
+| 21:00 (ecmwf-2025H2) | analog_arm | 0.8413 | 0.6028 | 126 |
+| 21:00 (ecmwf-2025H2) | ensemble | 0.5397 | 0.3753 | 126 |
+| 22:00 (ecmwf-2025H2) | ridge | 0.7143 | 0.5110 | 126 |
+| 22:00 (ecmwf-2025H2) | gfs_residual | 0.5079 | 0.3855 | 126 |
+| 22:00 (ecmwf-2025H2) | ecmwf_residual | 0.5714 | 0.3933 | 126 |
+| 22:00 (ecmwf-2025H2) | analog_arm | 0.7143 | 0.5110 | 126 |
+| 22:00 (ecmwf-2025H2) | ensemble | 0.5000 | 0.3581 | 126 |
+| 23:00 (ecmwf-2025H2) | ridge | 0.7222 | 0.4904 | 126 |
+| 23:00 (ecmwf-2025H2) | gfs_residual | 0.5794 | 0.3860 | 126 |
+| 23:00 (ecmwf-2025H2) | ecmwf_residual | 0.5794 | 0.3910 | 126 |
+| 23:00 (ecmwf-2025H2) | analog_arm | 0.7302 | 0.5341 | 126 |
+| 23:00 (ecmwf-2025H2) | ensemble | 0.5714 | 0.3591 | 126 |
 
 ### Regime: high_delta_06
 
@@ -202,26 +202,26 @@ unless a candidate wins clearly with no regression and not only on the short win
 | 23:00 (ecmwf-2025H1) | ecmwf_residual | 0.7391 | 0.5590 | 115 |
 | 23:00 (ecmwf-2025H1) | analog_arm | 0.7304 | 0.5713 | 115 |
 | 23:00 (ecmwf-2025H1) | ensemble | 0.9913 | 0.7143 | 115 |
-| 20:00 (ecmwf-2025H2) | ridge | 0.7851 | 0.6172 | 121 |
-| 20:00 (ecmwf-2025H2) | gfs_residual | 0.5702 | 0.4040 | 121 |
-| 20:00 (ecmwf-2025H2) | ecmwf_residual | 0.5950 | 0.4359 | 121 |
-| 20:00 (ecmwf-2025H2) | analog_arm | 0.7851 | 0.6172 | 121 |
-| 20:00 (ecmwf-2025H2) | ensemble | 0.5537 | 0.3876 | 121 |
-| 21:00 (ecmwf-2025H2) | ridge | 0.7934 | 0.5944 | 121 |
-| 21:00 (ecmwf-2025H2) | gfs_residual | 0.5041 | 0.3982 | 121 |
-| 21:00 (ecmwf-2025H2) | ecmwf_residual | 0.5868 | 0.4172 | 121 |
-| 21:00 (ecmwf-2025H2) | analog_arm | 0.7934 | 0.5944 | 121 |
-| 21:00 (ecmwf-2025H2) | ensemble | 0.5124 | 0.3625 | 121 |
-| 22:00 (ecmwf-2025H2) | ridge | 0.7603 | 0.5125 | 121 |
-| 22:00 (ecmwf-2025H2) | gfs_residual | 0.5455 | 0.3753 | 121 |
-| 22:00 (ecmwf-2025H2) | ecmwf_residual | 0.5785 | 0.4125 | 121 |
-| 22:00 (ecmwf-2025H2) | analog_arm | 0.7603 | 0.5125 | 121 |
-| 22:00 (ecmwf-2025H2) | ensemble | 0.4959 | 0.3577 | 121 |
-| 23:00 (ecmwf-2025H2) | ridge | 0.7190 | 0.4728 | 121 |
-| 23:00 (ecmwf-2025H2) | gfs_residual | 0.5124 | 0.3778 | 121 |
-| 23:00 (ecmwf-2025H2) | ecmwf_residual | 0.5785 | 0.3754 | 121 |
+| 20:00 (ecmwf-2025H2) | ridge | 0.7934 | 0.6218 | 121 |
+| 20:00 (ecmwf-2025H2) | gfs_residual | 0.5702 | 0.4018 | 121 |
+| 20:00 (ecmwf-2025H2) | ecmwf_residual | 0.5620 | 0.4156 | 121 |
+| 20:00 (ecmwf-2025H2) | analog_arm | 0.7934 | 0.6218 | 121 |
+| 20:00 (ecmwf-2025H2) | ensemble | 0.5207 | 0.3831 | 121 |
+| 21:00 (ecmwf-2025H2) | ridge | 0.8347 | 0.6000 | 121 |
+| 21:00 (ecmwf-2025H2) | gfs_residual | 0.5289 | 0.3981 | 121 |
+| 21:00 (ecmwf-2025H2) | ecmwf_residual | 0.5868 | 0.4200 | 121 |
+| 21:00 (ecmwf-2025H2) | analog_arm | 0.8347 | 0.6000 | 121 |
+| 21:00 (ecmwf-2025H2) | ensemble | 0.5620 | 0.3802 | 121 |
+| 22:00 (ecmwf-2025H2) | ridge | 0.7603 | 0.5187 | 121 |
+| 22:00 (ecmwf-2025H2) | gfs_residual | 0.5124 | 0.3787 | 121 |
+| 22:00 (ecmwf-2025H2) | ecmwf_residual | 0.5702 | 0.4067 | 121 |
+| 22:00 (ecmwf-2025H2) | analog_arm | 0.7603 | 0.5187 | 121 |
+| 22:00 (ecmwf-2025H2) | ensemble | 0.4959 | 0.3586 | 121 |
+| 23:00 (ecmwf-2025H2) | ridge | 0.7190 | 0.4779 | 121 |
+| 23:00 (ecmwf-2025H2) | gfs_residual | 0.5124 | 0.3749 | 121 |
+| 23:00 (ecmwf-2025H2) | ecmwf_residual | 0.5537 | 0.3728 | 121 |
 | 23:00 (ecmwf-2025H2) | analog_arm | 0.7273 | 0.5338 | 121 |
-| 23:00 (ecmwf-2025H2) | ensemble | 0.5124 | 0.3483 | 121 |
+| 23:00 (ecmwf-2025H2) | ensemble | 0.5289 | 0.3473 | 121 |
 
 ### Regime: non_calm_AND_high_delta
 
@@ -247,26 +247,26 @@ unless a candidate wins clearly with no regression and not only on the short win
 | 23:00 (ecmwf-2025H1) | ecmwf_residual | 0.7333 | 0.5602 | 90 |
 | 23:00 (ecmwf-2025H1) | analog_arm | 0.6778 | 0.5156 | 90 |
 | 23:00 (ecmwf-2025H1) | ensemble | 0.9111 | 0.6400 | 90 |
-| 20:00 (ecmwf-2025H2) | ridge | 0.7850 | 0.6316 | 107 |
-| 20:00 (ecmwf-2025H2) | gfs_residual | 0.5794 | 0.4097 | 107 |
-| 20:00 (ecmwf-2025H2) | ecmwf_residual | 0.6168 | 0.4428 | 107 |
-| 20:00 (ecmwf-2025H2) | analog_arm | 0.7850 | 0.6316 | 107 |
-| 20:00 (ecmwf-2025H2) | ensemble | 0.5607 | 0.3990 | 107 |
-| 21:00 (ecmwf-2025H2) | ridge | 0.8318 | 0.6141 | 107 |
-| 21:00 (ecmwf-2025H2) | gfs_residual | 0.5140 | 0.4056 | 107 |
-| 21:00 (ecmwf-2025H2) | ecmwf_residual | 0.6168 | 0.4293 | 107 |
-| 21:00 (ecmwf-2025H2) | analog_arm | 0.8318 | 0.6141 | 107 |
-| 21:00 (ecmwf-2025H2) | ensemble | 0.5047 | 0.3688 | 107 |
-| 22:00 (ecmwf-2025H2) | ridge | 0.7477 | 0.5150 | 107 |
-| 22:00 (ecmwf-2025H2) | gfs_residual | 0.5327 | 0.3733 | 107 |
-| 22:00 (ecmwf-2025H2) | ecmwf_residual | 0.5701 | 0.4089 | 107 |
-| 22:00 (ecmwf-2025H2) | analog_arm | 0.7477 | 0.5150 | 107 |
-| 22:00 (ecmwf-2025H2) | ensemble | 0.4860 | 0.3564 | 107 |
-| 23:00 (ecmwf-2025H2) | ridge | 0.7477 | 0.4854 | 107 |
-| 23:00 (ecmwf-2025H2) | gfs_residual | 0.5140 | 0.3769 | 107 |
-| 23:00 (ecmwf-2025H2) | ecmwf_residual | 0.5981 | 0.3913 | 107 |
-| 23:00 (ecmwf-2025H2) | analog_arm | 0.7570 | 0.5503 | 107 |
-| 23:00 (ecmwf-2025H2) | ensemble | 0.5327 | 0.3530 | 107 |
+| 20:00 (ecmwf-2025H2) | ridge | 0.7944 | 0.6344 | 107 |
+| 20:00 (ecmwf-2025H2) | gfs_residual | 0.5794 | 0.4066 | 107 |
+| 20:00 (ecmwf-2025H2) | ecmwf_residual | 0.5888 | 0.4203 | 107 |
+| 20:00 (ecmwf-2025H2) | analog_arm | 0.7944 | 0.6344 | 107 |
+| 20:00 (ecmwf-2025H2) | ensemble | 0.5514 | 0.3924 | 107 |
+| 21:00 (ecmwf-2025H2) | ridge | 0.8598 | 0.6191 | 107 |
+| 21:00 (ecmwf-2025H2) | gfs_residual | 0.5327 | 0.4040 | 107 |
+| 21:00 (ecmwf-2025H2) | ecmwf_residual | 0.6168 | 0.4348 | 107 |
+| 21:00 (ecmwf-2025H2) | analog_arm | 0.8598 | 0.6191 | 107 |
+| 21:00 (ecmwf-2025H2) | ensemble | 0.5701 | 0.3871 | 107 |
+| 22:00 (ecmwf-2025H2) | ridge | 0.7383 | 0.5191 | 107 |
+| 22:00 (ecmwf-2025H2) | gfs_residual | 0.5047 | 0.3773 | 107 |
+| 22:00 (ecmwf-2025H2) | ecmwf_residual | 0.5607 | 0.4026 | 107 |
+| 22:00 (ecmwf-2025H2) | analog_arm | 0.7383 | 0.5191 | 107 |
+| 22:00 (ecmwf-2025H2) | ensemble | 0.4860 | 0.3552 | 107 |
+| 23:00 (ecmwf-2025H2) | ridge | 0.7383 | 0.4901 | 107 |
+| 23:00 (ecmwf-2025H2) | gfs_residual | 0.5327 | 0.3734 | 107 |
+| 23:00 (ecmwf-2025H2) | ecmwf_residual | 0.5794 | 0.3926 | 107 |
+| 23:00 (ecmwf-2025H2) | analog_arm | 0.7477 | 0.5452 | 107 |
+| 23:00 (ecmwf-2025H2) | ensemble | 0.5421 | 0.3523 | 107 |
 
 ## Full-Window Context (2023-2025, 3 folds, Ridge/GFS/analog only)
 

@@ -4,6 +4,15 @@ Reviewer: Anti winner-shopping / decision review
 Date: 2026-06-01
 Prereg: contracts/serving_candidate_matrix_v0_prereg.md (v1.0)
 
+> **Update 2026-06-01 (reviewer P2 hygiene):** the matrix was re-run at the production
+> `n_estimators=500` (eval == serving) with the ECMWF-window causal-climo override
+> (`clim_tmax_c_dec` overwritten with the per-split causal climo, matching the full-window P1 fix).
+> Routing decisions are UNCHANGED: CP20-22 -> ECMWF-residual (2/2 folds); CP23 -> Ridge (conservative).
+> Only the H2 ECMWF-window point metrics shifted (<= ~0.07 MAE) - H1's causal climo already equalled the
+> broad climo, so H1 did not move. The CP23 evidence below (criteria 2 & 3) has been corrected to the
+> leak-free full-window logic; the prior wording predated the session-2026-06-01-6 `full_results` patch.
+> Authoritative numbers live in `candidate_matrix_v0.{md,json}`.
+
 ## Checklist
 
 ### 1. Same rows per slice? Window differences honestly labelled?
@@ -26,10 +35,12 @@ Evidence:
 - scripts/evaluate_serving_candidate_matrix.py:652 sets `need_folds = min(2, n_folds)` (= 2 for the 2-fold ECMWF window).
 - Line 695: `elif folds_won < need_folds:` rejects any candidate that does not win in >= 2 folds.
 - JSON routing_detail confirms `"folds_won_by_best": 2` for all 4 CPs.
-- CP20: ECMWF MAE fold1=0.6854 < Ridge 1.0337; fold2=0.5543 < Ridge 0.7989. Wins 2/2.
-- CP21: ECMWF MAE fold1=0.6742 < Ridge 0.9382; fold2=0.5435 < Ridge 0.8152. Wins 2/2.
-- CP22: ECMWF MAE fold1=0.6742 < Ridge 0.7753; fold2=0.5707 < Ridge 0.7283. Wins 2/2.
-- CP23: Ridge is best_by_mae (pooled 0.6714 vs analog 0.6824 vs GFS 0.7456). Wins 2/2 as incumbent.
+- CP20: ECMWF MAE fold1=0.6854 < Ridge 1.0337; fold2=0.5489 < Ridge 0.8207. Wins 2/2.
+- CP21: ECMWF MAE fold1=0.6742 < Ridge 0.9382; fold2=0.5435 < Ridge 0.8478. Wins 2/2.
+- CP22: ECMWF MAE fold1=0.6742 < Ridge 0.7753; fold2=0.5761 < Ridge 0.7283. Wins 2/2.
+- CP23: on the leak-free full 3-fold window, GFS-residual is best_by_mae (pooled 0.6643 vs analog_arm
+  0.6660 vs Ridge 0.6770), but GFS degrades the calm stratum (calm_ok=false), so the conservative rule
+  keeps Ridge (winner=ridge, folds_won_by_best=2/3). ECMWF/ensemble are not CP23 candidates.
 
 No winner rests on a single fold.
 
@@ -43,7 +54,7 @@ Evidence:
   `candidates_cp23 = ["ridge", "gfs_residual", "analog_arm"]`
 - Line 632: `candidates = candidates_cp23 if is_cp23 else candidates_cp20_22`
 - ECMWF-residual and ensemble are EXCLUDED from CP23 candidates entirely.
-- CP23 result: Ridge wins (pooled MAE 0.6714), not switched to ECMWF despite ECMWF being close in fold 2 (0.5761). This is correct conservative behavior.
+- CP23 result: Ridge is kept by the conservative rule. On the leak-free full window GFS-residual has the lowest pooled MAE (0.6643) but degrades the calm stratum (calm_ok=false); ECMWF/ensemble are not CP23 candidates at all. Keeping Ridge despite GFS's better pooled MAE is correct conservative behavior.
 
 ### 4. |GFS-ECMWF| spread EXCLUDED from routing?
 
@@ -96,11 +107,11 @@ Evidence:
 - JSON confirms `"calm_ok": true` for all 4 CPs.
 - Calm stratum data (from report):
   - CP20 fold1: ECMWF calm MAE=0.6164 vs Ridge calm MAE=0.8767 (ECMWF better)
-  - CP20 fold2: ECMWF calm MAE=0.5172 vs Ridge calm MAE=0.8793 (ECMWF better)
+  - CP20 fold2: ECMWF calm MAE=0.5517 vs Ridge calm MAE=0.9483 (ECMWF better)
   - CP21 fold1: ECMWF calm MAE=0.6438 vs Ridge calm MAE=0.8493 (ECMWF better)
-  - CP21 fold2: ECMWF calm MAE=0.4828 vs Ridge calm MAE=0.8103 (ECMWF better)
+  - CP21 fold2: ECMWF calm MAE=0.5000 vs Ridge calm MAE=0.8621 (ECMWF better)
   - CP22 fold1: ECMWF calm MAE=0.6438 vs Ridge calm MAE=0.7671 (ECMWF better)
-  - CP22 fold2: ECMWF calm MAE=0.5862 vs Ridge calm MAE=0.7414 (ECMWF better)
+  - CP22 fold2: ECMWF calm MAE=0.5862 vs Ridge calm MAE=0.7586 (ECMWF better)
 - ECMWF-residual improves calm days at all CP20-22 in both folds. No degradation.
 
 ### 9. Determinism (seed 42)? Reproducible?
@@ -155,6 +166,6 @@ If ECMWF data is delayed or missing at serving time, the system needs a fallback
 a graceful degradation path for missing ECMWF runs, or the CP20-22 improvement will be
 unreliable in production.
 
-Secondary risk: the evaluation uses n_estimators=200 (reduced from 500 for speed). If
-Phase 3 deploys with 500, the model behavior may differ slightly from what was evaluated
-here. Recommend re-running with production hyperparameters before final wiring.
+Secondary risk (RESOLVED 2026-06-01): the matrix now evaluates at the production
+n_estimators=500 (eval == serving); the earlier "200-for-speed" setting is gone. The re-run
+confirmed the routing is unchanged, so no production/eval hyperparameter gap remains before wiring.

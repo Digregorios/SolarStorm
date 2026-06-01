@@ -4,6 +4,19 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:T-11-9 P2-hygiene] - 2026-06-01 - ECMWF-window causal-climo override + production n_estimators rerun
+
+Hygiene patch before Phase 3 (reviewer P2, `references/code-reviews/update.txt`). (1) Applied the same
+causal `clim_tmax_c_dec` override used in the full-window path to `_evaluate_one_cp_ecmwf` (all candidate
+arrays - Ridge base, GFS-, ECMWF-, ensemble-residual; train + test) so the ECMWF window is eval == serving
+clean; it previously carried the broad climatology in that feature column. (2) Re-ran the matrix at the
+production `n_estimators=500`. (3) Fixed the stale console print and refreshed stale governance docs (this
+CHANGELOG, `tasks.md`, `PROJECT_JOURNEY.md`, `PLAN_2026-06-01.md`, `candidate_matrix_v0_review.md`).
+**Routing UNCHANGED:** CP20-22 ECMWF-residual (2/2 folds); CP23 Ridge (GFS-residual is best-by-MAE on the
+leak-free full window but degrades the calm stratum -> the conservative rule keeps Ridge). Only H2
+ECMWF-window point metrics moved (<= ~0.07 MAE); H1 was already identical because its causal climo equalled
+the broad climo. No threshold/gate/prereg changed; no execution/calibration. `reports/serving/candidate_matrix_v0.{md,json}`.
+
 ## [phase11:T-11-9 Phase2] - 2026-06-01 - serving candidate matrix (conservative per-CP routing)
 
 `scripts/evaluate_serving_candidate_matrix.py` (prereg v1.0). Consolidated comparison of 5 candidate
@@ -14,10 +27,12 @@ route adjustment honored: the `|GFS-ECMWF|` spread is EXCLUDED from all routing 
 
 **Recommended routing (recommendation, NOT promotion - Phase 3 wires it):**
 - CP20/21/22 -> ECMWF-residual (wins 2/2 folds, large margin, no calm regression; e.g. CP20 MAE 0.69/0.55
-  vs Ridge 1.03/0.80).
-- CP23 -> Ridge (incumbent best among the conservative set; ECMWF only wins CP23 in 1/2 folds, so the
-  conservative rule keeps Ridge). The ensemble is EXCLUDED from CP23 per the T-11-5 regression finding +
-  prereg rule (it regresses CP23 in H1: MAE 0.826 vs Ridge 0.674; only wins CP23 in H2).
+  vs Ridge 1.03/0.82).
+- CP23 -> Ridge (conservative). On the leak-free full 3-fold window GFS-residual has the best pooled MAE
+  (0.6643 vs analog 0.6660 vs Ridge 0.6770) BUT degrades the calm stratum (calm_ok=false), so the
+  conservative rule keeps Ridge. ECMWF and ensemble are EXCLUDED from CP23 entirely (T-11-5 regression
+  finding + prereg rule; in the ECMWF-window head-to-head the ensemble still regresses CP23 in H1: MAE
+  0.826 vs Ridge 0.674).
 CP20-22 decided separately from CP23; ECMWF metrics honestly labelled as the shorter 2-fold window
 (2024-03..2025-12) vs the 3-fold full-window context for Ridge/GFS/analog. Anti-winner-shopping: same
 rows, windows labelled, winner only if >=2/2 (short) or >=2/3 (full) folds. Review PASS 10/10.
@@ -30,12 +45,12 @@ the recommendation.
 **Carried Phase-3 risk (flagged):** ECMWF availability at inference - the CP20-22 routing needs a graceful
 fallback (to GFS-residual or Ridge) for missing/delayed ECMWF runs. Suite 367 green. No execution/calibration.
 
-**Reviewer P1 follow-up (BEFORE wiring):** CP23 must NOT be wired from this matrix yet - the full-window
-context used a broad climatology (train_end 2024-12-31) reused for the 2023/2024 splits, leaking
-`clim_tmax_c_dec` in the full-window context; and the router consumed only the ECMWF window. T-11-9 needs
-a patch (split-specific climatology, router consumes full_results for Ridge/GFS/analog, rerun at the
-production n_estimators) before CP23 promotion. CP20-22 ECMWF-residual stands as a strong hypothesis with
-fallback.
+**Reviewer P1 RESOLVED (patch session-2026-06-01-6 + P2 hygiene 2026-06-01):** the full-window leak is
+fixed - `clim_tmax_c_dec` is now overwritten with the per-split CAUSAL climatology in BOTH the full window
+AND the ECMWF window, the router consumes `full_results` (Ridge/GFS/analog) for CP23, and the matrix is
+re-run at the production `n_estimators=500` (eval == serving). The re-run leaves the routing UNCHANGED
+(CP20-22 ECMWF-residual 2/2; CP23 Ridge). CP23 is therefore now wired-eligible from the leak-free full
+window. CP20-22 ECMWF-residual stands as a strong hypothesis with fallback.
 `reports/serving/candidate_matrix_v0.md` (+ `_review.md`).
 
 ## [phase11:T-11-6] - 2026-06-01 - two-model spread feasibility FEASIBLE-CONDITIONAL (seasonal reversal)
