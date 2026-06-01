@@ -13,6 +13,14 @@ Prereg: contracts/serving_candidate_matrix_v0_prereg.md (v1.0)
 > leak-free full-window logic; the prior wording predated the session-2026-06-01-6 `full_results` patch.
 > Authoritative numbers live in `candidate_matrix_v0.{md,json}`.
 
+> **Update 2026-06-01 (reviewer 2nd pass, post-880924f):** corrected three stale-evidence
+> lines that survived the hygiene commit - criterion 2 (the `folds_won_by_best=2` gloss now
+> distinguishes CP20-22's winner==best_by_mae from CP23's best_by_mae=gfs_residual being
+> overridden by the calm gate), criterion 8 (`calm_ok=true` was wrongly stated for "all 4 CPs";
+> CP23 is `calm_ok=false`, which is *why* Ridge is kept), and criterion 10 (the script/reports/
+> prereg are now committed, not untracked). The PASS 10/10 verdict is unchanged - these were
+> documentation-accuracy fixes, not changes to the routing decision.
+
 ## Checklist
 
 ### 1. Same rows per slice? Window differences honestly labelled?
@@ -34,7 +42,10 @@ PASS
 Evidence:
 - scripts/evaluate_serving_candidate_matrix.py:652 sets `need_folds = min(2, n_folds)` (= 2 for the 2-fold ECMWF window).
 - Line 695: `elif folds_won < need_folds:` rejects any candidate that does not win in >= 2 folds.
-- JSON routing_detail confirms `"folds_won_by_best": 2` for all 4 CPs.
+- JSON routing_detail confirms `"folds_won_by_best": 2` at every CP, but the "2" means different
+  things by CP: for CP20-22 the winner IS best_by_mae (ecmwf_residual, won 2/2 folds); for CP23 the
+  "2" (of 3) describes best_by_mae=gfs_residual, NOT the winner - the winner is ridge, because gfs is
+  overridden by the calm gate (calm_ok=false; see the CP23 line below).
 - CP20: ECMWF MAE fold1=0.6854 < Ridge 1.0337; fold2=0.5489 < Ridge 0.8207. Wins 2/2.
 - CP21: ECMWF MAE fold1=0.6742 < Ridge 0.9382; fold2=0.5435 < Ridge 0.8478. Wins 2/2.
 - CP22: ECMWF MAE fold1=0.6742 < Ridge 0.7753; fold2=0.5761 < Ridge 0.7283. Wins 2/2.
@@ -104,7 +115,11 @@ PASS
 
 Evidence:
 - scripts/evaluate_serving_candidate_matrix.py:685-688 checks calm degradation with 0.05 tolerance.
-- JSON confirms `"calm_ok": true` for all 4 CPs.
+- JSON confirms `"calm_ok": true` for CP20-22, where the recommended ECMWF-residual improves calm
+  (data below). CP23 has `"calm_ok": false`, but that flag describes gfs_residual (best_by_mae), which
+  degrades calm and is therefore REJECTED; the recommended CP23 model is ridge, which does not degrade
+  calm. So the recommended routing (ECMWF-residual @ CP20-22, Ridge @ CP23) degrades calm at no CP -
+  which is exactly what this criterion asks.
 - Calm stratum data (from report):
   - CP20 fold1: ECMWF calm MAE=0.6164 vs Ridge calm MAE=0.8767 (ECMWF better)
   - CP20 fold2: ECMWF calm MAE=0.5517 vs Ridge calm MAE=0.9483 (ECMWF better)
@@ -129,13 +144,15 @@ Evidence:
 
 PASS
 
-Evidence (git status --short + git diff --stat):
-- Modified: `references/code-reviews/update.txt` only (unrelated, 15 ins / 25 del).
-- Untracked (new, expected): `contracts/serving_candidate_matrix_v0_prereg.md`, `reports/serving/`, `scripts/evaluate_serving_candidate_matrix.py`.
-- `core/cli/decide.py`: NOT modified (git status --short returns empty).
-- `core/decision/`: NOT modified (git status --short returns empty).
-- `core/calibration/`: NOT modified (git status --short returns empty).
-- No Polymarket, no execution, no contract changes (only the new prereg is untracked).
+Evidence (as of commit 880924f; the script/reports/prereg are now COMMITTED, no longer untracked):
+- Provenance: matrix script + prereg first committed in c175177, refined in 46445e7, P2-hygiene in
+  880924f. The hygiene commit touched only this evaluation's own files (script + `reports/serving/*` +
+  governance docs: CHANGELOG, tasks, PROJECT_JOURNEY, PLAN); no foreign code.
+- `core/cli/decide.py`: NOT modified.
+- `core/decision/`: NOT modified.
+- `core/calibration/`: NOT modified.
+- No Polymarket, no execution, no contract modifications (the prereg is a NEW frozen contract, not an
+  edit to an existing one).
 
 ## Verdict
 
