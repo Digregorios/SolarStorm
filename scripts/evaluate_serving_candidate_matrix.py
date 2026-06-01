@@ -653,37 +653,58 @@ def compute_routing_recommendation(ecmwf_results, full_results):
         results_src = full_results if is_cp23 else ecmwf_results
         incumbent = "ridge"
 
-        # Collect per-fold metrics for each candidate
-        fold_metrics = {c: [] for c in candidates}
-        fold_calm_metrics = {c: [] for c in candidates}
+        # Collect per-fold metrics for each candidate, KEYED BY FOLD INDEX. The fold index must be
+        # preserved (reviewer P2): with a flat list, a candidate missing fold 0 would have its
+        # fold-1 metric compared against the incumbent's fold-0 metric by list position, silently
+        # mixing folds. Keying by index makes coverage explicit and all comparisons fold-aligned.
+        fold_metrics = {c: {} for c in candidates}
+        fold_calm_metrics = {c: {} for c in candidates}
 
-        for sr in results_src:
+        for fold_idx, sr in enumerate(results_src):
             cpd = sr["by_cp"].get(cp)
             if cpd is None:
                 continue
             for c in candidates:
                 m = cpd.get(c, {}).get("ALL", {})
                 if m.get("mae") is not None:
-                    fold_metrics[c].append(m)
+                    fold_metrics[c][fold_idx] = m
                 cm = cpd.get(c, {}).get("calm", {})
                 if cm.get("mae") is not None:
-                    fold_calm_metrics[c].append(cm)
+                    fold_calm_metrics[c][fold_idx] = cm
 
         n_folds = len(results_src)
         need_folds = min(2, n_folds)  # >=2/2 short window (CP20-22) or >=2/3 full window (CP23)
 
-        # Find best candidate by pooled MAE
+        # Coverage guard (reviewer P2): a candidate only competes if it has ALL-stratum metrics in
+        # the SAME folds as the incumbent. A candidate with partial coverage (e.g. 2 of 3 folds)
+        # could otherwise post a flattering pooled MAE on its own subset and look eligible. Such a
+        # candidate is recorded coverage_ok=false and EXCLUDED from ranking (cannot win the CP).
+        inc_folds = set(fold_metrics[incumbent].keys())
+        coverage_ok = {
+            c: bool(inc_folds) and inc_folds.issubset(set(fold_metrics[c].keys()))
+            for c in candidates
+        }
+        eligible = [c for c in candidates if coverage_ok[c]]
+        coverage_excluded = [c for c in candidates if not coverage_ok[c]]
+
+        if not inc_folds or not eligible:
+            routing[cp] = incumbent
+            per_cp_detail[cp] = {
+                "winner": incumbent,
+                "reason": "no incumbent coverage" if not inc_folds else "no eligible candidate",
+                "coverage_ok": coverage_ok,
+                "coverage_excluded": coverage_excluded,
+                "incumbent_folds": sorted(inc_folds),
+            }
+            continue
+
+        # Pool MAE/RPS over the incumbent's folds ONLY, so every candidate is scored on an
+        # identical fold set (alignment, not winner-shopping).
         pooled_mae = {}
         pooled_rps = {}
-        for c in candidates:
-            if fold_metrics[c]:
-                pooled_mae[c] = np.mean([m["mae"] for m in fold_metrics[c]])
-                pooled_rps[c] = np.mean([m["rps"] for m in fold_metrics[c]])
-
-        if not pooled_mae:
-            routing[cp] = incumbent
-            per_cp_detail[cp] = {"winner": incumbent, "reason": "no data"}
-            continue
+        for c in eligible:
+            pooled_mae[c] = np.mean([fold_metrics[c][f]["mae"] for f in inc_folds])
+            pooled_rps[c] = np.mean([fold_metrics[c][f]["rps"] for f in inc_folds])
 
         # Sort by MAE then RPS
         ranked = sorted(pooled_mae.keys(), key=lambda c: (pooled_mae[c], pooled_rps.get(c, 99)))
@@ -693,20 +714,18 @@ def compute_routing_recommendation(ecmwf_results, full_results):
         inc_mae = pooled_mae.get(incumbent, 99)
         best_mae = pooled_mae.get(best, 99)
 
-        # Check: wins in >=2 folds (MAE lower than incumbent)
+        # Check: wins in >=need folds (MAE lower than incumbent), compared FOLD-BY-FOLD.
         folds_won = 0
-        for i in range(len(fold_metrics[best])):
-            if i < len(fold_metrics[incumbent]):
-                if fold_metrics[best][i]["mae"] <= fold_metrics[incumbent][i]["mae"]:
-                    folds_won += 1
+        for f in inc_folds:
+            if fold_metrics[best][f]["mae"] <= fold_metrics[incumbent][f]["mae"]:
+                folds_won += 1
 
-        # Check: no calm degradation
+        # Check: no calm degradation, on folds where BOTH have a calm stratum.
         calm_ok = True
-        for i in range(len(fold_calm_metrics[best])):
-            if i < len(fold_calm_metrics[incumbent]):
-                if fold_calm_metrics[best][i]["mae"] > fold_calm_metrics[incumbent][i]["mae"] + 0.05:
-                    calm_ok = False
-                    break
+        for f in sorted(set(fold_calm_metrics[best].keys()) & set(fold_calm_metrics[incumbent].keys())):
+            if fold_calm_metrics[best][f]["mae"] > fold_calm_metrics[incumbent][f]["mae"] + 0.05:
+                calm_ok = False
+                break
 
         # Decision
         reason_parts = []
@@ -734,6 +753,9 @@ def compute_routing_recommendation(ecmwf_results, full_results):
             "folds_won_by_best": folds_won,
             "n_folds": n_folds,
             "calm_ok": calm_ok,
+            "coverage_ok": coverage_ok,
+            "coverage_excluded": coverage_excluded,
+            "incumbent_folds": sorted(inc_folds),
             "reason": "; ".join(reason_parts),
         }
 
@@ -768,6 +790,13 @@ def write_reports(ecmwf_results, full_results, routing, per_cp_detail):
             "fold_rule": "candidate wins CP only if wins >=2/2 folds (ECMWF window) or >=2/3 (full window)",
             "cp20_22_separate_from_cp23": True,
             "spread_excluded": True,
+            "coverage_guard": "candidate competes only if it has ALL-stratum metrics in the same "
+                              "folds as the incumbent; else coverage_ok=false and excluded from ranking",
+            "all_candidates_full_coverage": all(
+                all(d["coverage_ok"].values())
+                for d in per_cp_detail.values()
+                if d.get("coverage_ok")
+            ),
         },
     }
 
@@ -823,6 +852,10 @@ def _render_markdown(ecmwf_results, full_results, routing, per_cp_detail):
         "  (short window) or >=2/3 folds (full window), NOT one lucky fold.",
         "- CP20-22 rigidly separated from CP23.",
         "- |GFS-ECMWF| spread excluded from all routing logic.",
+        "- Coverage guard: a candidate competes for a CP only if it has ALL-stratum metrics in the",
+        "  SAME folds as the incumbent (Ridge); otherwise coverage_ok=false and it is excluded from",
+        "  ranking. Pooled MAE/RPS are computed over the incumbent's folds so all candidates are",
+        "  scored on an identical fold set (routing_detail records coverage_ok / coverage_excluded).",
         "",
         "## Head-to-Head Matrix (ECMWF Overlap Window, ALL stratum)",
         "",

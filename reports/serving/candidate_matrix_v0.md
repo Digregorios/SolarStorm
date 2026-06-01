@@ -33,6 +33,10 @@ unless a candidate wins clearly with no regression and not only on the short win
   (short window) or >=2/3 folds (full window), NOT one lucky fold.
 - CP20-22 rigidly separated from CP23.
 - |GFS-ECMWF| spread excluded from all routing logic.
+- Coverage guard: a candidate competes for a CP only if it has ALL-stratum metrics in the
+  SAME folds as the incumbent (Ridge); otherwise coverage_ok=false and it is excluded from
+  ranking. Pooled MAE/RPS are computed over the incumbent's folds so all candidates are
+  scored on an identical fold set (routing_detail records coverage_ok / coverage_excluded).
 
 ## Head-to-Head Matrix (ECMWF Overlap Window, ALL stratum)
 

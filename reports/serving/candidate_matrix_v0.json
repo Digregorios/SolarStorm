@@ -2978,6 +2978,17 @@
       "folds_won_by_best": 2,
       "n_folds": 2,
       "calm_ok": true,
+      "coverage_ok": {
+        "ridge": true,
+        "gfs_residual": true,
+        "ecmwf_residual": true,
+        "ensemble": true
+      },
+      "coverage_excluded": [],
+      "incumbent_folds": [
+        0,
+        1
+      ],
       "reason": "wins 2/2 folds, no calm regression"
     },
     "21:00": {
@@ -2998,6 +3009,17 @@
       "folds_won_by_best": 2,
       "n_folds": 2,
       "calm_ok": true,
+      "coverage_ok": {
+        "ridge": true,
+        "gfs_residual": true,
+        "ecmwf_residual": true,
+        "ensemble": true
+      },
+      "coverage_excluded": [],
+      "incumbent_folds": [
+        0,
+        1
+      ],
       "reason": "wins 2/2 folds, no calm regression"
     },
     "22:00": {
@@ -3018,6 +3040,17 @@
       "folds_won_by_best": 2,
       "n_folds": 2,
       "calm_ok": true,
+      "coverage_ok": {
+        "ridge": true,
+        "gfs_residual": true,
+        "ecmwf_residual": true,
+        "ensemble": true
+      },
+      "coverage_excluded": [],
+      "incumbent_folds": [
+        0,
+        1
+      ],
       "reason": "wins 2/2 folds, no calm regression"
     },
     "23:00": {
@@ -3036,6 +3069,17 @@
       "folds_won_by_best": 2,
       "n_folds": 3,
       "calm_ok": false,
+      "coverage_ok": {
+        "ridge": true,
+        "gfs_residual": true,
+        "analog_arm": true
+      },
+      "coverage_excluded": [],
+      "incumbent_folds": [
+        0,
+        1,
+        2
+      ],
       "reason": "best=gfs_residual degrades calm stratum"
     }
   },
@@ -3045,6 +3089,8 @@
     "no_per_split_cherry_picking": true,
     "fold_rule": "candidate wins CP only if wins >=2/2 folds (ECMWF window) or >=2/3 (full window)",
     "cp20_22_separate_from_cp23": true,
-    "spread_excluded": true
+    "spread_excluded": true,
+    "coverage_guard": "candidate competes only if it has ALL-stratum metrics in the same folds as the incumbent; else coverage_ok=false and excluded from ranking",
+    "all_candidates_full_coverage": true
   }
 }
