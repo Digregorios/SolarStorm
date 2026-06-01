@@ -8,7 +8,7 @@ walk-forward, per CP and per regime.
 - **Prereg:** contracts/serving_candidate_matrix_v0_prereg.md (v1.0)
 - **Head-to-head window:** ECMWF overlap 2024-03..2025-12 (2 folds)
 - **Context window:** Full 2023-2025 (3 folds, Ridge/GFS/analog only)
-- **LGBM n_estimators:** 200 (reduced from 500 for speed)
+- **LGBM n_estimators:** 500 (production default; eval == serving, reviewer P2)
 - **Seed:** 42, deterministic=True, num_threads=1
 - **Spread excluded:** |GFS-ECMWF| spread NOT used in any routing (T-11-6 FEASIBLE-CONDITIONAL)
 
@@ -19,7 +19,7 @@ walk-forward, per CP and per regime.
 | 20:00 | ecmwf_residual | wins 2/2 folds, no calm regression |
 | 21:00 | ecmwf_residual | wins 2/2 folds, no calm regression |
 | 22:00 | ecmwf_residual | wins 2/2 folds, no calm regression |
-| 23:00 | ridge | incumbent is best |
+| 23:00 | ridge | best=gfs_residual degrades calm stratum |
 
 **CP20-22 decided SEPARATELY from CP23.** CP23 stays conservative (Ridge/GFS/analog)
 unless a candidate wins clearly with no regression and not only on the short window.
@@ -277,35 +277,35 @@ Do NOT directly compare a 3-fold metric here against a 2-fold ECMWF metric.
 
 | CP | Candidate | MAE | RMSE | BM | RPS | n |
 |----|-----------|-----|------|----|-----|---|
-| 20:00 | ridge | 0.9397 | 1.3314 | 0.3726 | 0.7772 | 365 |
-| 20:00 | gfs_residual | 0.8137 | 1.1575 | 0.3945 | 0.6716 | 365 |
-| 20:00 | analog_arm | 0.9397 | 1.3314 | 0.3726 | 0.7772 | 365 |
-| 21:00 | ridge | 0.8849 | 1.2175 | 0.3534 | 0.7222 | 365 |
-| 21:00 | gfs_residual | 0.7562 | 1.1251 | 0.4329 | 0.6500 | 365 |
-| 21:00 | analog_arm | 0.8849 | 1.2175 | 0.3534 | 0.7222 | 365 |
-| 22:00 | ridge | 0.8192 | 1.1165 | 0.3644 | 0.6639 | 365 |
-| 22:00 | gfs_residual | 0.7534 | 1.0841 | 0.4192 | 0.6165 | 365 |
-| 22:00 | analog_arm | 0.8192 | 1.1165 | 0.3644 | 0.6639 | 365 |
-| 23:00 | ridge | 0.7370 | 1.0429 | 0.4192 | 0.5836 | 365 |
-| 23:00 | gfs_residual | 0.6685 | 0.9904 | 0.4603 | 0.5723 | 365 |
-| 23:00 | analog_arm | 0.7178 | 1.0257 | 0.4301 | 0.6179 | 365 |
+| 20:00 | ridge | 0.9233 | 1.3231 | 0.3836 | 0.7624 | 365 |
+| 20:00 | gfs_residual | 0.8000 | 1.1586 | 0.4082 | 0.6650 | 365 |
+| 20:00 | analog_arm | 0.9233 | 1.3231 | 0.3836 | 0.7624 | 365 |
+| 21:00 | ridge | 0.8301 | 1.1716 | 0.3890 | 0.7032 | 365 |
+| 21:00 | gfs_residual | 0.7616 | 1.1299 | 0.4329 | 0.6453 | 365 |
+| 21:00 | analog_arm | 0.8301 | 1.1716 | 0.3890 | 0.7032 | 365 |
+| 22:00 | ridge | 0.7918 | 1.0816 | 0.3699 | 0.6456 | 365 |
+| 22:00 | gfs_residual | 0.7616 | 1.1004 | 0.4164 | 0.6117 | 365 |
+| 22:00 | analog_arm | 0.7918 | 1.0816 | 0.3699 | 0.6456 | 365 |
+| 23:00 | ridge | 0.6712 | 0.9778 | 0.4575 | 0.5621 | 365 |
+| 23:00 | gfs_residual | 0.7014 | 1.0123 | 0.4329 | 0.5784 | 365 |
+| 23:00 | analog_arm | 0.6575 | 0.9651 | 0.4658 | 0.5850 | 365 |
 
 ### Split: full-2024 (test 2024-01-01..2024-12-31)
 
 | CP | Candidate | MAE | RMSE | BM | RPS | n |
 |----|-----------|-----|------|----|-----|---|
-| 20:00 | ridge | 1.0191 | 1.3879 | 0.3115 | 0.7564 | 366 |
-| 20:00 | gfs_residual | 0.7322 | 1.0532 | 0.4126 | 0.5481 | 366 |
-| 20:00 | analog_arm | 1.0191 | 1.3879 | 0.3115 | 0.7564 | 366 |
-| 21:00 | ridge | 0.9317 | 1.2814 | 0.3333 | 0.6935 | 366 |
-| 21:00 | gfs_residual | 0.7432 | 1.0712 | 0.4126 | 0.5371 | 366 |
-| 21:00 | analog_arm | 0.9317 | 1.2814 | 0.3333 | 0.6935 | 366 |
-| 22:00 | ridge | 0.8033 | 1.1594 | 0.3989 | 0.6007 | 366 |
-| 22:00 | gfs_residual | 0.6995 | 1.0323 | 0.4399 | 0.4987 | 366 |
-| 22:00 | analog_arm | 0.8033 | 1.1594 | 0.3989 | 0.6007 | 366 |
-| 23:00 | ridge | 0.7049 | 1.0789 | 0.4617 | 0.5397 | 366 |
-| 23:00 | gfs_residual | 0.6612 | 1.0109 | 0.4672 | 0.4869 | 366 |
-| 23:00 | analog_arm | 0.6913 | 1.0725 | 0.4781 | 0.5441 | 366 |
+| 20:00 | ridge | 1.0164 | 1.3790 | 0.3060 | 0.7436 | 366 |
+| 20:00 | gfs_residual | 0.7678 | 1.0725 | 0.3798 | 0.5520 | 366 |
+| 20:00 | analog_arm | 1.0164 | 1.3790 | 0.3060 | 0.7436 | 366 |
+| 21:00 | ridge | 0.9317 | 1.2814 | 0.3306 | 0.6794 | 366 |
+| 21:00 | gfs_residual | 0.7568 | 1.0877 | 0.4044 | 0.5404 | 366 |
+| 21:00 | analog_arm | 0.9317 | 1.2814 | 0.3306 | 0.6794 | 366 |
+| 22:00 | ridge | 0.7842 | 1.1125 | 0.3934 | 0.5837 | 366 |
+| 22:00 | gfs_residual | 0.7131 | 1.0467 | 0.4317 | 0.5045 | 366 |
+| 22:00 | analog_arm | 0.7842 | 1.1125 | 0.3934 | 0.5837 | 366 |
+| 23:00 | ridge | 0.7022 | 1.0700 | 0.4645 | 0.5214 | 366 |
+| 23:00 | gfs_residual | 0.6530 | 1.0149 | 0.4781 | 0.4835 | 366 |
+| 23:00 | analog_arm | 0.6885 | 1.0712 | 0.4836 | 0.5460 | 366 |
 
 ### Split: full-2025 (test 2025-01-01..2025-12-31)
 

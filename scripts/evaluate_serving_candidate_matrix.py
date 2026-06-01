@@ -79,7 +79,7 @@ FULL_SPLITS = [
 ]
 
 PHASE4_FEATURES = tuple(FEATURE_COLUMNS) + tuple(NWP_FEATURE_COLUMNS)
-N_ESTIMATORS = 200  # reduced from 500 for speed (noted in report)
+N_ESTIMATORS = 500  # production default (matches residual_lgbm default); reviewer P2 - eval == serving
 
 
 def _arrays(panel, columns):
@@ -380,18 +380,18 @@ def _run_analog_arm(
 
     # Build aligned predictions
     analog_int = np.copy(ridge_int)
-    # For rows with risk features, run analog batch
     has_risk_mask = np.array([d in risk_date_set for d in test_dates])
     if has_risk_mask.any():
-        risk_indices = [
-            i for i, d in enumerate(risk_test["date_local"].to_list())
-            if d in set(test_dates)
-        ]
-        if risk_indices:
-            risk_test_aligned = risk_test[risk_indices]
-            ridge_for_risk = ridge_int[has_risk_mask]
-            arm_preds = predict_analog_batch(arm_state, risk_test_aligned, ridge_for_risk)
-            analog_int[has_risk_mask] = arm_preds
+        # P3 fix (reviewer 2026-06-01): align by DATE KEY, not row order. Build a date->row map and
+        # select risk rows in the EXACT order of the masked test_dates, then assert the alignment.
+        masked_dates = [d for d, m in zip(test_dates, has_risk_mask) if m]
+        by_date = {row["date_local"]: row for row in risk_test.iter_rows(named=True)}
+        risk_rows = [by_date[d] for d in masked_dates]
+        risk_test_aligned = pl.DataFrame(risk_rows)
+        assert risk_test_aligned["date_local"].to_list() == masked_dates, "analog arm date misalignment"
+        ridge_for_risk = ridge_int[has_risk_mask]
+        arm_preds = predict_analog_batch(arm_state, risk_test_aligned, ridge_for_risk)
+        analog_int[has_risk_mask] = arm_preds
 
     # Analog latent = float version of analog_int (no separate latent model)
     analog_latent = analog_int.astype(float)
@@ -543,18 +543,28 @@ def _evaluate_one_cp_full(
     # Ridge
     X_tr_base, y_tr_base = _arrays(tr_base, tuple(FEATURE_COLUMNS))
     clim_tr = np.array([float(climo.tmax_dec_for(d)) for d in tr_base["date_local"].to_list()])
-    ridge = fit_ridge_band(X_tr_base, y_tr_base, config=cfg_ridge, clim_train=clim_tr)
     X_te_base, y_te = _arrays(te_base_c, tuple(FEATURE_COLUMNS))
     clim_te = np.array([float(climo.tmax_dec_for(d)) for d in te_base_c["date_local"].to_list()])
+    # P1 leakage fix (reviewer 2026-06-01): clim_tmax_c_dec feature column was baked with the broad
+    # climo (train_end 2024-12-31) and reused for 2023/2024 splits. Overwrite it with the per-split
+    # CAUSAL climo so the full-window context is leak-free.
+    _clim_idx = list(FEATURE_COLUMNS).index("clim_tmax_c_dec")
+    X_tr_base[:, _clim_idx] = clim_tr
+    X_te_base[:, _clim_idx] = clim_te
+    ridge = fit_ridge_band(X_tr_base, y_tr_base, config=cfg_ridge, clim_train=clim_tr)
     ridge_latent = predict_ridge_latent(ridge, X_te_base, clim=clim_te)
     ridge_int = np.array([Q(float(v)) for v in ridge_latent], dtype=int)
 
     # GFS-residual
     X_tr_gfs, y_tr_gfs = _arrays(tr_gfs_ok, PHASE4_FEATURES)
+    clim_tr_gfs = np.array([float(climo.tmax_dec_for(d)) for d in tr_gfs_ok["date_local"].to_list()])
+    X_tr_gfs[:, _clim_idx] = clim_tr_gfs  # same causal-climo override (clim is feature 1 of PHASE4_FEATURES)
     anchor_tr_gfs = tr_gfs_ok["nwp_t2m_maxtraj_c"].to_numpy().astype(float)
     if tr_gfs_ok.height >= 100:
         lgbm_gfs = fit_residual_lgbm(X_tr_gfs, y_tr_gfs, anchor_tr_gfs, config=cfg_lgbm)
         X_te_gfs, _ = _arrays(te_gfs_c, PHASE4_FEATURES)
+        clim_te_gfs = np.array([float(climo.tmax_dec_for(d)) for d in te_gfs_c["date_local"].to_list()])
+        X_te_gfs[:, _clim_idx] = clim_te_gfs
         anchor_te_gfs = te_gfs_c["nwp_t2m_maxtraj_c"].to_numpy().astype(float)
         gfs_latent = predict_lgbm_latent(lgbm_gfs, X_te_gfs, anchor_te_gfs)
         gfs_int = np.array([Q(float(v)) for v in gfs_latent], dtype=int)
@@ -612,17 +622,12 @@ def _evaluate_one_cp_full(
 
 
 
-def compute_routing_recommendation(ecmwf_results):
-    """Compute conservative per-CP routing recommendation from ECMWF-window results."""
-    # Decision rules per prereg:
-    # - Per CP best by MAE then RPS
-    # - Winner only if no regression vs incumbent AND wins >=2/2 folds
-    # - CP20-22 decided separately from CP23
-    # - CP23 conservative (Ridge/GFS/analog) unless clear no-regression win
-    # - Do NOT degrade calm/stable
-
+def compute_routing_recommendation(ecmwf_results, full_results):
+    """Conservative per-CP routing. CP20-22 use the ECMWF-window results (only window with ECMWF);
+    CP23 uses the leak-free FULL-window results (Ridge/GFS/analog over 2023-2025, 3 folds) per the
+    reviewer P1 fix - CP23 must not be decided from the short ECMWF window alone."""
     candidates_cp20_22 = ["ridge", "gfs_residual", "ecmwf_residual", "ensemble"]
-    candidates_cp23 = ["ridge", "gfs_residual", "analog_arm"]  # conservative
+    candidates_cp23 = ["ridge", "gfs_residual", "analog_arm"]  # conservative; full-window sourced
 
     routing = {}
     per_cp_detail = {}
@@ -630,13 +635,14 @@ def compute_routing_recommendation(ecmwf_results):
     for cp in ["20:00", "21:00", "22:00", "23:00"]:
         is_cp23 = (cp == "23:00")
         candidates = candidates_cp23 if is_cp23 else candidates_cp20_22
+        results_src = full_results if is_cp23 else ecmwf_results
         incumbent = "ridge"
 
         # Collect per-fold metrics for each candidate
         fold_metrics = {c: [] for c in candidates}
         fold_calm_metrics = {c: [] for c in candidates}
 
-        for sr in ecmwf_results:
+        for sr in results_src:
             cpd = sr["by_cp"].get(cp)
             if cpd is None:
                 continue
@@ -648,8 +654,8 @@ def compute_routing_recommendation(ecmwf_results):
                 if cm.get("mae") is not None:
                     fold_calm_metrics[c].append(cm)
 
-        n_folds = len(ecmwf_results)
-        need_folds = min(2, n_folds)  # >=2/2 for short window
+        n_folds = len(results_src)
+        need_folds = min(2, n_folds)  # >=2/2 short window (CP20-22) or >=2/3 full window (CP23)
 
         # Find best candidate by pooled MAE
         pooled_mae = {}
@@ -733,7 +739,7 @@ def write_reports(ecmwf_results, full_results, routing, per_cp_detail):
         "seed": SEED,
         "deterministic": True,
         "num_threads": 1,
-        "n_estimators_note": f"Reduced to {N_ESTIMATORS} for speed (from 500)",
+        "n_estimators_note": f"Production default {N_ESTIMATORS} (matches residual_lgbm; eval == serving)",
         "window_choice": "Head-to-head on ECMWF overlap (2024-03..2025-12, 2 folds); "
                          "full 2023-2025 (3 folds) reported as context for Ridge/GFS/analog.",
         "ecmwf_window_splits": ecmwf_results,
@@ -775,7 +781,7 @@ def _render_markdown(ecmwf_results, full_results, routing, per_cp_detail):
         "- **Prereg:** contracts/serving_candidate_matrix_v0_prereg.md (v1.0)",
         "- **Head-to-head window:** ECMWF overlap 2024-03..2025-12 (2 folds)",
         "- **Context window:** Full 2023-2025 (3 folds, Ridge/GFS/analog only)",
-        f"- **LGBM n_estimators:** {N_ESTIMATORS} (reduced from 500 for speed)",
+        f"- **LGBM n_estimators:** {N_ESTIMATORS} (production default; eval == serving, reviewer P2)",
         "- **Seed:** 42, deterministic=True, num_threads=1",
         "- **Spread excluded:** |GFS-ECMWF| spread NOT used in any routing (T-11-6 FEASIBLE-CONDITIONAL)",
         "",
@@ -921,7 +927,7 @@ def main() -> int:
 
     # Phase C: Routing recommendation
     print("[8] Computing routing recommendation ...")
-    routing, per_cp_detail = compute_routing_recommendation(ecmwf_results)
+    routing, per_cp_detail = compute_routing_recommendation(ecmwf_results, full_results)
 
     print("\n=== RECOMMENDED ROUTING ===")
     for cp in ["20:00", "21:00", "22:00", "23:00"]:

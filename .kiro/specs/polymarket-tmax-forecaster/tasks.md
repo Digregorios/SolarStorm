@@ -840,9 +840,14 @@ Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo a
   spread EXCLUIDO de routing (T-11-6 condicional). **Roteamento recomendado (nao promove; Fase 3 liga):**
   CP20/21/22 -> ECMWF-residual (vence 2/2 folds, margem grande, sem regressao em calm); CP23 -> Ridge
   (incumbente melhor no conjunto conservador; ECMWF so vence CP23 em 1/2 -> regra conservadora mantem
-  Ridge; ensemble vence CP23 mas e EXCLUIDO por regredir em T-11-5). Janela ECMWF (2 folds) rotulada vs
-  full 2023-2025 (3 folds). Review anti-winner-shopping PASS 10/10. **Risco Fase 3:** disponibilidade
-  ECMWF no inference precisa de fallback gracioso (GFS-res/Ridge). `reports/serving/candidate_matrix_v0.md`.
+  Ridge; ensemble EXCLUIDO de CP23 por regredir em H1 (MAE 0.826 vs Ridge 0.674; so vence em H2)). Janela
+  ECMWF (2 folds) rotulada vs full 2023-2025 (3 folds). Review anti-winner-shopping PASS 10/10. **Risco
+  Fase 3:** disponibilidade ECMWF no inference precisa de fallback gracioso (GFS-res/Ridge).
+  **P1 (revisor, antes de wired):** CP23 NAO deve ser wired desta matriz ainda - contexto full-window
+  usou climo broad (train_end 2024-12-31) reusado nos splits 2023/2024 -> vazamento de `clim_tmax_c_dec`;
+  router so consumiu janela ECMWF. T-11-9 precisa de patch (climo split-specific, router usa full_results
+  p/ Ridge/GFS/analog, rerun no n_estimators de producao) antes de promover CP23.
+  `reports/serving/candidate_matrix_v0.md`.
 - **REQ:** REQ-MOD-3, REQ-MET-3, REQ-MET-4.
 
 ### T-11-8: cqr_lightgbm_quantile_v0 (calibracao - hipotese NOVA) - **PLANNED**

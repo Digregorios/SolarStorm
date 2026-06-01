@@ -16,14 +16,26 @@ route adjustment honored: the `|GFS-ECMWF|` spread is EXCLUDED from all routing 
 - CP20/21/22 -> ECMWF-residual (wins 2/2 folds, large margin, no calm regression; e.g. CP20 MAE 0.69/0.55
   vs Ridge 1.03/0.80).
 - CP23 -> Ridge (incumbent best among the conservative set; ECMWF only wins CP23 in 1/2 folds, so the
-  conservative rule keeps Ridge). The ensemble wins CP23 both folds but is EXCLUDED from CP23 per the
-  T-11-5 regression finding + prereg rule.
+  conservative rule keeps Ridge). The ensemble is EXCLUDED from CP23 per the T-11-5 regression finding +
+  prereg rule (it regresses CP23 in H1: MAE 0.826 vs Ridge 0.674; only wins CP23 in H2).
 CP20-22 decided separately from CP23; ECMWF metrics honestly labelled as the shorter 2-fold window
 (2024-03..2025-12) vs the 3-fold full-window context for Ridge/GFS/analog. Anti-winner-shopping: same
 rows, windows labelled, winner only if >=2/2 (short) or >=2/3 (full) folds. Review PASS 10/10.
 
+**Spread caveat:** the |GFS-ECMWF| spread is excluded from ROUTING logic, but the ensemble candidate's
+feature set (PHASE4_FEATURES) does include NWP spread/disagreement columns - so "spread excluded" applies
+to routing, not to the ensemble's internal features. The ensemble was not chosen, so this does not affect
+the recommendation.
+
 **Carried Phase-3 risk (flagged):** ECMWF availability at inference - the CP20-22 routing needs a graceful
 fallback (to GFS-residual or Ridge) for missing/delayed ECMWF runs. Suite 367 green. No execution/calibration.
+
+**Reviewer P1 follow-up (BEFORE wiring):** CP23 must NOT be wired from this matrix yet - the full-window
+context used a broad climatology (train_end 2024-12-31) reused for the 2023/2024 splits, leaking
+`clim_tmax_c_dec` in the full-window context; and the router consumed only the ECMWF window. T-11-9 needs
+a patch (split-specific climatology, router consumes full_results for Ridge/GFS/analog, rerun at the
+production n_estimators) before CP23 promotion. CP20-22 ECMWF-residual stands as a strong hypothesis with
+fallback.
 `reports/serving/candidate_matrix_v0.md` (+ `_review.md`).
 
 ## [phase11:T-11-6] - 2026-06-01 - two-model spread feasibility FEASIBLE-CONDITIONAL (seasonal reversal)
