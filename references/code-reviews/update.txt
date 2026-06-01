@@ -1,25 +1,80 @@
-Analise se essas recomendações foram seguidas, e se não, quais podem ser postas em prática: Faz sentido disparar os 3 treinos/avaliações em paralelo (Phase3 Ridge, Phase4 NWP-residual LGBM, Phase7 spike LGBM), desde que você imponha duas regras de coordenação para não gerar métricas “frescas” porém não comparáveis.
-1) Antes de rodar: 5 checks de saúde (rápidos, evitam lixo)
-1) Mesmo painel/splits para os 3 (mesmas datas, mesma definição de CP, mesmo Q(x) e janela do “dia local”).  
-2) Mesmo conjunto de baselines incluído em todos os reports (persistência/climatologia/NWP cru quando aplicável), para que “melhorou” signifique a mesma coisa.  
-3) Determinismo: seed fixo + log do commit/hash do contrato + config snapshot no header do report.  
-4) Sanity do dataset: número de linhas por split, cobertura de CPs, e flags de data_quality (se mudou, as métricas mudam sem ser “modelo”).  
-5) Outputs disjuntos: paths de report e run_id únicos por agente (você já planejou isso).
-2) Como rodar em paralelo sem colisão (o que cada agente deve escrever)
-Cada agente deve produzir dois arquivos:
-1) reports/<phase>_<model>_<run_id>.md (resumo humano)
-2) reports/<phase>_<model>_<run_id>.json (tabelas/métricas em formato máquina)
-E nunca sobrescrever reports/latest.* em paralelo. O consolidator serial faz isso depois.
-3) O que consolidar no “relatório único de métricas” (para ficar acionável)
-Para cada modelo (Phase3 / Phase4 / Spike):
-Bracket-match @ CP operacional + curva por CP (não só agregado)
-RPS / ECE (estratificado por split; pooled só como nota)
-SS vs persistência (1h / 3h se vocês já medem isso)
-Para spike: PR-AUC + recall@low-FPR e calibração do spike_risk
-E um quadro final:
-“Quem ganha onde” (por split e por CP)
-“Regressões” (ex.: melhora bracket-match mas piora tail/spike)
-4) O único cuidado conceitual (para não repetir o problema do Phase 5)
-Como Phase 5 ficou not ready, evite que o consolidator “promova” conclusões baseadas em:
-IC/coverage/confidence gates (tratá-los como informativos)
-métricas pooled que escondem o split ruim (sempre mostrar per-split)
+Achados
+[P2] Review ainda contradiz o JSON em CP23.
+Em candidate_matrix_v0_review.md (line 37), o texto diz que "folds_won_by_best": 2 vale para “all 4 CPs”; isso é enganoso para CP23, porque CP23 tem n_folds=3, best_by_mae=gfs_residual, folds_won_by_best=2, mas o winner final é ridge por calm_ok=false. Em linha 107 (line 107), o review também diz "calm_ok": true para todos os 4 CPs, mas o JSON mostra CP23 com calm_ok=false. Isso não quebra o código, mas é perigoso para a Fase 3 porque pode fazer alguém implementar CP23 como se o gate calm tivesse passado.
+
+[P2] O critério 10 do review ficou stale depois do commit.
+Em candidate_matrix_v0_review.md (line 133), o texto ainda fala que scripts/evaluate_serving_candidate_matrix.py, reports/serving/ e o contrato estavam “untracked”. Agora o commit 880924f já incorporou os arquivos, então essa evidência não representa mais o estado real. É governança/documentação, mas numa base com prereg e anti-winner-shopping isso importa.
+
+[P2] compute_routing_recommendation não exige cobertura completa por candidato.
+Em evaluate_serving_candidate_matrix.py (line 672), n_folds = len(results_src), mas pooled_mae e folds_won usam só os folds disponíveis em fold_metrics[c]. Se um candidato tiver métrica em 2 de 3 folds, ele ainda pode parecer elegível sem um gate explícito de cobertura. No dataset atual parece não ter causado erro, mas antes de transformar isso em serving eu colocaria um guard: candidato só concorre se tiver métricas nos mesmos folds do incumbent, ou registrar coverage_ok=false.
+
+[P2] pyproject.toml ainda não declara dependências já usadas.
+lightgbm é importado em core/models/residual_lgbm.py (line 20) e httpx em ingestão live/NWP/odds, mas pyproject.toml (line 13) ainda não lista lightgbm nem httpx. Isso já está corretamente marcado como Fase 3 no plano, mas eu trataria como primeiro commit da próxima fase, porque hoje um install limpo pode falhar.
+
+[P3] forecast.py ainda está no estágio pré-Fase 3.
+Em forecast.py (line 36), --model aceita só empirical e ridge; em linha 42 (line 42), auto ainda é rejeitado. Não é regressão: confirma que a Fase 3 realmente não começou.
+
+Verificações Feitas
+ascii_guard: OK nos arquivos tocados.
+JSON report: OK (candidate_matrix_v0.json parseia).
+Testes selecionados: 20 passed em test_forecast_model_flag.py, test_ridge_conformal.py, test_phase3.py.
+Routing atual confirmado:CP20: ecmwf_residual, pooled MAE 0.6172
+CP21: ecmwf_residual, pooled MAE 0.6088
+CP22: ecmwf_residual, pooled MAE 0.6252
+CP23: ridge; GFS é melhor por MAE (0.6643 vs Ridge 0.6770), mas falha calm.
+
+Próximo Seguimento
+A próxima fase deve ser Fase 3: Serving Mínimo, sem reabrir tuning.
+Entregáveis recomendados:
+Corrigir pyproject.toml: adicionar lightgbm>=4.0 e httpx>=0.27.
+Criar router conservador, idealmente core/cli/routing.py, com tabela fixa:CP20-22: tentar ecmwf_residual
+fallback: gfs_residual se ECMWF ausente, senão ridge
+CP23: ridge
+
+Implementar --model auto em core/cli/forecast.py.
+Emitir banner diagnóstico no output: modelo escolhido, motivo, fallback usado, presença/ausência de ECMWF, CP, train window.
+Testes mínimos:router escolhe ECMWF em CP20-22 quando disponível
+fallback sem ECMWF não explode
+CP23 permanece Ridge mesmo com GFS disponível
+--model auto --dry-run retorna JSON válido
+
+Atualizar CHANGELOG.md, PLAN_2026-06-01.md e runbook.
+Métricas de aceite da Fase 3:
+pip install -e . em ambiente limpo funciona.
+Suite verde.
+--model auto não altera trading/execution.
+Fallback ECMWF coberto por teste.
+Nenhuma rota usa spread como decisão direta.
+CP23 não é promovido para GFS enquanto calm_ok=false.
+Minha leitura: o patch principal está tecnicamente sólido, mas eu corrigiria os dois pontos stale do review antes de iniciar a Fase 3, para não deixar documentação “quase certa” guiar wiring errado.Findings
+[P2] O patch corrigiu o vazamento no contexto full-window, mas a janela ECMWF ainda usa climo_broad dentro da feature clim_tmax_c_dec sem o mesmo override por split. Ver evaluate_serving_candidate_matrix.py (line 139) e o bloco ECMWF em evaluate_serving_candidate_matrix.py (line 249). Não vejo vazamento futuro claro no H2, mas ainda não é eval == serving tão limpo quanto o full-window. Antes de wiring, eu aplicaria o mesmo override causal também em _evaluate_one_cp_ecmwf.
+[P2] Os artefatos de governança ficaram parcialmente stale depois do patch session-2026-06-01-6. candidate_matrix_v0_review.md (line 158) ainda fala em n_estimators=200; CHANGELOG.md (line 33) ainda diz que o patch P1 “precisa” acontecer; tasks.md (line 846) repete que CP23 não deve ser wired “desta matriz ainda”, embora o patch já tenha refeito CP23 via full_results. Isso pode confundir a Fase 3.
+[P2] O plano local PLAN_2026-06-01.md (line 14) está desatualizado: ainda marca Fase 1 como precisando fixes e Fase 2 como “script pronto, falta rodar”. O repo real já está no session-2026-06-01-6.
+[P3] O console ainda imprime n_estimators=500 (reduced for speed) em evaluate_serving_candidate_matrix.py (line 908). O relatório/JSON já dizem corretamente produção 500, então é cosmético, mas vale limpar.
+Parecer
+O patch principal é bom: CP23 agora usa full_results, n_estimators=500, analog alinha por data, e o JSON confirma a decisão atual: CP20-22 ecmwf_residual; CP23 ridge porque gfs_residual ganha em MAE mas degrada calm. Isso destrava a Fase 3 como wiring conservador, não como trading/execução.
+Próximos Passos
+Fazer um mini patch de higiene antes da Fase 3:
+aplicar override causal de clim_tmax_c_dec também na janela ECMWF;
+atualizar candidate_matrix_v0_review.md, CHANGELOG.md, tasks.md, PROJECT_JOURNEY.md e PLAN_2026-06-01.md;
+corrigir o print stale de n_estimators.
+
+Fase 3:
+adicionar lightgbm e httpx ao pyproject.toml (line 11);
+implementar --model auto em forecast.py (line 36);
+criar roteamento conservador: CP20-22 ECMWF-residual se NWP causal disponível, fallback gracioso GFS-residual/Ridge; CP23 Ridge;
+incluir model_route, fallback_reason, nwp_run_time_utc e banner de IC diagnóstico.
+
+Testes mínimos:
+unit tests do roteador;
+smoke tmax forecast --model auto;
+casos de ECMWF ausente/atrasado;
+garantir que spread não entra como regra de routing.
+
+Depois disso: Fase 4 CQR, usando spread só como feature candidata interagida com estação/regime e com ablação obrigatória. Fase 5 Live NWP só depois do serving mínimo estar estável.
+
+Inicio do trabalho  update.txt
+
+● Read D:\Downloads\Wellington\references\code-reviews\update.txt
+
+ 
