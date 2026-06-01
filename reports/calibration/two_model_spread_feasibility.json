@@ -439,7 +439,15 @@
   "gate2_q4_gt_q1_folds": 2,
   "gate3_cp2022_holds": true,
   "gate4_causal_train_only": true,
+  "cp_sign_consistent": {
+    "20:00": false,
+    "21:00": false,
+    "22:00": true,
+    "23:00": true
+  },
+  "sign_reversal": true,
   "verdict": "FEASIBLE-CONDITIONAL",
+  "verdict_note": "FEASIBLE-CONDITIONAL = gates met but spread->error sign reverses by season (CP20/CP21 flip across folds); usable ONLY as a season/regime-interacted calibration difficulty axis with mandatory ablation; NOT standalone, NOT point routing.",
   "best_spread_candidate": "spread_at_cp (|GFS_t2m - ECMWF_t2m| at CP)",
   "per_cp_spearman_summary": {
     "20:00": [

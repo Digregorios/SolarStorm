@@ -80,5 +80,8 @@
   train-only c30/P50, ex-ante regime (predicted risk, never truth), same rows.
 - Window is shorter than full 2023-2025 due to ECMWF archive start (2024-03).
 - Spread candidate: |GFS_t2m_at_cp - ECMWF_t2m_at_cp| per CP.
-- FEASIBLE: recommend follow-up T-11-8 using spread as difficulty axis
-  for integer-native / CQR calibrator, or as conditional point-routing signal.
+- Cross-fold sign consistency per CP: {'20:00': False, '21:00': False, '22:00': True, '23:00': True} (reversal=True).
+- FEASIBLE-CONDITIONAL: gates met but the spread->error sign REVERSES by fold/season
+  (CP20/CP21 flip). Usable ONLY as a season/regime-INTERACTED calibration difficulty
+  axis (T-11-8 CQR), with mandatory ablation. NOT a standalone signal and NOT for
+  point routing/serving. REQ-AUD-5 stays unchanged (no auto-reopen).

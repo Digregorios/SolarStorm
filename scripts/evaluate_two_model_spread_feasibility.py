@@ -430,7 +430,13 @@ def main() -> int:
         "gate2_q4_gt_q1_folds": gate2_passes,
         "gate3_cp2022_holds": gate3_cp2022,
         "gate4_causal_train_only": gate4,
+        "cp_sign_consistent": cp_sign_consistent,
+        "sign_reversal": sign_reversal,
         "verdict": verdict,
+        "verdict_note": ("FEASIBLE-CONDITIONAL = gates met but spread->error sign reverses by season "
+                         "(CP20/CP21 flip across folds); usable ONLY as a season/regime-interacted "
+                         "calibration difficulty axis with mandatory ablation; NOT standalone, NOT point "
+                         "routing." if verdict == "FEASIBLE-CONDITIONAL" else ""),
         "best_spread_candidate": best_candidate,
         "per_cp_spearman_summary": {
             cp: [round(r, 4) for r in rhos]
@@ -512,9 +518,15 @@ def main() -> int:
     md.append("  train-only c30/P50, ex-ante regime (predicted risk, never truth), same rows.")
     md.append("- Window is shorter than full 2023-2025 due to ECMWF archive start (2024-03).")
     md.append("- Spread candidate: |GFS_t2m_at_cp - ECMWF_t2m_at_cp| per CP.")
-    if feasible:
-        md.append("- FEASIBLE: recommend follow-up T-11-8 using spread as difficulty axis")
-        md.append("  for integer-native / CQR calibrator, or as conditional point-routing signal.")
+    md.append(f"- Cross-fold sign consistency per CP: {cp_sign_consistent} (reversal={sign_reversal}).")
+    if verdict == "FEASIBLE":
+        md.append("- FEASIBLE: spread reliably predicts error and is sign-consistent across folds.")
+        md.append("  Recommend T-11-8 using spread as a difficulty axis for the integer-native/CQR calibrator.")
+    elif verdict == "FEASIBLE-CONDITIONAL":
+        md.append("- FEASIBLE-CONDITIONAL: gates met but the spread->error sign REVERSES by fold/season")
+        md.append("  (CP20/CP21 flip). Usable ONLY as a season/regime-INTERACTED calibration difficulty")
+        md.append("  axis (T-11-8 CQR), with mandatory ablation. NOT a standalone signal and NOT for")
+        md.append("  point routing/serving. REQ-AUD-5 stays unchanged (no auto-reopen).")
     else:
         md.append("- NOT FEASIBLE: two-model spread does not reliably predict error at NZWN")
         md.append("  in this window. Do NOT build a spread-conditioned calibrator.")

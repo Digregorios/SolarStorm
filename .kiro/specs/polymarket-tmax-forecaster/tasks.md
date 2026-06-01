@@ -842,8 +842,11 @@ Tudo o que NAO for 1-4 (ou um kill criterion de plano) e fora de foco ate novo a
   centro. Reabre calibracao como hipotese nova baseada em literatura (Romano 2019), SEM contradizer o
   fechamento (que mata center+band) e SEM afrouxar REQ-AUD-5. Caveat honesto: granularidade inteira
   persiste; pode melhorar shape e ainda assim nao passar o het gate.
-- **Fila:** rodar POR ULTIMO, alimentado com o melhor feature set (obs + GFS + ECMWF + spread se T-11-6
-  GO) - CQR e subestimado se rodar antes das features NWP novas.
+- **Fila:** rodar POR ULTIMO, alimentado com o melhor feature set (obs + GFS + ECMWF). O spread
+  `|GFS-ECMWF|` entra SOMENTE como feature CANDIDATA INTERAGIDA com estacao/mes/regime (T-11-6 deu
+  FEASIBLE-CONDITIONAL: reverte sinal por estacao), com ABLACAO OBRIGATORIA - nunca standalone. NAO
+  tratar `nwp_t2m_maxtraj_spread_c` como validado (no T-11-6 vinha de painel single-model = zero). CQR
+  e subestimado se rodar antes das features NWP novas.
 - **REQ:** REQ-MOD-4, REQ-AUD-5, REQ-CONF-1.
 
 ---

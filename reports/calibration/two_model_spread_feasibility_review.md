@@ -173,3 +173,14 @@ the report transparently discloses this. All anti-leakage requirements are met:
 - No winner-shopping.
 
 No leakage, no P70 drift, no unfair comparison detected.
+
+
+
+## Correction (2026-06-01, post-review)
+
+This review pre-dates the final headline. After review, a cross-fold sign-consistency check was added
+to the evaluator and the COMMITTED verdict is **FEASIBLE-CONDITIONAL**, not "FEASIBLE": the lenient
+any-CP gate is met, but the spread->error sign REVERSES by season (CP20/CP21 flip across folds; CP22/CP23
+consistent). Read every "FEASIBLE" above as "FEASIBLE-CONDITIONAL". Operational consequence: the spread
+is usable ONLY as a season/regime-interacted calibration difficulty axis (T-11-8 CQR) with mandatory
+ablation - NOT a standalone signal and NOT for point routing/serving. REQ-AUD-5 unchanged.
