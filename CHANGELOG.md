@@ -4,6 +4,30 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:Onda2-A] - 2026-06-02 - live NWP availability audit + P3 endpoint traceability
+
+Reviewer Onda 2 (`references/code-reviews/update.txt`): no P1/P2 left on `119fba3`; ship operational
+code. Onda 2 has three tracks (A audit, B residual serving, C MOS/EMOS-lite); this pass ships the
+low-risk **Track A + the P3 traceability item** only (B and C deferred -- they touch the serving path
+and are leakage-sensitive). Read-only audit + a pure JSON-field add: inside the reviewer's advance gate
+(blocks only on leakage / red test / metric regression / false JSON-contract).
+
+- **Track A -- live NWP availability audit (`scripts/live_nwp_availability_audit.py`):** read-only causal
+  coverage audit over EXISTING local snapshots for BOTH models, using the per-model endpoints
+  (`ENDPOINT_BY_MODEL`: ECMWF `single_runs`, GFS `s3_grib`) so the audit can never drift from the live
+  probe. Per model/CP over 2021-2025: causal coverage, fallback rate, lead_h + run_time-age summaries,
+  missing-month buckets; plus an `any_causal` row (covered iff EITHER model is causal -- what the router
+  keys off at CP20-22). Causality delegated unchanged to `select_nwp_v1` (`run_time <= cp - 60min`,
+  re-checked locally). Verdict tests a pre-stated `any_causal >= 0.99` threshold frozen before the
+  numbers (anti-gaming). Writes `reports/live_nwp/availability_audit.{json,md}`. Pure helpers
+  (`audit_model`/`summarize`/`_any_causal`) unit-pinned on synthetic snapshots; the real-data run stays
+  out of the suite (script entry point). **First run = PAUSE (honest):** `any_causal` ~0.956 (GFS ~0.956,
+  ECMWF ~0.358 -- ECMWF snapshots only span 2024+ of the 2021-2025 window, reported honestly as a gap,
+  not a bug). The PAUSE is descriptive availability signal for Track B, not a code failure.
+- **P3 -- endpoint traceability (`core/cli/forecast.py`):** the `--model auto` routing JSON now records
+  `ecmwf_endpoint`/`gfs_endpoint` (from the probe when it ran, else the canonical `ENDPOINT_BY_MODEL`
+  defaults under `--no-nwp-probe`); banner shows them on the nwp line. Tests extended.
+
 ## [phase11:Onda1.1] - 2026-06-02 - patch-forward: per-model NWP endpoints + honest D6/verdict
 
 Reviewer patch-forward on the Onda 1 commit (`references/code-reviews/update.txt`): two P1 fixes, do

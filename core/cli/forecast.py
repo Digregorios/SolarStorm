@@ -19,7 +19,8 @@ from core.eval.intervals import discrete_ic
 from core.features.builder import build_cp_features, build_panel
 from core.features.training_panel import FEATURE_COLUMNS, build_training_panel
 from core.ingest.iem_csv import load_observations
-from core.ingest.nwp_live import DEFAULT_NWP_ROOT, probe_causal_nwp
+from core.ingest.nwp_client import ECMWF_IFS_HRES, NCEP_GFS
+from core.ingest.nwp_live import DEFAULT_NWP_ROOT, ENDPOINT_BY_MODEL, probe_causal_nwp
 from core.io.logging import log_event, new_run_id
 from core.io.timeutil import day_local_window
 from core.labels.tmax import build_tmax_labels
@@ -41,7 +42,8 @@ def _emit_routing_banner(routing: dict, ic_low: int, ic_high: int) -> None:
         err=True,
     )
     typer.echo(
-        f"  nwp: ecmwf={routing['ecmwf_available']} gfs={routing['gfs_available']} "
+        f"  nwp: ecmwf={routing['ecmwf_available']}({routing['ecmwf_endpoint']}) "
+        f"gfs={routing['gfs_available']}({routing['gfs_endpoint']}) "
         f"run_time={routing['nwp_run_time_utc'] or 'none'} "
         f"spread_used={routing['spread_used']}",
         err=True,
@@ -125,10 +127,15 @@ def run(
             ecmwf_available = probe.ecmwf_available
             gfs_available = probe.gfs_available
             nwp_run_time = probe.nwp_run_time_utc
+            ecmwf_endpoint = probe.ecmwf_endpoint
+            gfs_endpoint = probe.gfs_endpoint
         else:
             ecmwf_available = False
             gfs_available = False
             nwp_run_time = None
+            # No probe ran; record the canonical endpoints for traceability anyway.
+            ecmwf_endpoint = ENDPOINT_BY_MODEL[ECMWF_IFS_HRES.id]
+            gfs_endpoint = ENDPOINT_BY_MODEL[NCEP_GFS.id]
         route = recommend_route(
             int(cp),
             ecmwf_available=ecmwf_available,
@@ -210,6 +217,8 @@ def run(
             "degraded_reason": degraded_reason,
             "ecmwf_available": route.ecmwf_available,
             "gfs_available": route.gfs_available,
+            "ecmwf_endpoint": ecmwf_endpoint,
+            "gfs_endpoint": gfs_endpoint,
             "nwp_run_time_utc": route.nwp_run_time_utc,
             "spread_used": route.spread_used,
             "train_start": train_start_d.isoformat(),

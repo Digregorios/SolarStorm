@@ -198,6 +198,8 @@ def test_auto_dry_run_emits_valid_json_ridge_served(monkeypatch):
     assert routing["degraded_reason"] is None         # ridge is servable, no further degrade
     assert routing["ecmwf_available"] is False
     assert routing["gfs_available"] is False
+    assert routing["ecmwf_endpoint"] == "single_runs"  # P3: endpoints recorded for traceability
+    assert routing["gfs_endpoint"] == "s3_grib"
     assert routing["spread_used"] is False            # invariant: spread never routes
 
     # Banner is on stderr, never on stdout (keeps the JSON clean).
@@ -275,6 +277,8 @@ def test_auto_with_ecmwf_probe_routes_residual_serves_ridge(monkeypatch):
     assert routing["served_model"] == "ridge"           # not servable this phase -> ridge
     assert routing["ecmwf_available"] is True
     assert routing["gfs_available"] is True
+    assert routing["ecmwf_endpoint"] == "single_runs"  # P3: from probe.ecmwf_endpoint
+    assert routing["gfs_endpoint"] == "s3_grib"
     assert routing["nwp_run_time_utc"] == "2025-07-15T00:00:00+00:00"
     assert "ecmwf_residual_not_servable" in routing["degraded_reason"]
     assert routing["spread_used"] is False              # invariant: spread never routes
@@ -324,3 +328,6 @@ def test_auto_no_nwp_probe_flag_forces_ridge(monkeypatch):
     assert routing["ecmwf_available"] is False
     assert routing["gfs_available"] is False
     assert routing["model_route"] == "ridge"
+    # P3: even with the probe skipped, the canonical endpoints are recorded.
+    assert routing["ecmwf_endpoint"] == "single_runs"
+    assert routing["gfs_endpoint"] == "s3_grib"
