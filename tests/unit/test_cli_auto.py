@@ -177,6 +177,7 @@ def test_auto_dry_run_emits_valid_json_ridge_served(monkeypatch):
     assert routing["served_model"] == "ridge"
     assert routing["fallback_used"] is True           # routed to ridge by NWP-absent fallback
     assert routing["fallback_reason"] == "no_causal_nwp_fallback_ridge"
+    assert routing["decision_reason"] is None          # a fallback, not a CP23-style conservative decision
     assert routing["degraded_reason"] is None         # ridge is servable, no further degrade
     assert routing["ecmwf_available"] is False
     assert routing["gfs_available"] is False

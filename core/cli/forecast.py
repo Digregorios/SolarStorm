@@ -25,6 +25,14 @@ from core.labels.tmax import build_tmax_labels
 from core.models.ridge_band import RidgeBandConfig, fit_ridge_band, predict_dist as ridge_predict_dist
 from core.cli.routing import recommend_route, resolve_servable
 
+# Phase 3 serving has NO live NWP wired in (Live NWP is Phase 5). These are the single
+# switch the Phase 5 work flips; until then the router degrades CP20-22 to ridge. They are
+# named (not inlined) so the Phase 5 wiring point is greppable and impossible to miss.
+# TODO(Phase 5): replace with a live causal-NWP availability probe (see PLAN_2026-06-01.md
+# Fase 5; e.g. core/ingest/nwp_live.py) and pass the real run_time into recommend_route.
+_PHASE3_ECMWF_AVAILABLE = False
+_PHASE3_GFS_AVAILABLE = False
+
 
 def _join_reason(existing: str | None, new: str) -> str:
     return f"{existing};{new}" if existing else new
@@ -36,7 +44,7 @@ def _emit_routing_banner(routing: dict, ic_low: int, ic_high: int) -> None:
         f"[forecast --model auto] CP{routing['cp']} "
         f"route={routing['model_route']} served={routing['served_model']} "
         f"fallback={routing['fallback_used']} "
-        f"reason={routing['fallback_reason'] or routing['degraded_reason'] or '-'}",
+        f"reason={routing['fallback_reason'] or routing.get('decision_reason') or routing['degraded_reason'] or '-'}",
         err=True,
     )
     typer.echo(
@@ -114,7 +122,10 @@ def run(
     degraded_reason = None
     if model == "auto":
         route = recommend_route(
-            int(cp), ecmwf_available=False, gfs_available=False, nwp_run_time_utc=None
+            int(cp),
+            ecmwf_available=_PHASE3_ECMWF_AVAILABLE,
+            gfs_available=_PHASE3_GFS_AVAILABLE,
+            nwp_run_time_utc=None,
         )
         effective_model, degraded_reason = resolve_servable(route.model_route)
     else:
@@ -187,6 +198,7 @@ def run(
             "served_model": effective_model,
             "fallback_used": route.fallback_used,
             "fallback_reason": route.fallback_reason,
+            "decision_reason": route.decision_reason,
             "degraded_reason": degraded_reason,
             "ecmwf_available": route.ecmwf_available,
             "gfs_available": route.gfs_available,

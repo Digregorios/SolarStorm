@@ -54,8 +54,14 @@ With `--model auto` a diagnostic banner is printed to STDERR (so `--dry-run` STD
 ```
 
 The emitted forecast row also gains a `routing` block: `cp`, `model_route`, `served_model`,
-`fallback_used`, `fallback_reason`, `degraded_reason`, `ecmwf_available`, `gfs_available`,
-`nwp_run_time_utc`, `spread_used`, `train_start`, `train_end`.
+`fallback_used`, `fallback_reason`, `decision_reason`, `degraded_reason`, `ecmwf_available`,
+`gfs_available`, `nwp_run_time_utc`, `spread_used`, `train_start`, `train_end`.
+
+`fallback_reason` is set ONLY when a fallback actually happened (`fallback_used=True`, e.g. ECMWF
+absent so CP20-22 drops to GFS or Ridge). A conservative decision that is NOT a fallback -- chiefly
+CP23 keeping Ridge instead of the lower-MAE GFS because GFS degrades the calm stratum -- is recorded
+separately in `decision_reason`, with `fallback_used=False` and `fallback_reason=None`. This keeps the
+two concepts from being conflated in logs (reviewer 2nd-pass A1).
 
 ## Usage
 

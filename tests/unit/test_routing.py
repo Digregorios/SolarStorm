@@ -57,6 +57,24 @@ def test_cp23_is_ridge_even_with_ecmwf_and_gfs():
     assert d.model_route == "ridge"
 
 
+def test_cp23_records_decision_reason_not_fallback_reason():
+    # CP23 keeping Ridge is a conservative DECISION, not a fallback. fallback_reason must
+    # stay None (no fallback happened) and the rationale must live in decision_reason.
+    d = recommend_route(23, ecmwf_available=False, gfs_available=True)
+    assert d.fallback_used is False
+    assert d.fallback_reason is None
+    assert d.decision_reason is not None
+    assert "calm" in d.decision_reason
+
+
+def test_cp20_22_fallback_sets_fallback_reason_not_decision_reason():
+    # A genuine fallback (no ECMWF -> GFS) records fallback_reason, never decision_reason.
+    d = recommend_route(20, ecmwf_available=False, gfs_available=True)
+    assert d.fallback_used is True
+    assert d.fallback_reason is not None
+    assert d.decision_reason is None
+
+
 def test_unknown_cp_raises():
     with pytest.raises(ValueError):
         recommend_route(19, ecmwf_available=True, gfs_available=True)

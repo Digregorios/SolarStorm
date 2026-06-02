@@ -37,11 +37,12 @@ class RouteDecision:
     cp: int
     model_route: str
     fallback_used: bool
-    fallback_reason: str | None
+    fallback_reason: str | None  # set ONLY when fallback_used is True (a fallback actually happened)
     ecmwf_available: bool
     gfs_available: bool
     nwp_run_time_utc: str | None = None
     spread_used: bool = False  # invariant: spread is never a routing input
+    decision_reason: str | None = None  # conservative-decision note (e.g. CP23 not promoted); NOT a fallback
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -62,21 +63,24 @@ def recommend_route(
         )
 
     if cp in CONSERVATIVE_RIDGE_CPS:
-        # Ridge always at CP23: GFS wins pooled MAE but degrades calm, so it is
-        # intentionally not promoted here.
-        reason = (
+        # Ridge always at CP23 (frozen conservative rule). This is a DECISION, not a
+        # fallback: even when GFS is available it is intentionally NOT promoted because
+        # GFS wins pooled MAE but degrades the calm stratum (calm_ok=false). Recorded in
+        # decision_reason so fallback_reason stays reserved for genuine fallbacks.
+        decision_reason = (
             "cp23_conservative_ridge_gfs_not_promoted_calm_degraded"
             if gfs_available
-            else None
+            else "cp23_conservative_ridge"
         )
         return RouteDecision(
             cp=cp,
             model_route="ridge",
             fallback_used=False,
-            fallback_reason=reason,
+            fallback_reason=None,
             ecmwf_available=ecmwf_available,
             gfs_available=gfs_available,
             nwp_run_time_utc=nwp_run_time_utc,
+            decision_reason=decision_reason,
         )
 
     if ecmwf_available:
