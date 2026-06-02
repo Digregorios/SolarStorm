@@ -4,6 +4,20 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:T-11-9 Phase3-sanity] - 2026-06-02 - operational smoke PASS (--model auto, 4 CPs)
+
+Reviewer "Ship Fast, Com Rigor" directive (`references/code-reviews/update.txt`): close Phase 3 with a
+real operational sanity before opening Phase 4. `pip install -e .` is self-contained (lightgbm/httpx
+declared); the real `forecast --model auto --dry-run` was run for all four matrix CPs
+(`py -3 -m core.cli.app forecast --date 2025-07-15 --cp {20,21,22,23} --model auto --dry-run`) and PASSED
+every invariant: STDOUT pure JSON, diagnostic banner on STDERR only, `spread_used=False`,
+`ecmwf_available=gfs_available=False`, `degraded_reason=None`. The fallback-vs-decision split holds
+end-to-end - CP20/21/22 serve `ridge` via the genuine NWP-absent fallback
+(`fallback_used=True`, `fallback_reason=no_causal_nwp_fallback_ridge`, `decision_reason=None`); CP23 serves
+`ridge` as a conservative DECISION (`fallback_used=False`, `fallback_reason=None`,
+`decision_reason=cp23_conservative_ridge`). No code change - verification only; result recorded in
+`docs/serving.md`. Phase 3 (T-11-9) is operationally closed; next is Phase 4 (T-11-8 CQR).
+
 ## [phase11:T-11-9 P2-coverage-guard] - 2026-06-02 - per-fold coverage gate in routing recommendation
 
 Reviewer P2 (`references/code-reviews/update.txt`): `compute_routing_recommendation` used

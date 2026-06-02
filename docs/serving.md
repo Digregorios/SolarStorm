@@ -75,6 +75,22 @@ CP23 keeping Ridge instead of the lower-MAE GFS because GFS degrades the calm st
 separately in `decision_reason`, with `fallback_used=False` and `fallback_reason=None`. This keeps the
 two concepts from being conflated in logs (reviewer 2nd-pass A1).
 
+## Phase 3 operational sanity (2026-06-02)
+
+A real `forecast --model auto --dry-run` smoke was run for all four matrix CPs
+(`py -3 -m core.cli.app forecast --date 2025-07-15 --cp {20,21,22,23} --model auto --dry-run`)
+and passed every invariant:
+
+| CP    | served | route | fallback_used | fallback_reason             | decision_reason          |
+|-------|--------|-------|---------------|-----------------------------|--------------------------|
+| 20/21/22 | ridge | ridge | True          | `no_causal_nwp_fallback_ridge` | `None`                |
+| 23    | ridge  | ridge | False         | `None`                      | `cp23_conservative_ridge` |
+
+Confirmed for every CP: STDOUT is pure JSON (parses clean), the diagnostic banner is on
+STDERR only, `spread_used=False`, `ecmwf_available=gfs_available=False`, `degraded_reason=None`.
+The fallback-vs-decision split holds end-to-end (CP20-22 = genuine NWP-absent fallback; CP23 =
+conservative decision, not a fallback). Phase 3 serving is operationally sane.
+
 ## Usage
 
 ```
