@@ -4,6 +4,23 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:Onda2-C] - 2026-06-03 - MOS/EMOS-lite offline evaluator
+
+Track C is now measured, not wired into serving. This pass adds a read-only MOS/EMOS-lite evaluator
+(`scripts/evaluate_mos_emos_lite_v0.py`) plus `reports/serving/mos_emos_lite_v0.{json,md}`.
+
+- New `core.models.mos_emos_lite`: linear MOS center with train/calib split and a discrete Gaussian
+  EMOS-lite probability distribution over integer brackets. The evaluator uses the same CP20-22 ECMWF
+  overlap folds as Track B, holds out the last `conformal.per_cp_window_days` of train for sigma
+  calibration, and leaves test as a one-shot readout.
+- Result: **NO_PROMOTION**. Against the Track-B `served_v0` incumbent, `mos_ecmwf` and `emos2_lite`
+  both lose RPS in all 6 CP/fold cells, do not beat MAE in all folds, and fail the per-fold calm guard.
+  They also widen raw IC80 materially (~3.5-4.0 integer brackets vs ~2.7 for `served_v0`). No CLI,
+  routing, default serving, confidence gate, or trading behavior changed.
+- Tests pin the MOS/EMOS-lite probability/model helpers and the Track-C gate (`all folds` RPS+MAE wins
+  plus per-fold calm preservation). The evaluator is intentionally offline-heavy because it rebuilds
+  causal NWP panels and the incumbent residual baseline for an audited report.
+
 ## [phase11:Onda2-B patch-forward] - 2026-06-02 - residual serving JSON truthfulness
 
 Reviewer follow-up on `f230636`: no Track C, no B2 metric re-run. Patch-forward only:
