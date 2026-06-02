@@ -4,6 +4,37 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:T-11-8 Phase4-CQR] - 2026-06-02 - CQR LightGBM IC80 KILL (honest; over-covers at integer granularity)
+
+Phase 4 (reviewer directive, `references/code-reviews/update.txt`): build the Conformalized Quantile
+Regression object (Romano et al. 2019), evaluate IC80 against the FROZEN prereg gate
+(`contracts/cqr_lightgbm_quantile_v0_prereg.md` v1.0), and return an honest GO/KILL. Verdict: **KILL**.
+
+- **Object (allowed scope only):** `core/models/quantile_lgbm.py` (two quantile boosters q(0.10)/q(0.90),
+  additive CQR correction `E = max(q_lo - y, y - q_hi)` at rank `ceil((n+1)*coverage)`, integer interval
+  `[Q(q_lo-E), Q(q_hi+E)]` with `hi>=lo`); `scripts/evaluate_cqr_lightgbm_quantile.py` (walk-forward
+  2023/24/25, primary obs+GFS feature set; ECMWF and `|GFS-ECMWF|` spread as overlap-window ablations);
+  `tests/unit/test_quantile_lgbm_cqr.py` (8 synthetic correctness tests pinning the conformal algorithm
+  BEFORE real data -- anti-gaming). The eval was run EXACTLY ONCE (deterministic, seed 42); numbers are not
+  re-rolled.
+- **Gate result (>= 2/3 splits each; conditions in `cqr_lightgbm_quantile_v0.json`):** c1 global IC80 in
+  [0.78,0.86] FAIL [F,F,F] -- coverage OVER-covers (0.9219 / 0.9044 / 0.9274, all above 0.86); c2 REQ-AUD-5
+  het gate FAIL [F,F,F] (per-width-quartile coverage rises with width -- narrow bins ~0.83-0.87, wide bins
+  0.94-1.0, the heteroscedastic-miscalibration signature); c5 hard-strata IC80 FAIL [F,F,F] (late-CP /
+  non_calm / high-delta all over-cover). c3 width <= `ridge_conformal_minimal` PASS [T,T,F] and c4 RPS
+  <= +2% vs Ridge center proxy PASS [T,F,T] -- so the KILL is NOT passing-by-inflation and the point
+  forecast does NOT degrade; it is purely OVER-coverage + het miscalibration at integer granularity.
+- **Contingency-tree mapping (recorded, NOT auto-run per reviewer):** the failure is OVER-coverage, so the
+  ACI branch (Step 1, for L1 < 0.78 UNDER-coverage) does not apply; Step 8 (conform on the real-valued
+  score, round at the very end -- the T-9-5 lesson) is ALREADY implemented in the model and did not rescue
+  coverage. This maps to **Step 10**: formally accept that an 80% IC80 is not recoverable at this integer
+  temperature granularity for NZWN. Steps 1-9 were NOT executed inside Phase 4 (PLAN done-criteria:
+  "Nao tentar Step 10+ dentro da Fase 4"; the contingency tree stays documented in `PLAN_2026-06-01.md`).
+- **Spread ablation:** the `|GFS-ECMWF|` spread barely moves calibration (with_spread cov 0.8829 / width
+  4.5685 vs without 0.8877 / 4.4274; het FAILs both), consistent with the T-11-6 FEASIBLE-CONDITIONAL
+  finding that the spread is a weak, regime-dependent signal. Calibration-only: no decision/Polymarket/
+  execution wiring touched. Suite 402 green; ASCII guard clean.
+
 ## [phase11:T-11-9 Phase3-sanity] - 2026-06-02 - operational smoke PASS (--model auto, 4 CPs)
 
 Reviewer "Ship Fast, Com Rigor" directive (`references/code-reviews/update.txt`): close Phase 3 with a

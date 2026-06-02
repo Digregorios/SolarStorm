@@ -1,0 +1,702 @@
+{
+  "task": "T-11-8",
+  "prereg": "contracts/cqr_lightgbm_quantile_v0_prereg.md",
+  "prereg_version": "1.0",
+  "git_sha": "a83c44f63e44a1badac1cf86d2ae2ae57d218091",
+  "seed": 42,
+  "deterministic": true,
+  "num_threads": 1,
+  "n_estimators": 500,
+  "calib_frac": 0.2,
+  "coverage_target": 0.8,
+  "primary_feature_set": "obs+GFS (best set spanning the 3-fold walk-forward; ECMWF/spread are ablations only)",
+  "gate": {
+    "verdict": "KILL",
+    "n_ok_splits": 3,
+    "aggregation_rule": ">= 2/3 splits satisfy each of conditions 1-5; condition 6 structural",
+    "conditions": {
+      "c1_global_coverage_in_band": {
+        "per_split": [
+          false,
+          false,
+          false
+        ],
+        "n_pass": 0,
+        "need": 2,
+        "pass": false
+      },
+      "c2_het_gate": {
+        "per_split": [
+          false,
+          false,
+          false
+        ],
+        "n_pass": 0,
+        "need": 2,
+        "pass": false
+      },
+      "c3_width_not_exceed_ridge": {
+        "per_split": [
+          true,
+          true,
+          false
+        ],
+        "n_pass": 2,
+        "need": 2,
+        "pass": true
+      },
+      "c4_rps_not_worse_2pct": {
+        "per_split": [
+          true,
+          false,
+          true
+        ],
+        "n_pass": 2,
+        "need": 2,
+        "pass": true
+      },
+      "c5_no_hard_strata_regression": {
+        "per_split": [
+          false,
+          false,
+          false
+        ],
+        "n_pass": 0,
+        "need": 2,
+        "pass": false
+      },
+      "c6_disjoint_deterministic_no_tuning": {
+        "pass": true,
+        "note": "train/calib/test disjoint by construction; seed 42 deterministic; quantile levels frozen in prereg"
+      }
+    },
+    "failed_conditions": [
+      "c1_global_coverage_in_band",
+      "c2_het_gate",
+      "c5_no_hard_strata_regression"
+    ]
+  },
+  "primary_splits": [
+    {
+      "split": "full-2023",
+      "status": "ok",
+      "n_test_pooled": 1460,
+      "global_coverage": 0.9219,
+      "het_passed": false,
+      "het_mixed_in_and_out": true,
+      "het_bins": [
+        {
+          "width_lo": 2.0,
+          "width_hi": 3.0,
+          "coverage": 0.8681,
+          "mean_width": 2.9235,
+          "n": 379
+        },
+        {
+          "width_lo": 4.0,
+          "width_hi": 5.0,
+          "coverage": 0.9395,
+          "mean_width": 4.3927,
+          "n": 909
+        },
+        {
+          "width_lo": 6.0,
+          "width_hi": 7.0,
+          "coverage": 0.9471,
+          "mean_width": 6.2176,
+          "n": 170
+        },
+        {
+          "width_lo": 8.0,
+          "width_hi": 9.0,
+          "coverage": 1.0,
+          "mean_width": 8.5,
+          "n": 2
+        }
+      ],
+      "cqr_mean_width": 4.2295,
+      "ridge_mean_width": 4.5,
+      "cqr_rps": 0.6686,
+      "ridge_rps": 0.669,
+      "rps_rel_delta": -0.0007,
+      "cqr_strata": {
+        "ALL": {
+          "n": 1460,
+          "coverage": 0.9219,
+          "mean_width": 4.2295
+        },
+        "calm": {
+          "n": 412,
+          "coverage": 0.9175,
+          "mean_width": 4.5121
+        },
+        "non_calm": {
+          "n": 1048,
+          "coverage": 0.9237,
+          "mean_width": 4.1183
+        },
+        "high_delta_06": {
+          "n": 952,
+          "coverage": 0.9254,
+          "mean_width": 4.1975
+        },
+        "late_cp_23": {
+          "n": 365,
+          "coverage": 0.9315,
+          "mean_width": 4.137
+        }
+      },
+      "ridge_strata": {
+        "ALL": {
+          "n": 1460,
+          "coverage": 0.9438,
+          "mean_width": 4.5
+        },
+        "calm": {
+          "n": 412,
+          "coverage": 0.9466,
+          "mean_width": 4.5
+        },
+        "non_calm": {
+          "n": 1048,
+          "coverage": 0.9427,
+          "mean_width": 4.5
+        },
+        "high_delta_06": {
+          "n": 952,
+          "coverage": 0.938,
+          "mean_width": 4.5
+        },
+        "late_cp_23": {
+          "n": 365,
+          "coverage": 0.9014,
+          "mean_width": 3.0
+        }
+      },
+      "by_cp": {
+        "20:00": {
+          "status": "ok",
+          "n_test": 365,
+          "cqr": {
+            "n": 365,
+            "coverage": 0.9014,
+            "mean_width": 4.4521
+          },
+          "ridge_conformal_minimal": {
+            "n": 365,
+            "coverage": 0.937,
+            "mean_width": 5.0
+          },
+          "e_correction": 0.2283,
+          "certified": true,
+          "n_calib": 129
+        },
+        "21:00": {
+          "status": "ok",
+          "n_test": 365,
+          "cqr": {
+            "n": 365,
+            "coverage": 0.9123,
+            "mean_width": 4.411
+          },
+          "ridge_conformal_minimal": {
+            "n": 365,
+            "coverage": 0.9562,
+            "mean_width": 5.0
+          },
+          "e_correction": 0.2469,
+          "certified": true,
+          "n_calib": 129
+        },
+        "22:00": {
+          "status": "ok",
+          "n_test": 365,
+          "cqr": {
+            "n": 365,
+            "coverage": 0.9425,
+            "mean_width": 3.9178
+          },
+          "ridge_conformal_minimal": {
+            "n": 365,
+            "coverage": 0.9808,
+            "mean_width": 5.0
+          },
+          "e_correction": 0.3848,
+          "certified": true,
+          "n_calib": 129
+        },
+        "23:00": {
+          "status": "ok",
+          "n_test": 365,
+          "cqr": {
+            "n": 365,
+            "coverage": 0.9315,
+            "mean_width": 4.137
+          },
+          "ridge_conformal_minimal": {
+            "n": 365,
+            "coverage": 0.9014,
+            "mean_width": 3.0
+          },
+          "e_correction": 0.2162,
+          "certified": true,
+          "n_calib": 129
+        }
+      }
+    },
+    {
+      "split": "full-2024",
+      "status": "ok",
+      "n_test_pooled": 1464,
+      "global_coverage": 0.9044,
+      "het_passed": false,
+      "het_mixed_in_and_out": true,
+      "het_bins": [
+        {
+          "width_lo": 1.0,
+          "width_hi": 2.0,
+          "coverage": 0.8421,
+          "mean_width": 1.9895,
+          "n": 95
+        },
+        {
+          "width_lo": 3.0,
+          "width_hi": 3.0,
+          "coverage": 0.898,
+          "mean_width": 3.0,
+          "n": 490
+        },
+        {
+          "width_lo": 4.0,
+          "width_hi": 5.0,
+          "coverage": 0.9131,
+          "mean_width": 4.2901,
+          "n": 817
+        },
+        {
+          "width_lo": 6.0,
+          "width_hi": 7.0,
+          "coverage": 0.9355,
+          "mean_width": 6.1452,
+          "n": 62
+        }
+      ],
+      "cqr_mean_width": 3.7876,
+      "ridge_mean_width": 4.0,
+      "cqr_rps": 0.6619,
+      "ridge_rps": 0.6337,
+      "rps_rel_delta": 0.0445,
+      "cqr_strata": {
+        "ALL": {
+          "n": 1464,
+          "coverage": 0.9044,
+          "mean_width": 3.7876
+        },
+        "calm": {
+          "n": 424,
+          "coverage": 0.9175,
+          "mean_width": 4.0
+        },
+        "non_calm": {
+          "n": 1040,
+          "coverage": 0.899,
+          "mean_width": 3.701
+        },
+        "high_delta_06": {
+          "n": 948,
+          "coverage": 0.8924,
+          "mean_width": 3.7152
+        },
+        "late_cp_23": {
+          "n": 366,
+          "coverage": 0.9098,
+          "mean_width": 3.1448
+        }
+      },
+      "ridge_strata": {
+        "ALL": {
+          "n": 1464,
+          "coverage": 0.9051,
+          "mean_width": 4.0
+        },
+        "calm": {
+          "n": 424,
+          "coverage": 0.9198,
+          "mean_width": 4.0
+        },
+        "non_calm": {
+          "n": 1040,
+          "coverage": 0.899,
+          "mean_width": 4.0
+        },
+        "high_delta_06": {
+          "n": 948,
+          "coverage": 0.8998,
+          "mean_width": 4.0
+        },
+        "late_cp_23": {
+          "n": 366,
+          "coverage": 0.8716,
+          "mean_width": 3.0
+        }
+      },
+      "by_cp": {
+        "20:00": {
+          "status": "ok",
+          "n_test": 366,
+          "cqr": {
+            "n": 366,
+            "coverage": 0.9098,
+            "mean_width": 4.3333
+          },
+          "ridge_conformal_minimal": {
+            "n": 366,
+            "coverage": 0.9399,
+            "mean_width": 5.0
+          },
+          "e_correction": 0.4349,
+          "certified": true,
+          "n_calib": 202
+        },
+        "21:00": {
+          "status": "ok",
+          "n_test": 366,
+          "cqr": {
+            "n": 366,
+            "coverage": 0.8962,
+            "mean_width": 3.9153
+          },
+          "ridge_conformal_minimal": {
+            "n": 366,
+            "coverage": 0.9536,
+            "mean_width": 5.0
+          },
+          "e_correction": 0.2858,
+          "certified": true,
+          "n_calib": 202
+        },
+        "22:00": {
+          "status": "ok",
+          "n_test": 366,
+          "cqr": {
+            "n": 366,
+            "coverage": 0.9016,
+            "mean_width": 3.7568
+          },
+          "ridge_conformal_minimal": {
+            "n": 366,
+            "coverage": 0.8552,
+            "mean_width": 3.0
+          },
+          "e_correction": 0.2349,
+          "certified": true,
+          "n_calib": 202
+        },
+        "23:00": {
+          "status": "ok",
+          "n_test": 366,
+          "cqr": {
+            "n": 366,
+            "coverage": 0.9098,
+            "mean_width": 3.1448
+          },
+          "ridge_conformal_minimal": {
+            "n": 366,
+            "coverage": 0.8716,
+            "mean_width": 3.0
+          },
+          "e_correction": 0.2559,
+          "certified": true,
+          "n_calib": 202
+        }
+      }
+    },
+    {
+      "split": "full-2025",
+      "status": "ok",
+      "n_test_pooled": 1460,
+      "global_coverage": 0.9274,
+      "het_passed": false,
+      "het_mixed_in_and_out": true,
+      "het_bins": [
+        {
+          "width_lo": 1.0,
+          "width_hi": 2.0,
+          "coverage": 0.8304,
+          "mean_width": 1.9732,
+          "n": 112
+        },
+        {
+          "width_lo": 3.0,
+          "width_hi": 4.0,
+          "coverage": 0.9286,
+          "mean_width": 3.4814,
+          "n": 1022
+        },
+        {
+          "width_lo": 5.0,
+          "width_hi": 6.0,
+          "coverage": 0.9542,
+          "mean_width": 5.2218,
+          "n": 284
+        },
+        {
+          "width_lo": 7.0,
+          "width_hi": 9.0,
+          "coverage": 0.9762,
+          "mean_width": 7.4524,
+          "n": 42
+        }
+      ],
+      "cqr_mean_width": 3.8185,
+      "ridge_mean_width": 3.5,
+      "cqr_rps": 0.6069,
+      "ridge_rps": 0.6694,
+      "rps_rel_delta": -0.0934,
+      "cqr_strata": {
+        "ALL": {
+          "n": 1460,
+          "coverage": 0.9274,
+          "mean_width": 3.8185
+        },
+        "calm": {
+          "n": 488,
+          "coverage": 0.9283,
+          "mean_width": 4.1311
+        },
+        "non_calm": {
+          "n": 972,
+          "coverage": 0.927,
+          "mean_width": 3.6615
+        },
+        "high_delta_06": {
+          "n": 944,
+          "coverage": 0.9322,
+          "mean_width": 3.732
+        },
+        "late_cp_23": {
+          "n": 365,
+          "coverage": 0.9452,
+          "mean_width": 3.2247
+        }
+      },
+      "ridge_strata": {
+        "ALL": {
+          "n": 1460,
+          "coverage": 0.8856,
+          "mean_width": 3.5
+        },
+        "calm": {
+          "n": 488,
+          "coverage": 0.9037,
+          "mean_width": 3.5
+        },
+        "non_calm": {
+          "n": 972,
+          "coverage": 0.8765,
+          "mean_width": 3.5
+        },
+        "high_delta_06": {
+          "n": 944,
+          "coverage": 0.8729,
+          "mean_width": 3.5
+        },
+        "late_cp_23": {
+          "n": 365,
+          "coverage": 0.9123,
+          "mean_width": 3.0
+        }
+      },
+      "by_cp": {
+        "20:00": {
+          "status": "ok",
+          "n_test": 365,
+          "cqr": {
+            "n": 365,
+            "coverage": 0.9178,
+            "mean_width": 4.6658
+          },
+          "ridge_conformal_minimal": {
+            "n": 365,
+            "coverage": 0.9534,
+            "mean_width": 5.0
+          },
+          "e_correction": 0.1911,
+          "certified": true,
+          "n_calib": 275
+        },
+        "21:00": {
+          "status": "ok",
+          "n_test": 365,
+          "cqr": {
+            "n": 365,
+            "coverage": 0.9233,
+            "mean_width": 3.9342
+          },
+          "ridge_conformal_minimal": {
+            "n": 365,
+            "coverage": 0.8301,
+            "mean_width": 3.0
+          },
+          "e_correction": 0.2165,
+          "certified": true,
+          "n_calib": 275
+        },
+        "22:00": {
+          "status": "ok",
+          "n_test": 365,
+          "cqr": {
+            "n": 365,
+            "coverage": 0.9233,
+            "mean_width": 3.4493
+          },
+          "ridge_conformal_minimal": {
+            "n": 365,
+            "coverage": 0.8466,
+            "mean_width": 3.0
+          },
+          "e_correction": 0.1467,
+          "certified": true,
+          "n_calib": 275
+        },
+        "23:00": {
+          "status": "ok",
+          "n_test": 365,
+          "cqr": {
+            "n": 365,
+            "coverage": 0.9452,
+            "mean_width": 3.2247
+          },
+          "ridge_conformal_minimal": {
+            "n": 365,
+            "coverage": 0.9123,
+            "mean_width": 3.0
+          },
+          "e_correction": 0.166,
+          "certified": true,
+          "n_calib": 275
+        }
+      }
+    }
+  ],
+  "ablations": {
+    "window": "ecmwf_overlap_2024_03..2025_12_2folds",
+    "note": "Single station (NZWN); spread ablation interacted with REGIME only (no cross-station interaction possible). The spread ablation (with vs without) is SAME-ROWS (both on the GFS+ECMWF ensemble panel). The ECMWF-add arms (obs_gfs vs obs_gfs_ecmwf) are rough context only: the GFS panel and ensemble panel can differ in date coverage, so it is NOT a strict same-rows comparison.",
+    "ecmwf_add": {
+      "obs_gfs": {
+        "global_coverage": 0.8952,
+        "mean_width": 4.8007,
+        "het_passed": false,
+        "n": 1460,
+        "by_regime": {
+          "ALL": {
+            "n": 1460,
+            "coverage": 0.8952,
+            "mean_width": 4.8007
+          },
+          "calm": {
+            "n": 532,
+            "coverage": 0.9117,
+            "mean_width": 5.2444
+          },
+          "non_calm": {
+            "n": 928,
+            "coverage": 0.8858,
+            "mean_width": 4.5463
+          },
+          "high_delta_06": {
+            "n": 944,
+            "coverage": 0.8792,
+            "mean_width": 4.7352
+          }
+        }
+      },
+      "obs_gfs_ecmwf": {
+        "global_coverage": 0.8829,
+        "mean_width": 4.5685,
+        "het_passed": false,
+        "n": 1460,
+        "by_regime": {
+          "ALL": {
+            "n": 1460,
+            "coverage": 0.8829,
+            "mean_width": 4.5685
+          },
+          "calm": {
+            "n": 532,
+            "coverage": 0.906,
+            "mean_width": 4.9718
+          },
+          "non_calm": {
+            "n": 928,
+            "coverage": 0.8696,
+            "mean_width": 4.3373
+          },
+          "high_delta_06": {
+            "n": 944,
+            "coverage": 0.8612,
+            "mean_width": 4.4958
+          }
+        }
+      }
+    },
+    "spread_ablation": {
+      "with_spread": {
+        "global_coverage": 0.8829,
+        "mean_width": 4.5685,
+        "het_passed": false,
+        "n": 1460,
+        "by_regime": {
+          "ALL": {
+            "n": 1460,
+            "coverage": 0.8829,
+            "mean_width": 4.5685
+          },
+          "calm": {
+            "n": 532,
+            "coverage": 0.906,
+            "mean_width": 4.9718
+          },
+          "non_calm": {
+            "n": 928,
+            "coverage": 0.8696,
+            "mean_width": 4.3373
+          },
+          "high_delta_06": {
+            "n": 944,
+            "coverage": 0.8612,
+            "mean_width": 4.4958
+          }
+        }
+      },
+      "without_spread": {
+        "global_coverage": 0.8877,
+        "mean_width": 4.4274,
+        "het_passed": false,
+        "n": 1460,
+        "by_regime": {
+          "ALL": {
+            "n": 1460,
+            "coverage": 0.8877,
+            "mean_width": 4.4274
+          },
+          "calm": {
+            "n": 532,
+            "coverage": 0.9079,
+            "mean_width": 4.7613
+          },
+          "non_calm": {
+            "n": 928,
+            "coverage": 0.8761,
+            "mean_width": 4.236
+          },
+          "high_delta_06": {
+            "n": 944,
+            "coverage": 0.8655,
+            "mean_width": 4.3676
+          }
+        }
+      }
+    }
+  }
+}
