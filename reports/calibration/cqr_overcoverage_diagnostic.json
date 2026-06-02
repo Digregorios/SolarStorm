@@ -1,37 +1,41 @@
 {
   "task": "T-11-8-diagnostic",
   "purpose": "D1-D6 over-coverage diagnostic (read-only evidence; no remedy chosen or run)",
-  "git_sha": "c897ecf83daeb93d3f00bd7c00d803a594f13496",
+  "git_sha": "9fed50cae14f11296e0042fa3f37174bf5e612af",
   "seed": 42,
   "deterministic": true,
   "num_threads": 1,
   "n_estimators": 500,
   "coverage_target": 0.8,
-  "oracle_lower_bound_diagnostic_only": true,
+  "marginal_fixed_window_reference_only": true,
   "verdict": {
-    "dominant_failure_mode": "F3",
+    "dominant_failure_mode": "F2 unlikely; base band over-covers; F1 signal present; F3 not proven",
     "metrics": {
       "mean_crossing_freq": 0.0002,
       "mean_base_band_coverage": 0.8752,
       "mean_cqr_width_fraction": 0.1214,
       "mean_coverage_width_slope": 0.0496,
-      "mean_oracle_floor_width_ALL": 10.0
+      "mean_marginal_fixed_window_width_ALL": 10.0
     },
-    "contributions": [
+    "findings": [
       {
-        "mode": "F3",
-        "evidence": "base band already over-covers (0.875) and CQR adds little width (frac=0.121)"
+        "label": "F2",
+        "evidence": "unlikely: raw quantile crossing ~0.0002 (<= 0.05)"
       },
       {
-        "mode": "F1",
-        "evidence": "coverage rises with width (slope 0.050)"
+        "label": "base",
+        "evidence": "base band already OVER-covers (0.875); CQR adds ~0.121 of width"
       },
       {
-        "mode": "F3",
-        "evidence": "oracle 80% floor width 10.00 brackets (integer granularity)"
+        "label": "F1",
+        "evidence": "signal present: coverage rises with width (slope 0.050)"
+      },
+      {
+        "label": "F3",
+        "evidence": "NOT proven: D6 marginal fixed window is not a conditional predictive-interval lower bound"
       }
     ],
-    "note": "Descriptive evidence, not a decision. F3 (integer-granularity floor / CQR-can-only-widen) dominates when present because no conformal remedy can narrow below the oracle floor. See research/RESEARCH_CQR_OVERCOVERAGE_AND_ALTERNATIVES.md section 6 for the branch."
+    "note": "Descriptive evidence, not a decision. F2 (quantile crossing) is unlikely; the base 10/90 band over-covers and CQR can only widen it; F1 (coverage rising with width) shows a signal. F3 (integer-granularity floor) is NOT proven here -- the D6 marginal fixed-window width is a property of the marginal label distribution, not a lower bound on a feature-conditional predictive interval. The honest takeaway for Onda 2: Phase 4 CQR stays KILL and Live NWP has independent operational value; do NOT cite 'F3 proven by D6'. See research/RESEARCH_CQR_OVERCOVERAGE_AND_ALTERNATIVES.md section 6."
   },
   "splits": [
     {
@@ -108,30 +112,30 @@
           "23:00": 0.2162
         }
       },
-      "D6_oracle_lower_bound": {
+      "D6_marginal_fixed_window": {
         "ALL": {
           "n": 1460,
-          "oracle_min_width_80": 10,
+          "marginal_fixed_window_width_80": 10,
           "cqr_mean_width": 4.2295
         },
         "calm": {
           "n": 412,
-          "oracle_min_width_80": 8,
+          "marginal_fixed_window_width_80": 8,
           "cqr_mean_width": 4.5121
         },
         "non_calm": {
           "n": 1048,
-          "oracle_min_width_80": 9,
+          "marginal_fixed_window_width_80": 9,
           "cqr_mean_width": 4.1183
         },
         "high_delta": {
           "n": 952,
-          "oracle_min_width_80": 9,
+          "marginal_fixed_window_width_80": 9,
           "cqr_mean_width": 4.1975
         },
         "late_cp_23": {
           "n": 365,
-          "oracle_min_width_80": 10,
+          "marginal_fixed_window_width_80": 10,
           "cqr_mean_width": 4.137
         }
       },
@@ -236,30 +240,30 @@
           "23:00": 0.2559
         }
       },
-      "D6_oracle_lower_bound": {
+      "D6_marginal_fixed_window": {
         "ALL": {
           "n": 1464,
-          "oracle_min_width_80": 10,
+          "marginal_fixed_window_width_80": 10,
           "cqr_mean_width": 3.7876
         },
         "calm": {
           "n": 424,
-          "oracle_min_width_80": 8,
+          "marginal_fixed_window_width_80": 8,
           "cqr_mean_width": 4.0
         },
         "non_calm": {
           "n": 1040,
-          "oracle_min_width_80": 10,
+          "marginal_fixed_window_width_80": 10,
           "cqr_mean_width": 3.701
         },
         "high_delta": {
           "n": 948,
-          "oracle_min_width_80": 10,
+          "marginal_fixed_window_width_80": 10,
           "cqr_mean_width": 3.7152
         },
         "late_cp_23": {
           "n": 366,
-          "oracle_min_width_80": 10,
+          "marginal_fixed_window_width_80": 10,
           "cqr_mean_width": 3.1448
         }
       },
@@ -364,30 +368,30 @@
           "23:00": 0.166
         }
       },
-      "D6_oracle_lower_bound": {
+      "D6_marginal_fixed_window": {
         "ALL": {
           "n": 1460,
-          "oracle_min_width_80": 10,
+          "marginal_fixed_window_width_80": 10,
           "cqr_mean_width": 3.8185
         },
         "calm": {
           "n": 488,
-          "oracle_min_width_80": 8,
+          "marginal_fixed_window_width_80": 8,
           "cqr_mean_width": 4.1311
         },
         "non_calm": {
           "n": 972,
-          "oracle_min_width_80": 9,
+          "marginal_fixed_window_width_80": 9,
           "cqr_mean_width": 3.6615
         },
         "high_delta": {
           "n": 944,
-          "oracle_min_width_80": 10,
+          "marginal_fixed_window_width_80": 10,
           "cqr_mean_width": 3.732
         },
         "late_cp_23": {
           "n": 365,
-          "oracle_min_width_80": 10,
+          "marginal_fixed_window_width_80": 10,
           "cqr_mean_width": 3.2247
         }
       },

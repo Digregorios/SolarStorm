@@ -4,6 +4,28 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:Onda1.1] - 2026-06-02 - patch-forward: per-model NWP endpoints + honest D6/verdict
+
+Reviewer patch-forward on the Onda 1 commit (`references/code-reviews/update.txt`): two P1 fixes, do
+NOT revert Onda 1, do NOT rerun any CQR remedy or touch the gate.
+
+- **P1 operacional -- per-model NWP endpoints (`core/ingest/nwp_live.py`):** the probe defaulted BOTH
+  models to `single_runs`, but the canonical layout reads GFS from `s3_grib` (ECMWF stays `single_runs`;
+  see the eval / serving-matrix scripts). With the shared default a causal GFS run was invisible, so at
+  CP20-22 with ECMWF absent the router would fall to ridge instead of `gfs_residual`. Fix: per-model
+  endpoint defaults (`ENDPOINT_BY_MODEL`); `NwpProbe` now records `ecmwf_endpoint`/`gfs_endpoint`. Tests:
+  GFS-only now writes to `s3_grib` and asserts `gfs_available=True`; a guard test proves a GFS snapshot
+  mistakenly under `single_runs` is NOT picked up.
+- **P1 decisional -- honest D6/verdict (`scripts/diagnose_cqr_overcoverage.py` + report):** the old D6
+  `oracle_min_width_80` was a GLOBAL fixed window over the marginal `y` (ignores features/CP/center/
+  per-row intervals), so it is NOT a predictive-interval lower bound and does NOT prove F3. Renamed to
+  `marginal_fixed_window_width_80` (reference only); removed from the verdict logic. The verdict is now
+  the honest framing: **F2 unlikely (crossing ~0); base band over-covers and CQR can only widen; F1
+  signal present; F3 NOT proven.** Onda 2 justification is corrected accordingly: Phase 4 CQR stays KILL
+  and Live NWP has independent operational value -- NOT "F3 proven by D6".
+- P3 hygiene: dropped the trailing blank line in the diagnostic `.md`. Read-only diagnostic re-run
+  (deterministic, seed 42); no CQR gate re-opened, no remedy executed. Frozen contracts/eval untouched.
+
 ## [phase11:Onda1] - 2026-06-02 - Live NWP causal probe + D1-D6 over-coverage diagnostic (operational code)
 
 Reviewer "Regra De Ritmo" directive (`references/code-reviews/update.txt`): stop the review-corrige-review
@@ -21,13 +43,12 @@ loop and ship OPERATIONAL code. Onda 1 immediate priority = two executable track
 - **D1-D6 over-coverage diagnostic (Agent C):** `scripts/diagnose_cqr_overcoverage.py` re-fits the SAME
   frozen CQR config (imported from the eval; eval script NOT modified) on the SAME slices and computes
   D1 pinball / D2 base-vs-CQR coverage / D3 per-width-quartile slope / D4 raw quantile-crossing / D5 width
-  attribution + `E` distribution / D6 oracle integer-grid floor (oracle = peeks at test truth,
-  `oracle_lower_bound_diagnostic_only: true`, NEVER a model-selection signal). Reports:
-  `reports/calibration/cqr_overcoverage_diagnostic.{json,md}`. **Verdict: F3** (integer-granularity floor):
-  D4 crossing ~0 (rules out F2); base band already over-covers 0.875 and CQR adds only ~12% width; the
-  oracle 80% floor is ~10 integer brackets while the CQR band is ~3.8-4.2 -- discrete bracket structure
-  forces over-coverage, no conformal step can narrow below it. F1 (slope 0.05) is a minor secondary. This
-  is descriptive evidence ONLY; it branches Onda 2 toward Phase 5 + MOS/EMOS-lite, NOT a new QRF prereg.
+  attribution + `E` distribution / D6 marginal fixed-window width (reference only; NEVER a model-selection
+  signal). Reports: `reports/calibration/cqr_overcoverage_diagnostic.{json,md}`. Evidence: D4 crossing ~0
+  (F2 unlikely); base band over-covers ~0.875 and CQR can only widen it (~12% added width); F1 (coverage
+  rising with width, slope ~0.05) shows a signal. _(NOTE: the original commit overclaimed "Verdict: F3";
+  corrected in Onda1.1 above -- F3 is NOT proven by the marginal D6 window.)_ Descriptive evidence ONLY;
+  it branches Onda 2 toward Phase 5 + MOS/EMOS-lite, NOT a new QRF prereg.
 - Read-only diagnostic; no gate re-opened, no remedy run; frozen contracts/CQR eval untouched. Suite 414
   green (+12 new tests: probe causal/fallback cases, CLI ECMWF-probe routing, D1-D6 pure-helper pins);
   ASCII guard clean. Deterministic (seed 42), run once.

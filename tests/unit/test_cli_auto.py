@@ -127,7 +127,7 @@ def _fake_probe_unavailable(**kwargs):
     return NwpProbe(
         ecmwf_available=False, gfs_available=False,
         ecmwf_run_time_utc=None, gfs_run_time_utc=None, nwp_run_time_utc=None,
-        probe_root="fake", endpoint="single_runs",
+        probe_root="fake", ecmwf_endpoint="single_runs", gfs_endpoint="s3_grib",
     )
 
 
@@ -260,7 +260,7 @@ def test_auto_with_ecmwf_probe_routes_residual_serves_ridge(monkeypatch):
             ecmwf_run_time_utc="2025-07-15T00:00:00+00:00",
             gfs_run_time_utc="2025-07-15T00:00:00+00:00",
             nwp_run_time_utc="2025-07-15T00:00:00+00:00",
-            probe_root="fake", endpoint="single_runs",
+            probe_root="fake", ecmwf_endpoint="single_runs", gfs_endpoint="s3_grib",
         )
 
     result = _invoke_auto(monkeypatch, tpanel_height=120, cp=22, probe=_probe_ecmwf)

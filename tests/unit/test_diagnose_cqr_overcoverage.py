@@ -12,7 +12,7 @@ import numpy as np
 
 from scripts.diagnose_cqr_overcoverage import (
     crossing_frequency,
-    oracle_min_width_80,
+    marginal_fixed_window_width_80,
     pinball_loss,
     width_attribution,
 )
@@ -42,19 +42,19 @@ def test_crossing_frequency_counts_inverted_pairs():
     assert crossing_frequency(np.array([1.0, 2.0]), np.array([3.0, 4.0])) == 0.0
 
 
-def test_oracle_min_width_80_known_answer():
+def test_marginal_fixed_window_width_80_known_answer():
     # y uniformly on integers 0..9 (n=10): need >=8 covered. The tightest window
     # covering 8 of the 10 distinct integers spans 8 brackets (e.g. [0,7] or [2,9]).
     y = np.arange(0, 10)
-    assert oracle_min_width_80(y) == 8
+    assert marginal_fixed_window_width_80(y) == 8
     # All identical -> a single bracket covers everything.
-    assert oracle_min_width_80(np.array([5, 5, 5, 5, 5])) == 1
+    assert marginal_fixed_window_width_80(np.array([5, 5, 5, 5, 5])) == 1
 
 
-def test_oracle_min_width_80_concentrated_mass():
+def test_marginal_fixed_window_width_80_concentrated_mass():
     # 9 values at 5, one outlier at 50: a width-1 window at 5 covers 90% >= 80%.
     y = np.array([5] * 9 + [50])
-    assert oracle_min_width_80(y) == 1
+    assert marginal_fixed_window_width_80(y) == 1
 
 
 def test_width_attribution_arithmetic():

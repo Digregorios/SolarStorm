@@ -5,6 +5,11 @@ answers "is there a causal ECMWF/GFS run available for this station/date/CP on
 disk?" so that ``forecast --model auto`` can route on real availability instead of
 the hardcoded ``_PHASE3_*`` flags.
 
+Endpoints are per-model: the canonical project layout stores ECMWF under
+``single_runs`` and GFS under ``s3_grib`` (see the eval / serving-matrix scripts).
+A single shared default would make GFS invisible and force CP20-22 to ridge even
+when a causal GFS run exists -- so the probe keys the endpoint off the model.
+
 Causality is delegated to ``select_nwp_v1`` (it filters to runs with
 ``run_time_utc <= cp_utc - safety_margin``). Missing snapshot roots degrade to
 "unavailable" without raising - graceful degradation is the whole point.
@@ -26,7 +31,13 @@ from core.io.timeutil import cp_to_utc
 
 
 DEFAULT_NWP_ROOT = Path("artifacts/raw/nwp")
-DEFAULT_ENDPOINT = "single_runs"
+
+# Canonical per-model snapshot endpoints (must match the eval / serving-matrix
+# scripts: ECMWF -> single_runs, GFS -> s3_grib). Keyed by ModelSpec.id.
+ENDPOINT_BY_MODEL: dict[str, str] = {
+    ECMWF_IFS_HRES.id: "single_runs",
+    NCEP_GFS.id: "s3_grib",
+}
 
 
 @dataclass(frozen=True)
@@ -39,7 +50,8 @@ class NwpProbe:
     gfs_run_time_utc: str | None
     nwp_run_time_utc: str | None
     probe_root: str
-    endpoint: str
+    ecmwf_endpoint: str
+    gfs_endpoint: str
 
 
 def _probe_one(
@@ -81,16 +93,20 @@ def probe_causal_nwp(
     target_date: date,
     cp_hhmm: str,
     out_root: Path | str = DEFAULT_NWP_ROOT,
-    endpoint: str = DEFAULT_ENDPOINT,
+    ecmwf_endpoint: str | None = None,
+    gfs_endpoint: str | None = None,
     safety_margin: timedelta = SAFETY_MARGIN_DEFAULT,
 ) -> NwpProbe:
     """Probe local snapshots for a causal ECMWF/GFS run at ``cp_hhmm`` on ``target_date``.
 
-    Uses the Phase-4 causal-at-CP convention: ``target_valid_utc == cp_utc``. The
-    returned ``nwp_run_time_utc`` is the ECMWF run if ECMWF is available, else the
-    GFS run - the run the router keys off.
+    Endpoints default per-model (ECMWF ``single_runs``, GFS ``s3_grib``); override
+    only for tests or non-canonical layouts. Uses the Phase-4 causal-at-CP convention
+    (``target_valid_utc == cp_utc``). ``nwp_run_time_utc`` is the ECMWF run if ECMWF
+    is available, else the GFS run - the run the router keys off.
     """
     out_root = Path(out_root)
+    ecmwf_ep = ecmwf_endpoint or ENDPOINT_BY_MODEL[ECMWF_IFS_HRES.id]
+    gfs_ep = gfs_endpoint or ENDPOINT_BY_MODEL[NCEP_GFS.id]
     cp_utc = cp_to_utc(target_date, cp_hhmm)
     target_valid_utc = cp_utc
 
@@ -100,7 +116,7 @@ def probe_causal_nwp(
         cp_utc=cp_utc,
         target_valid_utc=target_valid_utc,
         out_root=out_root,
-        endpoint=endpoint,
+        endpoint=ecmwf_ep,
         safety_margin=safety_margin,
     )
     gfs_run = _probe_one(
@@ -109,7 +125,7 @@ def probe_causal_nwp(
         cp_utc=cp_utc,
         target_valid_utc=target_valid_utc,
         out_root=out_root,
-        endpoint=endpoint,
+        endpoint=gfs_ep,
         safety_margin=safety_margin,
     )
 
@@ -121,5 +137,6 @@ def probe_causal_nwp(
         gfs_run_time_utc=gfs_run,
         nwp_run_time_utc=nwp_run,
         probe_root=str(out_root),
-        endpoint=endpoint,
+        ecmwf_endpoint=ecmwf_ep,
+        gfs_endpoint=gfs_ep,
     )

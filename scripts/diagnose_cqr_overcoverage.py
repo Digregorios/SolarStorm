@@ -2,7 +2,7 @@
 
 The Phase-4 CQR object was KILLed for OVER-coverage at integer granularity
 (global IC80 0.92/0.90/0.93). This script does NOT re-open the gate or choose a fix;
-it produces an evidence-only F1/F2/F3 verdict so Onda 2 can branch:
+it produces evidence-only findings so Onda 2 can branch:
 
   F1 = base quantile boosters over-fit (over-coverage rises with width)
   F2 = quantile crossing / clamp inflates the band
@@ -10,8 +10,12 @@ it produces an evidence-only F1/F2/F3 verdict so Onda 2 can branch:
 
 It re-fits the SAME frozen CQR config the eval used (imported from
 ``scripts.evaluate_cqr_lightgbm_quantile``) on the SAME fit/calib/test slices and
-computes six diagnostics. D6 is an ORACLE lower-bound that peeks at test truth: it is
-explicitly DIAGNOSTIC-ONLY and is never used as a model-selection signal (anti-gaming).
+computes D1-D6. The honest read is reported as findings, NOT a single "Fx proven"
+label: F2 is unlikely (crossing ~0), the base band over-covers and CQR can only widen,
+F1 shows a signal. **D6 is a MARGINAL fixed-window reference only** -- it is a property
+of the marginal label distribution, NOT a conditional predictive-interval lower bound,
+so it does NOT prove F3. D6 peeks at test labels and is therefore never used as a
+model-selection signal (anti-gaming).
 
 Determinism: seed 42 (inherited from the eval module's module-level np.random.seed),
 lightgbm deterministic=True, num_threads=1. Run ONCE.
@@ -105,11 +109,16 @@ def crossing_frequency(raw_q_lo: np.ndarray, raw_q_hi: np.ndarray) -> float:
     return float(np.mean(lo > hi))
 
 
-def oracle_min_width_80(y: np.ndarray, coverage: float = COVERAGE) -> int:
-    """Smallest integer fixed-width window covering >= ``coverage`` of ``y`` (oracle).
+def marginal_fixed_window_width_80(y: np.ndarray, coverage: float = COVERAGE) -> int:
+    """Smallest integer fixed-width window covering >= ``coverage`` of the MARGINAL ``y``.
 
-    DIAGNOSTIC ONLY -- this peeks at the test truth to characterise the integer
-    granularity floor. It is never used to select or tune a model.
+    This is a property of the marginal label distribution ONLY -- it ignores features,
+    CP, the predicted center, and any per-row interval. It is therefore NOT a lower
+    bound for a feature-conditional predictive/conformal interval (a conditional model
+    can be narrower than this global window on easy rows and wider on hard ones), and it
+    is NOT proof of an integer-granularity floor (F3). It is a rough marginal scale
+    reference only. DIAGNOSTIC ONLY: it peeks at the test labels and is never used to
+    select or tune a model.
     """
     yi = np.round(np.asarray(y, dtype=float)).astype(int)
     n = yi.size
@@ -329,7 +338,8 @@ def diagnose_split(panel, split, climo, risk_df_full, tau, mode, n_estimators):
         "e_correction_by_cp": e_corr_by_cp,
     }
 
-    # D6 oracle lower-bound width per stratum (DIAGNOSTIC ONLY).
+    # D6 marginal fixed-window width per stratum (REFERENCE ONLY -- NOT a predictive
+    # interval lower bound, NOT proof of F3; see marginal_fixed_window_width_80 docstring).
     masks = {
         "ALL": np.ones(agg["y"].size, dtype=bool),
         "calm": ~agg["non_calm"],
@@ -343,7 +353,7 @@ def diagnose_split(panel, split, climo, risk_df_full, tau, mode, n_estimators):
         n = int(m.sum())
         d6[st] = {
             "n": n,
-            "oracle_min_width_80": int(oracle_min_width_80(agg["y"][m])) if n >= 5 else None,
+            "marginal_fixed_window_width_80": int(marginal_fixed_window_width_80(agg["y"][m])) if n >= 5 else None,
             "cqr_mean_width": round(float(np.mean(agg["cqr_hi"][m] - agg["cqr_lo"][m] + 1)), 4) if n >= 5 else None,
         }
 
@@ -357,7 +367,7 @@ def diagnose_split(panel, split, climo, risk_df_full, tau, mode, n_estimators):
         "D3_width_quartile_slope": d3,
         "D4_crossing": d4,
         "D5_width_and_E": d5,
-        "D6_oracle_lower_bound": d6,
+        "D6_marginal_fixed_window": d6,
         "by_cp": per_cp,
     }
 
@@ -385,27 +395,34 @@ def classify_failure(splits) -> dict:
     base_cov = _mean(["D2_base_vs_cqr_coverage", "base_band_coverage"])
     cqr_frac = _mean(["D5_width_and_E", "width_attribution", "cqr_width_fraction"])
     slope = _mean(["D3_width_quartile_slope", "coverage_vs_width_slope"])
-    oracle_all = float(np.mean([
-        s["D6_oracle_lower_bound"]["ALL"]["oracle_min_width_80"]
-        for s in ok if s["D6_oracle_lower_bound"]["ALL"]["oracle_min_width_80"] is not None
+    marginal_all = float(np.mean([
+        s["D6_marginal_fixed_window"]["ALL"]["marginal_fixed_window_width_80"]
+        for s in ok if s["D6_marginal_fixed_window"]["ALL"]["marginal_fixed_window_width_80"] is not None
     ])) if ok else float("nan")
 
-    contributions = []
+    # Findings (descriptive). D6 is NOT used here: a marginal fixed window is not a
+    # predictive-interval lower bound, so it cannot prove F3 (integer-granularity).
+    findings = []
+    f2_status = "unlikely"
     if not np.isnan(crossing) and crossing > 0.05:
-        contributions.append(("F2", f"raw quantile crossing {crossing:.3f} > 0.05"))
-    if not np.isnan(base_cov) and base_cov > 0.85 and (np.isnan(cqr_frac) or cqr_frac < 0.30):
-        contributions.append(("F3", f"base band already over-covers ({base_cov:.3f}) and CQR adds little width (frac={cqr_frac:.3f})"))
-    if not np.isnan(slope) and slope > 0.03:
-        contributions.append(("F1", f"coverage rises with width (slope {slope:.3f})"))
-    if not np.isnan(oracle_all) and oracle_all >= 5:
-        contributions.append(("F3", f"oracle 80% floor width {oracle_all:.2f} brackets (integer granularity)"))
-
-    if not contributions:
-        dominant = "INCONCLUSIVE"
+        f2_status = "present"
+        findings.append(("F2", f"raw quantile crossing {crossing:.3f} > 0.05"))
     else:
-        # F3 (structural granularity) dominates when present; else first contributor.
-        modes = [c[0] for c in contributions]
-        dominant = "F3" if "F3" in modes else modes[0]
+        findings.append(("F2", f"unlikely: raw quantile crossing ~{crossing:.4f} (<= 0.05)"))
+    if not np.isnan(base_cov) and base_cov > 0.85:
+        findings.append(("base", f"base band already OVER-covers ({base_cov:.3f}); CQR adds ~{cqr_frac:.3f} of width"))
+    if not np.isnan(slope) and slope > 0.03:
+        findings.append(("F1", f"signal present: coverage rises with width (slope {slope:.3f})"))
+    else:
+        findings.append(("F1", f"weak: coverage~width slope {slope:.3f}"))
+    findings.append(("F3", "NOT proven: D6 marginal fixed window is not a conditional predictive-interval lower bound"))
+
+    # Honest summary string (reviewer directive): do not claim F3 from D6.
+    f1_present = (not np.isnan(slope)) and slope > 0.03
+    dominant = (
+        f"F2 {f2_status}; base band over-covers; "
+        f"F1 signal {'present' if f1_present else 'weak'}; F3 not proven"
+    )
 
     return {
         "dominant_failure_mode": dominant,
@@ -414,12 +431,16 @@ def classify_failure(splits) -> dict:
             "mean_base_band_coverage": round(base_cov, 4) if not np.isnan(base_cov) else None,
             "mean_cqr_width_fraction": round(cqr_frac, 4) if not np.isnan(cqr_frac) else None,
             "mean_coverage_width_slope": round(slope, 4) if not np.isnan(slope) else None,
-            "mean_oracle_floor_width_ALL": round(oracle_all, 4) if not np.isnan(oracle_all) else None,
+            "mean_marginal_fixed_window_width_ALL": round(marginal_all, 4) if not np.isnan(marginal_all) else None,
         },
-        "contributions": [{"mode": m, "evidence": e} for m, e in contributions],
-        "note": ("Descriptive evidence, not a decision. F3 (integer-granularity floor / CQR-can-only-widen) "
-                 "dominates when present because no conformal remedy can narrow below the oracle floor. "
-                 "See research/RESEARCH_CQR_OVERCOVERAGE_AND_ALTERNATIVES.md section 6 for the branch."),
+        "findings": [{"label": m, "evidence": e} for m, e in findings],
+        "note": ("Descriptive evidence, not a decision. F2 (quantile crossing) is unlikely; the base "
+                 "10/90 band over-covers and CQR can only widen it; F1 (coverage rising with width) shows "
+                 "a signal. F3 (integer-granularity floor) is NOT proven here -- the D6 marginal fixed-window "
+                 "width is a property of the marginal label distribution, not a lower bound on a "
+                 "feature-conditional predictive interval. The honest takeaway for Onda 2: Phase 4 CQR stays "
+                 "KILL and Live NWP has independent operational value; do NOT cite 'F3 proven by D6'. See "
+                 "research/RESEARCH_CQR_OVERCOVERAGE_AND_ALTERNATIVES.md section 6."),
     }
 
 
@@ -437,11 +458,12 @@ def _render_md(report) -> str:
     L = [
         "# CQR Over-Coverage Diagnostic (D1-D6) -- Phase 4 post-KILL",
         "",
-        f"**Dominant failure mode: {v['dominant_failure_mode']}** (descriptive evidence, NOT a gate or a remedy choice)",
+        f"**Verdict: {v['dominant_failure_mode']}** (descriptive evidence, NOT a gate or a remedy choice)",
         "",
         f"- git_sha: `{report['git_sha']}`  seed: {report['seed']}  n_estimators: {report['n_estimators']}",
         f"- Companion to the frozen KILL: `reports/calibration/cqr_lightgbm_quantile_v0.{{md,json}}`.",
-        "- D6 is an ORACLE lower-bound (peeks at test truth); `oracle_lower_bound_diagnostic_only: true`. Never a model-selection signal.",
+        "- D6 is a MARGINAL fixed-window reference (`marginal_fixed_window_reference_only: true`); it is NOT a",
+        "  predictive-interval lower bound and is NEVER used to select a model or to prove F3.",
         "",
         "## Verdict evidence",
         "",
@@ -450,9 +472,9 @@ def _render_md(report) -> str:
     ]
     for k, val in v["metrics"].items():
         L.append(f"| {k} | {val} |")
-    L += ["", "**Contributions:**"]
-    for c in v["contributions"]:
-        L.append(f"- `{c['mode']}` -- {c['evidence']}")
+    L += ["", "**Findings:**"]
+    for c in v["findings"]:
+        L.append(f"- `{c['label']}` -- {c['evidence']}")
     L += ["", f"_{v['note']}_", "", "## Per-split diagnostics", ""]
     for s in report["splits"]:
         if s.get("status") != "ok":
@@ -468,20 +490,20 @@ def _render_md(report) -> str:
             f"- D3 coverage~width slope: {s['D3_width_quartile_slope']['coverage_vs_width_slope']}",
             f"- D4 raw crossing freq: {s['D4_crossing']['crossing_freq']}",
             f"- D5 width: base={d5['mean_base_width']}  cqr={d5['mean_cqr_width']}  cqr_frac={d5['cqr_width_fraction']}  E={s['D5_width_and_E']['e_score_distribution']}",
-            "- D6 oracle floor (integer brackets) vs CQR width:",
+            "- D6 marginal fixed-window width (reference only) vs CQR width:",
             "",
-            "  | stratum | n | oracle_min_width_80 | cqr_mean_width |",
-            "  |---------|---|---------------------|----------------|",
+            "  | stratum | n | marginal_fixed_window_width_80 | cqr_mean_width |",
+            "  |---------|---|--------------------------------|----------------|",
         ]
         for st in STRATA:
-            blk = s["D6_oracle_lower_bound"][st]
-            L.append(f"  | {st} | {blk['n']} | {blk['oracle_min_width_80']} | {blk['cqr_mean_width']} |")
+            blk = s["D6_marginal_fixed_window"][st]
+            L.append(f"  | {st} | {blk['n']} | {blk['marginal_fixed_window_width_80']} | {blk['cqr_mean_width']} |")
         L.append("")
     L += ["## Notes", "",
           "- Read-only diagnostic. No gate re-opened, no remedy run (reviewer directive).",
           "- CQR config re-fit identically to the frozen eval (same fit/calib/test slices, seed 42, n_estimators=500).",
-          "- F1/F2/F3 mapping per research/RESEARCH_CQR_OVERCOVERAGE_AND_ALTERNATIVES.md section 6.",
-          ""]
+          "- D6 is a MARGINAL reference, not a conditional predictive-interval lower bound -- it does NOT prove F3.",
+          "- F1/F2 mapping per research/RESEARCH_CQR_OVERCOVERAGE_AND_ALTERNATIVES.md section 6."]
     return "\n".join(L) + "\n"
 
 
@@ -536,7 +558,7 @@ def main() -> int:
         "num_threads": 1,
         "n_estimators": N_ESTIMATORS,
         "coverage_target": COVERAGE,
-        "oracle_lower_bound_diagnostic_only": True,
+        "marginal_fixed_window_reference_only": True,
         "verdict": verdict,
         "splits": splits,
     }
