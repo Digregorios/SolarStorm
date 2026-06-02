@@ -673,12 +673,15 @@ def compute_routing_recommendation(ecmwf_results, full_results):
                     fold_calm_metrics[c][fold_idx] = cm
 
         n_folds = len(results_src)
-        need_folds = min(2, n_folds)  # >=2/2 short window (CP20-22) or >=2/3 full window (CP23)
+        need_folds = min(2, n_folds)  # win rule: must win >=2 folds (2 of 2 at CP20-22; 2 of 3 at CP23)
 
         # Coverage guard (reviewer P2): a candidate only competes if it has ALL-stratum metrics in
         # the SAME folds as the incumbent. A candidate with partial coverage (e.g. 2 of 3 folds)
         # could otherwise post a flattering pooled MAE on its own subset and look eligible. Such a
         # candidate is recorded coverage_ok=false and EXCLUDED from ranking (cannot win the CP).
+        # The incumbent (Ridge) defines the comparison fold set ON PURPOSE: if Ridge itself lacks an
+        # ALL-stratum metric in some fold, that fold drops out for EVERY candidate, so the whole
+        # comparison stays apples-to-apples on exactly the folds the incumbent was scored on.
         inc_folds = set(fold_metrics[incumbent].keys())
         coverage_ok = {
             c: bool(inc_folds) and inc_folds.issubset(set(fold_metrics[c].keys()))
@@ -720,12 +723,20 @@ def compute_routing_recommendation(ecmwf_results, full_results):
             if fold_metrics[best][f]["mae"] <= fold_metrics[incumbent][f]["mae"]:
                 folds_won += 1
 
-        # Check: no calm degradation, on folds where BOTH have a calm stratum.
-        calm_ok = True
-        for f in sorted(set(fold_calm_metrics[best].keys()) & set(fold_calm_metrics[incumbent].keys())):
-            if fold_calm_metrics[best][f]["mae"] > fold_calm_metrics[incumbent][f]["mae"] + 0.05:
-                calm_ok = False
-                break
+        # Check: no calm degradation. Compared fold-by-fold on folds where BOTH best and incumbent
+        # have a calm stratum. If they share NO calm fold, calm preservation cannot be verified, so
+        # the conservative router refuses to promote best (calm_ok=false) -- consistent with keeping
+        # the incumbent unless a challenger is provably safe (reviewer 2nd-pass A6). On the current
+        # data every candidate has calm metrics in every fold, so this guard does not change routing.
+        common_calm_folds = set(fold_calm_metrics[best].keys()) & set(fold_calm_metrics[incumbent].keys())
+        if not common_calm_folds:
+            calm_ok = False
+        else:
+            calm_ok = True
+            for f in sorted(common_calm_folds):
+                if fold_calm_metrics[best][f]["mae"] > fold_calm_metrics[incumbent][f]["mae"] + 0.05:
+                    calm_ok = False
+                    break
 
         # Decision
         reason_parts = []
