@@ -120,12 +120,13 @@ class _FakeFeats:
     features = {**{c: 1.0 for c in FEATURE_COLUMNS}, "k_cp": 14}
 
 
-def _invoke_auto(monkeypatch, tpanel_height):
+def _invoke_auto(monkeypatch, tpanel_height, cp=22):
     """Monkeypatch the forecast pipeline and invoke ``--model auto --dry-run``.
 
     The router itself (recommend_route/resolve_servable) is NOT mocked -- that is
-    the unit under test. With ecmwf/gfs unavailable it routes to ridge; the
-    ridge fit is mocked, and ``tpanel_height`` decides ridge-served vs empirical.
+    the unit under test. With ecmwf/gfs unavailable it routes to ridge (CP20-22
+    via NWP-absent fallback; CP23 by the conservative rule); the ridge fit is
+    mocked, and ``tpanel_height`` decides ridge-served vs empirical.
     """
     dates = [date(2025, 7, 1), date(2025, 7, 2), date(2025, 7, 3)]
 
@@ -157,7 +158,7 @@ def _invoke_auto(monkeypatch, tpanel_height):
     runner = CliRunner(mix_stderr=False)
     result = runner.invoke(
         app,
-        ["--date", "2025-07-15", "--cp", "22", "--model", "auto", "--dry-run"],
+        ["--date", "2025-07-15", "--cp", str(cp), "--model", "auto", "--dry-run"],
     )
     return result
 
@@ -187,6 +188,29 @@ def test_auto_dry_run_emits_valid_json_ridge_served(monkeypatch):
     assert "[forecast --model auto]" in result.stderr
     assert "spread_used=False" in result.stderr
     assert "[forecast --model auto]" not in result.stdout
+
+
+def test_auto_dry_run_cp23_records_decision_reason(monkeypatch):
+    """CP23 keeping Ridge is a conservative DECISION end-to-end, not a fallback.
+
+    CP23 is the most common Phase-3 path (no NWP needed to decide it), so pin the
+    CLI-emitted routing block: decision_reason is populated and mentions cp23,
+    while fallback_reason stays None and fallback_used is False (intern A8).
+    """
+    result = _invoke_auto(monkeypatch, tpanel_height=120, cp=23)
+    assert result.exit_code == 0, (result.stdout, result.stderr, repr(result.exception))
+
+    row = json.loads(result.stdout)
+    assert row["served_model"] == "ridge"
+
+    routing = row["routing"]
+    assert routing["cp"] == 23
+    assert routing["model_route"] == "ridge"           # conservative rule, not a fallback
+    assert routing["fallback_used"] is False
+    assert routing["fallback_reason"] is None
+    assert routing["decision_reason"] is not None
+    assert "cp23" in routing["decision_reason"]
+    assert routing["spread_used"] is False             # invariant: spread never routes
 
 
 def test_auto_dry_run_degrades_to_empirical_without_exploding(monkeypatch):

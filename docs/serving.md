@@ -53,6 +53,18 @@ With `--model auto` a diagnostic banner is printed to STDERR (so `--dry-run` STD
   train: 2020-01-01..2025-07-14  IC80: [13, 15]
 ```
 
+CP23 is a conservative *decision*, not a fallback, so its banner shows `fallback=False` and the
+reason comes from `decision_reason` (with `fallback_reason=None`):
+
+```
+[forecast --model auto] CP23 route=ridge served=ridge fallback=False reason=cp23_conservative_ridge
+  nwp: ecmwf=False gfs=False run_time=none spread_used=False
+  train: 2020-01-01..2025-07-14  IC80: [13, 15]
+```
+
+(When live NWP lands and GFS is causally available, the CP23 reason becomes
+`cp23_conservative_ridge_gfs_not_promoted_calm_degraded` -- still `fallback=False`.)
+
 The emitted forecast row also gains a `routing` block: `cp`, `model_route`, `served_model`,
 `fallback_used`, `fallback_reason`, `decision_reason`, `degraded_reason`, `ecmwf_available`,
 `gfs_available`, `nwp_run_time_utc`, `spread_used`, `train_start`, `train_end`.

@@ -44,7 +44,7 @@ def _emit_routing_banner(routing: dict, ic_low: int, ic_high: int) -> None:
         f"[forecast --model auto] CP{routing['cp']} "
         f"route={routing['model_route']} served={routing['served_model']} "
         f"fallback={routing['fallback_used']} "
-        f"reason={routing['fallback_reason'] or routing.get('decision_reason') or routing['degraded_reason'] or '-'}",
+        f"reason={routing['fallback_reason'] or routing['decision_reason'] or routing['degraded_reason'] or '-'}",
         err=True,
     )
     typer.echo(
