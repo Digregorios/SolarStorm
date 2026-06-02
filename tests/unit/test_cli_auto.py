@@ -120,16 +120,32 @@ class _FakeFeats:
     features = {**{c: 1.0 for c in FEATURE_COLUMNS}, "k_cp": 14}
 
 
-def _invoke_auto(monkeypatch, tpanel_height, cp=22):
+def _fake_probe_unavailable(**kwargs):
+    """Default probe stub: no causal NWP on disk (Phase-3 expectation)."""
+    from core.ingest.nwp_live import NwpProbe
+
+    return NwpProbe(
+        ecmwf_available=False, gfs_available=False,
+        ecmwf_run_time_utc=None, gfs_run_time_utc=None, nwp_run_time_utc=None,
+        probe_root="fake", endpoint="single_runs",
+    )
+
+
+def _invoke_auto(monkeypatch, tpanel_height, cp=22, probe=None):
     """Monkeypatch the forecast pipeline and invoke ``--model auto --dry-run``.
 
     The router itself (recommend_route/resolve_servable) is NOT mocked -- that is
-    the unit under test. With ecmwf/gfs unavailable it routes to ridge (CP20-22
-    via NWP-absent fallback; CP23 by the conservative rule); the ridge fit is
-    mocked, and ``tpanel_height`` decides ridge-served vs empirical.
+    the unit under test. The NWP probe IS mocked (default: nothing available) so the
+    test never reads the real on-disk snapshots; ``probe`` overrides it. With ecmwf/gfs
+    unavailable the router routes to ridge (CP20-22 via NWP-absent fallback; CP23 by
+    the conservative rule); the ridge fit is mocked, and ``tpanel_height`` decides
+    ridge-served vs empirical.
     """
     dates = [date(2025, 7, 1), date(2025, 7, 2), date(2025, 7, 3)]
 
+    monkeypatch.setattr(
+        "core.cli.forecast.probe_causal_nwp", probe or _fake_probe_unavailable
+    )
     monkeypatch.setattr("core.cli.forecast.load_station_config", lambda _: _FakeCfg())
     monkeypatch.setattr("core.cli.forecast.load_observations", lambda *a, **kw: (None, _FakeStats()))
     monkeypatch.setattr("core.cli.forecast.build_tmax_labels", lambda *a, **kw: None)
@@ -229,3 +245,82 @@ def test_auto_dry_run_degrades_to_empirical_without_exploding(monkeypatch):
     # The degradation reason records the row shortfall and the empirical fallback.
     assert "ridge_insufficient_rows_5" in routing["degraded_reason"]
     assert "fallback_empirical" in routing["degraded_reason"]
+
+
+def test_auto_with_ecmwf_probe_routes_residual_serves_ridge(monkeypatch):
+    """When the probe finds a causal ECMWF run, CP20-22 routes ecmwf_residual but
+    still SERVES ridge this phase (no residual serving yet) -- model_route vs
+    served_model are recorded distinctly, with a degraded_reason."""
+
+    def _probe_ecmwf(**kwargs):
+        from core.ingest.nwp_live import NwpProbe
+
+        return NwpProbe(
+            ecmwf_available=True, gfs_available=True,
+            ecmwf_run_time_utc="2025-07-15T00:00:00+00:00",
+            gfs_run_time_utc="2025-07-15T00:00:00+00:00",
+            nwp_run_time_utc="2025-07-15T00:00:00+00:00",
+            probe_root="fake", endpoint="single_runs",
+        )
+
+    result = _invoke_auto(monkeypatch, tpanel_height=120, cp=22, probe=_probe_ecmwf)
+    assert result.exit_code == 0, (result.stdout, result.stderr, repr(result.exception))
+
+    row = json.loads(result.stdout)
+    assert row["served_model"] == "ridge"
+
+    routing = row["routing"]
+    assert routing["cp"] == 22
+    assert routing["model_route"] == "ecmwf_residual"   # real probe drives the route
+    assert routing["served_model"] == "ridge"           # not servable this phase -> ridge
+    assert routing["ecmwf_available"] is True
+    assert routing["gfs_available"] is True
+    assert routing["nwp_run_time_utc"] == "2025-07-15T00:00:00+00:00"
+    assert "ecmwf_residual_not_servable" in routing["degraded_reason"]
+    assert routing["spread_used"] is False              # invariant: spread never routes
+
+
+def test_auto_no_nwp_probe_flag_forces_ridge(monkeypatch):
+    """``--no-nwp-probe`` skips the probe entirely and treats NWP as unavailable."""
+    # Even if the (unused) probe stub would say available, the flag must win.
+    def _probe_would_be_available(**kwargs):  # pragma: no cover - must NOT be called
+        raise AssertionError("probe must not run under --no-nwp-probe")
+
+    monkeypatch.setattr("core.cli.forecast.probe_causal_nwp", _probe_would_be_available)
+    monkeypatch.setattr("core.cli.forecast.load_station_config", lambda _: _FakeCfg())
+    monkeypatch.setattr("core.cli.forecast.load_observations", lambda *a, **kw: (None, _FakeStats()))
+    monkeypatch.setattr("core.cli.forecast.build_tmax_labels", lambda *a, **kw: None)
+    monkeypatch.setattr("core.cli.forecast.build_panel", lambda *a, **kw: _FakePanel(
+        [date(2025, 7, 1), date(2025, 7, 2), date(2025, 7, 3)]))
+    monkeypatch.setattr("core.cli.forecast.fit_climatology", lambda *a, **kw: _FakeClimo())
+    monkeypatch.setattr("core.cli.forecast.fit_empirical_conditional", lambda *a, **kw: _FakeEmpirical())
+    monkeypatch.setattr("core.cli.forecast.build_cp_features", lambda *a, **kw: _FakeFeats())
+    monkeypatch.setattr("core.cli.forecast.support_K", lambda *a, **kw: [13, 14, 15, 16])
+    monkeypatch.setattr("core.cli.forecast.log_event", lambda *a, **kw: None)
+    monkeypatch.setattr(
+        "core.cli.forecast.build_training_panel",
+        lambda *a, **kw: _FakeTPanel(120, [date(2025, 7, 1)]),
+    )
+    monkeypatch.setattr(
+        "core.cli.forecast.fit_ridge_band",
+        lambda *a, **kw: types.SimpleNamespace(alpha=1.0),
+    )
+    monkeypatch.setattr("core.cli.forecast.ridge_predict_dist", lambda *a, **kw: [{14: 1.0}])
+
+    from core.cli.forecast import run
+    from typer.testing import CliRunner
+    import typer
+
+    app = typer.Typer()
+    app.command()(run)
+    runner = CliRunner(mix_stderr=False)
+    result = runner.invoke(
+        app,
+        ["--date", "2025-07-15", "--cp", "22", "--model", "auto", "--no-nwp-probe", "--dry-run"],
+    )
+    assert result.exit_code == 0, (result.stdout, result.stderr, repr(result.exception))
+
+    routing = json.loads(result.stdout)["routing"]
+    assert routing["ecmwf_available"] is False
+    assert routing["gfs_available"] is False
+    assert routing["model_route"] == "ridge"

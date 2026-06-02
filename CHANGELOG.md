@@ -4,6 +4,34 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:Onda1] - 2026-06-02 - Live NWP causal probe + D1-D6 over-coverage diagnostic (operational code)
+
+Reviewer "Regra De Ritmo" directive (`references/code-reviews/update.txt`): stop the review-corrige-review
+loop and ship OPERATIONAL code. Onda 1 immediate priority = two executable tracks (no remedy chosen).
+
+- **Live NWP causal probe (Agents A/B):** `core/ingest/nwp_live.py` -- snapshot-only, read-only probe
+  (`probe_causal_nwp`) over EXISTING local NWP snapshots (no HTTP this pass). It answers
+  `ecmwf_available`/`gfs_available`/`nwp_run_time_utc` for a station/date/CP by reusing `read_snapshots` +
+  `select_nwp_v1` (causality = `run_time <= cp_utc - 60min`); missing roots degrade to unavailable without
+  raising. Wired into `core/cli/forecast.py`: the hardcoded `_PHASE3_ECMWF_AVAILABLE=False`/`_GFS_=False`
+  flags are DELETED; `--model auto` now routes on REAL probed availability (new `--nwp-root` /
+  `--nwp-probe/--no-nwp-probe` options). Residual routes still degrade to ridge this phase (no residual
+  serving yet) -- the JSON records `model_route` vs `served_model` + `degraded_reason` (reviewer line 31).
+  The SAME router + table will serve residuals in Phase 5 with no logic change.
+- **D1-D6 over-coverage diagnostic (Agent C):** `scripts/diagnose_cqr_overcoverage.py` re-fits the SAME
+  frozen CQR config (imported from the eval; eval script NOT modified) on the SAME slices and computes
+  D1 pinball / D2 base-vs-CQR coverage / D3 per-width-quartile slope / D4 raw quantile-crossing / D5 width
+  attribution + `E` distribution / D6 oracle integer-grid floor (oracle = peeks at test truth,
+  `oracle_lower_bound_diagnostic_only: true`, NEVER a model-selection signal). Reports:
+  `reports/calibration/cqr_overcoverage_diagnostic.{json,md}`. **Verdict: F3** (integer-granularity floor):
+  D4 crossing ~0 (rules out F2); base band already over-covers 0.875 and CQR adds only ~12% width; the
+  oracle 80% floor is ~10 integer brackets while the CQR band is ~3.8-4.2 -- discrete bracket structure
+  forces over-coverage, no conformal step can narrow below it. F1 (slope 0.05) is a minor secondary. This
+  is descriptive evidence ONLY; it branches Onda 2 toward Phase 5 + MOS/EMOS-lite, NOT a new QRF prereg.
+- Read-only diagnostic; no gate re-opened, no remedy run; frozen contracts/CQR eval untouched. Suite 414
+  green (+12 new tests: probe causal/fallback cases, CLI ECMWF-probe routing, D1-D6 pure-helper pins);
+  ASCII guard clean. Deterministic (seed 42), run once.
+
 ## [phase11:T-11-8 Phase4-CQR] - 2026-06-02 - CQR LightGBM IC80 KILL (honest; over-covers at integer granularity)
 
 Phase 4 (reviewer directive, `references/code-reviews/update.txt`): build the Conformalized Quantile

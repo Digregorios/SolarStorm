@@ -19,19 +19,12 @@ from core.eval.intervals import discrete_ic
 from core.features.builder import build_cp_features, build_panel
 from core.features.training_panel import FEATURE_COLUMNS, build_training_panel
 from core.ingest.iem_csv import load_observations
+from core.ingest.nwp_live import DEFAULT_NWP_ROOT, probe_causal_nwp
 from core.io.logging import log_event, new_run_id
 from core.io.timeutil import day_local_window
 from core.labels.tmax import build_tmax_labels
 from core.models.ridge_band import RidgeBandConfig, fit_ridge_band, predict_dist as ridge_predict_dist
 from core.cli.routing import recommend_route, resolve_servable
-
-# Phase 3 serving has NO live NWP wired in (Live NWP is Phase 5). These are the single
-# switch the Phase 5 work flips; until then the router degrades CP20-22 to ridge. They are
-# named (not inlined) so the Phase 5 wiring point is greppable and impossible to miss.
-# TODO(Phase 5): replace with a live causal-NWP availability probe (see PLAN_2026-06-01.md
-# Fase 5; e.g. core/ingest/nwp_live.py) and pass the real run_time into recommend_route.
-_PHASE3_ECMWF_AVAILABLE = False
-_PHASE3_GFS_AVAILABLE = False
 
 
 def _join_reason(existing: str | None, new: str) -> str:
@@ -69,6 +62,8 @@ def run(
     train_end: str | None = typer.Option(None, "--train-end"),
     out_root: Path = typer.Option(Path("artifacts/forecasts"), "--out-root"),
     model: str = typer.Option("empirical", "--model", help="Forecast model: 'empirical' (default baseline), 'ridge' (Phase 3 trained), or 'auto' (conservative per-CP router)."),
+    nwp_root: Path = typer.Option(DEFAULT_NWP_ROOT, "--nwp-root", help="Root of local NWP snapshots for the --model auto causal probe."),
+    nwp_probe: bool = typer.Option(True, "--nwp-probe/--no-nwp-probe", help="For --model auto: probe local snapshots for causal ECMWF/GFS availability. Off => treat NWP as unavailable (forces ridge fallback)."),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
     """Emit a forecast row. Default model is the Phase-2 empirical baseline; ``--model ridge``
@@ -115,17 +110,30 @@ def run(
         kcp_for_pred = int(kcp)
 
     # Resolve the effective servable model. 'auto' consults the conservative
-    # per-CP router; Phase 3 serving has no NWP wired in (Live NWP is Phase 5),
-    # so ECMWF/GFS are unavailable here and the router degrades to ridge. Phase 5
-    # flips the availability flags and the same table routes to the residuals.
+    # per-CP router with REAL causal-NWP availability probed from local snapshots
+    # (core/ingest/nwp_live.py). The probe only reports availability + run_time; this
+    # pass still degrades residual routes to ridge (Phase 3 has no residual serving),
+    # so we record model_route vs served_model. Phase 5 turns on residual serving with
+    # the SAME table and probe - no routing-logic change.
     route = None
     degraded_reason = None
     if model == "auto":
+        if nwp_probe:
+            probe = probe_causal_nwp(
+                station=cfg.icao, target_date=d, cp_hhmm=cp_hhmm, out_root=nwp_root
+            )
+            ecmwf_available = probe.ecmwf_available
+            gfs_available = probe.gfs_available
+            nwp_run_time = probe.nwp_run_time_utc
+        else:
+            ecmwf_available = False
+            gfs_available = False
+            nwp_run_time = None
         route = recommend_route(
             int(cp),
-            ecmwf_available=_PHASE3_ECMWF_AVAILABLE,
-            gfs_available=_PHASE3_GFS_AVAILABLE,
-            nwp_run_time_utc=None,
+            ecmwf_available=ecmwf_available,
+            gfs_available=gfs_available,
+            nwp_run_time_utc=nwp_run_time,
         )
         effective_model, degraded_reason = resolve_servable(route.model_route)
     else:
