@@ -723,17 +723,22 @@ def compute_routing_recommendation(ecmwf_results, full_results):
             if fold_metrics[best][f]["mae"] <= fold_metrics[incumbent][f]["mae"]:
                 folds_won += 1
 
-        # Check: no calm degradation. Compared fold-by-fold on folds where BOTH best and incumbent
-        # have a calm stratum. If they share NO calm fold, calm preservation cannot be verified, so
-        # the conservative router refuses to promote best (calm_ok=false) -- consistent with keeping
-        # the incumbent unless a challenger is provably safe (reviewer 2nd-pass A6). On the current
-        # data every candidate has calm metrics in every fold, so this guard does not change routing.
-        common_calm_folds = set(fold_calm_metrics[best].keys()) & set(fold_calm_metrics[incumbent].keys())
-        if not common_calm_folds:
+        # Check: no calm degradation, WITH a calm-coverage requirement (official reviewer residual P3).
+        # best must have a calm stratum in EVERY fold where the incumbent has one. A non-empty
+        # intersection is NOT enough (reviewer 2nd-pass A6 only blocked the empty case): if best covers
+        # just some of the incumbent's calm folds, it could pass on those and leave calm UNVERIFIED on
+        # the rest, so promotion would not actually prove calm preservation. Require
+        # inc_calm_folds <= best_calm_folds; otherwise calm_ok=false (conservative: do not promote when
+        # calm cannot be verified on ALL of the incumbent's folds). On the current data every candidate
+        # has calm metrics in every fold, so this does not change routing -- it only hardens the gate
+        # against partial-coverage challengers.
+        inc_calm_folds = set(fold_calm_metrics[incumbent].keys())
+        best_calm_folds = set(fold_calm_metrics[best].keys())
+        if not inc_calm_folds or not inc_calm_folds.issubset(best_calm_folds):
             calm_ok = False
         else:
             calm_ok = True
-            for f in sorted(common_calm_folds):
+            for f in sorted(inc_calm_folds):
                 if fold_calm_metrics[best][f]["mae"] > fold_calm_metrics[incumbent][f]["mae"] + 0.05:
                     calm_ok = False
                     break

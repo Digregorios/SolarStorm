@@ -101,3 +101,37 @@ def test_calm_unverifiable_candidate_is_kept_out():
     assert d["calm_ok"] is False                      # but calm cannot be verified
     assert routing[CP23] == "ridge"                   # so Ridge is kept
     assert d["winner"] == "ridge"
+
+
+def test_calm_partial_coverage_candidate_is_kept_out():
+    """gfs_residual wins ALL-MAE on all 3 folds but has a calm stratum in only ONE of Ridge's folds.
+
+    The single covered fold does NOT degrade, so the old intersection-only guard would have set
+    calm_ok=True and promoted gfs. The calm-COVERAGE requirement (official reviewer residual P3)
+    rejects it: calm is unverified in 2 of the incumbent's 3 folds, so calm_ok=False and Ridge stays.
+    """
+    full_results = [
+        _split("f0", {
+            "ridge": _cand(1.00, 1.00, calm_mae=1.00),
+            "gfs_residual": _cand(0.50, 0.50, calm_mae=0.50),   # calm present here, non-degrading
+            "analog_arm": _cand(1.20, 1.20, calm_mae=1.20),
+        }),
+        _split("f1", {
+            "ridge": _cand(1.00, 1.00, calm_mae=1.00),
+            "gfs_residual": _cand(0.50, 0.50, calm_mae=None),   # ALL only, NO calm stratum
+            "analog_arm": _cand(1.20, 1.20, calm_mae=1.20),
+        }),
+        _split("f2", {
+            "ridge": _cand(1.00, 1.00, calm_mae=1.00),
+            "gfs_residual": _cand(0.50, 0.50, calm_mae=None),   # ALL only, NO calm stratum
+            "analog_arm": _cand(1.20, 1.20, calm_mae=1.20),
+        }),
+    ]
+    routing, detail = compute_routing_recommendation([], full_results)
+
+    d = detail[CP23]
+    assert d["coverage_ok"]["gfs_residual"] is True   # ALL-stratum coverage is complete
+    assert d["best_by_mae"] == "gfs_residual"          # it does win on MAE
+    assert d["calm_ok"] is False                       # but calm is unverified in 2 of 3 incumbent folds
+    assert routing[CP23] == "ridge"                    # so Ridge is kept
+    assert d["winner"] == "ridge"
