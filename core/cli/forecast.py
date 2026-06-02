@@ -193,6 +193,8 @@ def run(
             source = result.source
             model_version = result.model_version
             effective_model = result.served_model
+            degraded_reason = None
+            nwp_run_time = result.run_time_utc
             residual_telemetry = {
                 "valid_time_utc": result.valid_time_utc,
                 "valid_time_delta_h": result.valid_time_delta_h,
@@ -275,7 +277,7 @@ def run(
             "gfs_available": route.gfs_available,
             "ecmwf_endpoint": ecmwf_endpoint,
             "gfs_endpoint": gfs_endpoint,
-            "nwp_run_time_utc": route.nwp_run_time_utc,
+            "nwp_run_time_utc": nwp_run_time,
             "valid_time_utc": residual_telemetry["valid_time_utc"],
             "valid_time_delta_h": residual_telemetry["valid_time_delta_h"],
             "lead_h": residual_telemetry["lead_h"],

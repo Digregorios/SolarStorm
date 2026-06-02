@@ -132,11 +132,13 @@ def test_serve_residuals_served_path_records_telemetry(monkeypatch):
     assert routing["cp"] == 22
     assert routing["model_route"] == "ecmwf_residual"
     assert routing["served_model"] == "ecmwf_residual"
+    assert routing["degraded_reason"] is None
     # P3b telemetry: nothing is "at CP" without a recorded valid_time trace.
     assert routing["valid_time_utc"] == "2025-07-15T10:00:00+00:00"
     assert routing["valid_time_delta_h"] == 0.0
     assert routing["lead_h"] == 10
     assert routing["run_age_h"] == 10.0
+    assert routing["nwp_run_time_utc"] == "2025-07-15T00:00:00+00:00"
     assert routing["ecmwf_endpoint"] == "single_runs"
     assert routing["gfs_endpoint"] == "s3_grib"
     assert routing["spread_used"] is False
@@ -271,7 +273,7 @@ class _FakeThc:
         self._cp_utc = cp_utc
 
     def window_utc(self, d, cp_utc):
-        return (cp_utc - timedelta(hours=5), cp_utc)
+        return (self._cp_utc - timedelta(hours=5), self._cp_utc)
 
 
 class _FakeResidualPanel:
@@ -331,3 +333,118 @@ def test_serve_residual_leakage_pin_refuses_noncausal_run(monkeypatch):
     )
     assert result is None
     assert reason == "no_causal_nwp_serve_row"
+
+
+def _synthetic_anchor_snaps(cp_utc: datetime) -> pl.DataFrame:
+    """Causal run where at-CP is not the max-trajectory anchor.
+
+    The old telemetry path called ``select_nwp_ensemble(... target_valid=cp)`` and
+    would report valid_time=CP. The served residual uses the max-trajectory anchor,
+    whose peak here is CP+2h; telemetry must report that anchor row instead.
+    """
+    run_time = cp_utc - timedelta(hours=6)
+    rows = [
+        {
+            "station": "NZWN",
+            "model": "ecmwf_ifs_hres",
+            "endpoint": "single_runs",
+            "run_time_utc": run_time,
+            "valid_time_utc": cp_utc,
+            "lead_h": 6,
+            "t2m_c": 12.0,
+            "wind_speed_10m": 5.0,
+            "wind_direction_10m": 180.0,
+            "pressure_msl": 1012.0,
+            "cloud_cover": 50.0,
+            "precipitation": 0.0,
+        },
+        {
+            "station": "NZWN",
+            "model": "ecmwf_ifs_hres",
+            "endpoint": "single_runs",
+            "run_time_utc": run_time,
+            "valid_time_utc": cp_utc + timedelta(hours=2),
+            "lead_h": 8,
+            "t2m_c": 20.0,
+            "wind_speed_10m": 5.0,
+            "wind_direction_10m": 180.0,
+            "pressure_msl": 1012.0,
+            "cloud_cover": 50.0,
+            "precipitation": 0.0,
+        },
+    ]
+    return pl.DataFrame(rows).with_columns(
+        pl.col("run_time_utc").dt.replace_time_zone("UTC"),
+        pl.col("valid_time_utc").dt.replace_time_zone("UTC"),
+        pl.col("lead_h").cast(pl.Int32),
+    )
+
+
+def _residual_train_panel(cp: str = "22:00") -> pl.DataFrame:
+    from core.cli.residual_serving import PHASE4_FEATURES
+
+    rows = []
+    for i in range(120):
+        row = {c: 1.0 for c in PHASE4_FEATURES}
+        row.update({
+            "cp": cp,
+            "target_tmax_int": 14 + (i % 2),
+            "nwp_t2m_maxtraj_c": 13.0 + (i % 3),
+        })
+        rows.append(row)
+    return pl.DataFrame(rows)
+
+
+def test_serve_residual_reports_maxtraj_anchor_telemetry(monkeypatch):
+    """Served telemetry follows the anchor row, not the separate at-CP selector."""
+    cp_utc = datetime(2025, 7, 15, 10, 0, tzinfo=timezone.utc)
+    feats = types.SimpleNamespace(
+        cp_utc=cp_utc,
+        cp_local=datetime(2025, 7, 15, 22, 0),
+        features={
+            "k_cp": 14,
+            "last_obs_tmp_c_int": 13,
+            "wind_dir_deg": 180.0,
+        },
+    )
+
+    monkeypatch.setattr(
+        "core.cli.residual_serving.read_snapshots",
+        lambda *a, **kw: _synthetic_anchor_snaps(cp_utc),
+    )
+    monkeypatch.setattr(
+        "core.cli.residual_serving.fit_tmax_hour_climatology",
+        lambda *a, **kw: _FakeThc(cp_utc + timedelta(hours=2)),
+    )
+    monkeypatch.setattr(
+        "core.cli.residual_serving.build_training_panel",
+        lambda *a, **kw: _residual_train_panel(),
+    )
+    monkeypatch.setattr(
+        "core.cli.residual_serving.fit_residual_lgbm",
+        lambda *a, **kw: object(),
+    )
+    monkeypatch.setattr(
+        "core.cli.residual_serving.residual_predict_dist",
+        lambda *a, **kw: [{14: 1.0}],
+    )
+
+    from core.cli.residual_serving import serve_residual
+
+    result, reason = serve_residual(
+        route_model="ecmwf_residual",
+        station="NZWN", obs=None,
+        labels=pl.DataFrame({"date_local": [date(2025, 7, 1)]}),
+        climo=_FakeClimo(), feats=feats,
+        support_k=[13, 14, 15], cp_hhmm="22:00", d=date(2025, 7, 15),
+        tz_name="Pacific/Auckland", cp_set=["22:00"],
+        train_start_d=date(2020, 1, 1), train_end_d=date(2025, 7, 14),
+        nwp_root="fake",
+    )
+
+    assert reason is None
+    assert result is not None
+    assert result.valid_time_utc == (cp_utc + timedelta(hours=2)).isoformat()
+    assert result.valid_time_delta_h == 2.0
+    assert result.lead_h == 8
+    assert result.run_age_h == 6.0

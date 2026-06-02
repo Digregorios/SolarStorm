@@ -4,6 +4,18 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:Onda2-B patch-forward] - 2026-06-02 - residual serving JSON truthfulness
+
+Reviewer follow-up on `f230636`: no Track C, no B2 metric re-run. Patch-forward only:
+
+- `forecast --model auto --serve-residuals` now clears the pre-flag
+  `*_not_servable_phase3_fallback_ridge` `degraded_reason` when the residual arm actually serves.
+  Served residual JSON can no longer say both `served_model=ecmwf_residual` and fallback-to-Ridge.
+- Residual telemetry now records the max-trajectory anchor that fed the prediction. `MaxTrajAnchor`
+  carries `valid_time_utc`/`lead_h`, and `core/cli/residual_serving.py` uses those fields instead of
+  running a separate at-CP selector for telemetry. Tests pin the divergent case where CP valid-time and
+  maxtraj anchor valid-time differ.
+
 ## [phase11:Onda2-B] - 2026-06-02 - residual serving v0 behind `--serve-residuals` (B1 shipped; B2 measured)
 
 Reviewer Onda 2 (`references/code-reviews/update.txt`) authorized **Track B** with a tight contract

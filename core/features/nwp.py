@@ -57,13 +57,17 @@ class MaxTrajAnchor:
     ``anchor_c`` is the ensemble mean of each model's windowed max; ``spread_c`` is
     the ensemble std of those per-model maxima (same causal source feeds both -
     D6). ``per_model_max`` records each model's max; ``run_time_utc`` is the latest
-    selected causal run actually used (for the leakage gate).
+    selected causal run actually used (for the leakage gate). ``valid_time_utc`` /
+    ``lead_h`` are the representative valid timestamp that produced the max anchor;
+    for single-model serving this is the exact row used by the residual arm.
     """
 
     nwp_t2m_maxtraj_c: float | None
     nwp_t2m_maxtraj_spread_c: float | None
     per_model_max: dict[str, float | None]
     run_time_utc: datetime | None
+    valid_time_utc: datetime | None
+    lead_h: int | None
     n_models: int
     n_valid_steps: int
 
@@ -101,6 +105,7 @@ def select_max_trajectory_anchor(
     per_model_max: dict[str, float | None] = {}
     maxima: list[float] = []
     runs: list[datetime] = []
+    anchor_trace: list[tuple[datetime, int]] = []
     total_steps = 0
     for m in models:
         sub_m = snapshots.filter(pl.col("model") == m)
@@ -123,23 +128,34 @@ def select_max_trajectory_anchor(
             per_model_max[m] = None
             continue
         m_max = float(run_rows["t2m_c"].max())
+        max_row = (
+            run_rows
+            .filter(pl.col("t2m_c") == m_max)
+            .sort("valid_time_utc")
+            .row(0, named=True)
+        )
         per_model_max[m] = m_max
         maxima.append(m_max)
         runs.append(sel.run_time_utc)
+        anchor_trace.append((max_row["valid_time_utc"], int(max_row["lead_h"])))
         total_steps += run_rows.height
 
     if not maxima:
         return MaxTrajAnchor(
             nwp_t2m_maxtraj_c=None, nwp_t2m_maxtraj_spread_c=None,
             per_model_max=per_model_max, run_time_utc=None,
+            valid_time_utc=None, lead_h=None,
             n_models=0, n_valid_steps=0,
         )
     arr = np.asarray(maxima, dtype=float)
+    anchor_valid, anchor_lead = max(anchor_trace, key=lambda t: t[0])
     return MaxTrajAnchor(
         nwp_t2m_maxtraj_c=float(arr.mean()),
         nwp_t2m_maxtraj_spread_c=float(arr.std()) if arr.size > 1 else 0.0,
         per_model_max=per_model_max,
         run_time_utc=max(runs),
+        valid_time_utc=anchor_valid,
+        lead_h=anchor_lead,
         n_models=int(arr.size),
         n_valid_steps=int(total_steps),
     )
@@ -272,4 +288,3 @@ __all__ = [
     "compute_nwp_features",
     "select_max_trajectory_anchor",
 ]
-

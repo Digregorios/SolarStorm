@@ -33,7 +33,10 @@ def _snapshots(rows: list[dict]) -> pl.DataFrame:
             "model": [r["model"] for r in rows],
             "run_time_utc": [r["run_time_utc"] for r in rows],
             "valid_time_utc": [r["valid_time_utc"] for r in rows],
-            "lead_h": [int(r.get("lead_h", 0)) for r in rows],
+            "lead_h": [
+                int(r.get("lead_h", (r["valid_time_utc"] - r["run_time_utc"]).total_seconds() / 3600))
+                for r in rows
+            ],
             "t2m_c": [r.get("t2m_c") for r in rows],
         },
         schema={
@@ -66,6 +69,8 @@ def test_anchor_takes_windowed_max_from_single_causal_run():
     assert res.nwp_t2m_maxtraj_c == 19.0  # the peak across the window
     assert res.per_model_max["ecmwf_ifs_hres"] == 19.0
     assert res.run_time_utc == run
+    assert res.valid_time_utc == _utc(2024, 1, 11, 0)
+    assert res.lead_h == 6
     assert res.n_models == 1
     assert res.n_valid_steps == 4
 
@@ -102,6 +107,8 @@ def test_anchor_refuses_non_causal_run():
     )
     assert res.nwp_t2m_maxtraj_c is None
     assert res.run_time_utc is None
+    assert res.valid_time_utc is None
+    assert res.lead_h is None
     assert res.per_model_max["ecmwf_ifs_hres"] is None
 
 

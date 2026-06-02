@@ -36,7 +36,7 @@ from core.features.training_panel import (
     NWP_FEATURE_COLUMNS,
     build_training_panel,
 )
-from core.ingest.nwp import read_snapshots, select_nwp_ensemble
+from core.ingest.nwp import read_snapshots
 from core.ingest.nwp_client import ECMWF_IFS_HRES, NCEP_GFS
 from core.models.residual_lgbm import (
     ResidualLgbmConfig,
@@ -191,22 +191,20 @@ def serve_residual(
         fitted, x_row, np.array([float(anchor.nwp_t2m_maxtraj_c)]), [support_k]
     )[0]
 
-    # Telemetry: per-model causal selection at CP (records the nearest-lead trace, P3b).
-    sel = select_nwp_ensemble(
-        snaps, cp_utc=feats.cp_utc, target_valid_utc=feats.cp_utc, models=[spec.id]
-    )[spec.id]
-    if sel is not None:
-        vt = sel.valid_time_utc
-        rt = sel.run_time_utc
+    # Telemetry must describe the max-trajectory anchor that fed the residual
+    # prediction, not a separate at-CP selector that may choose a different valid time.
+    vt = anchor.valid_time_utc
+    rt = anchor.run_time_utc
+    if vt is None or rt is None:
+        run_time_utc = valid_time_utc = None
+        valid_time_delta_h = run_age_h = None
+        lead_h = None
+    else:
         valid_time_delta_h = abs((vt - feats.cp_utc).total_seconds()) / 3600.0
         run_age_h = (feats.cp_utc - rt).total_seconds() / 3600.0
         run_time_utc = rt.isoformat()
         valid_time_utc = vt.isoformat()
-        lead_h = int(sel.lead_h)
-    else:
-        run_time_utc = valid_time_utc = None
-        valid_time_delta_h = run_age_h = None
-        lead_h = None
+        lead_h = int(anchor.lead_h) if anchor.lead_h is not None else None
 
     return (
         ResidualServe(
