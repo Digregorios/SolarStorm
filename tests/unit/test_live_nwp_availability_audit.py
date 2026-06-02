@@ -21,6 +21,7 @@ from scripts.live_nwp_availability_audit import (
     summarize,
     _any_causal,
     _months_in_window,
+    _serving_readiness,
 )
 
 STATION = "NZWN"
@@ -147,3 +148,30 @@ def test_any_causal_unions_models():
     out2 = _any_causal(per_model_raw2, cp_set=[cp], n_days=2)
     assert out2[cp]["coverage"] == 0.5
     assert out2[cp]["gaps_first5"] == [d2.isoformat()]
+
+
+def test_serving_readiness_only_judges_cp20_22():
+    """P3a: serving readiness keys off CP20-22 only; a CP23 gap must NOT mask it,
+    and a CP20-22 gap must NOT be diluted by a healthy CP23."""
+    # CP20-22 all full, CP23 below threshold -> serving GO (CP23 ignored).
+    any_causal = {
+        "20:00": {"coverage": 1.0},
+        "21:00": {"coverage": 0.995},
+        "22:00": {"coverage": 0.99},
+        "23:00": {"coverage": 0.50},  # conservative Ridge CP -- irrelevant to serving
+    }
+    sr = _serving_readiness(any_causal, threshold=0.99)
+    assert sr["cps"] == ["20:00", "21:00", "22:00"]
+    assert sr["serving_verdict"] == "GO"
+    assert sr["serving_offending_cps"] == []
+
+    # A single CP20-22 gap -> serving PAUSE even if CP23 is perfect.
+    any_causal2 = {
+        "20:00": {"coverage": 0.9556},  # the real-data number today -> PAUSE
+        "21:00": {"coverage": 1.0},
+        "22:00": {"coverage": 1.0},
+        "23:00": {"coverage": 1.0},
+    }
+    sr2 = _serving_readiness(any_causal2, threshold=0.99)
+    assert sr2["serving_verdict"] == "PAUSE"
+    assert sr2["serving_offending_cps"] == ["20:00"]

@@ -63,9 +63,9 @@
     "ecmwf": "single_runs",
     "gfs": "s3_grib"
   },
-  "generated_utc": "2026-06-02T17:24:13.726353+00:00",
-  "git_sha": "119fba34dac2a545749e9c434f69ed09bfa028e1",
-  "note": "Read-only causal audit over local snapshots; no fetch, no model. run_time <= cp - 60min enforced by select_nwp_v1 and re-checked here. Per-model endpoints from ENDPOINT_BY_MODEL (ecmwf single_runs, gfs s3_grib). Verdict threshold any_causal coverage >= 0.99 on all CPs was frozen before the numbers. ECMWF pre-2024 absence is reported honestly as a per-CP coverage gap, not a bug -- the audit measures reality.",
+  "generated_utc": "2026-06-02T19:45:25.328943+00:00",
+  "git_sha": "b6ec9f2b120aa3a67fa124b33dac682b52b27f86",
+  "note": "Read-only causal audit over local snapshots; no fetch, no model. run_time <= cp - 60min enforced by select_nwp_v1 and re-checked here. Per-model endpoints from ENDPOINT_BY_MODEL (ecmwf single_runs, gfs s3_grib). Verdict threshold any_causal coverage >= 0.99 on all CPs was frozen before the numbers. ECMWF pre-2024 absence is reported honestly as a per-CP coverage gap, not a bug -- the audit measures reality. serving_readiness (P3a) re-judges the SAME any_causal numbers over CP20-22 (NWP_LEAD_CPS) only -- CP23 is conservative Ridge and needs no NWP.",
   "offending_cps": [
     "20:00",
     "21:00",
@@ -323,6 +323,63 @@
     }
   },
   "safety_margin_min": 60,
+  "serving_readiness": {
+    "cps": [
+      "20:00",
+      "21:00",
+      "22:00"
+    ],
+    "per_cp": {
+      "20:00": {
+        "causal": 1745,
+        "coverage": 0.9556,
+        "fallback_rate": 0.0444,
+        "gaps_first5": [
+          "2021-01-01",
+          "2021-01-02",
+          "2021-01-03",
+          "2021-01-04",
+          "2021-01-05"
+        ],
+        "n_days": 1826,
+        "n_gaps": 81
+      },
+      "21:00": {
+        "causal": 1745,
+        "coverage": 0.9556,
+        "fallback_rate": 0.0444,
+        "gaps_first5": [
+          "2021-01-01",
+          "2021-01-02",
+          "2021-01-03",
+          "2021-01-04",
+          "2021-01-05"
+        ],
+        "n_days": 1826,
+        "n_gaps": 81
+      },
+      "22:00": {
+        "causal": 1745,
+        "coverage": 0.9556,
+        "fallback_rate": 0.0444,
+        "gaps_first5": [
+          "2021-01-01",
+          "2021-01-02",
+          "2021-01-03",
+          "2021-01-04",
+          "2021-01-05"
+        ],
+        "n_days": 1826,
+        "n_gaps": 81
+      }
+    },
+    "serving_offending_cps": [
+      "20:00",
+      "21:00",
+      "22:00"
+    ],
+    "serving_verdict": "PAUSE"
+  },
   "station": "NZWN",
   "verdict": "PAUSE",
   "window": [

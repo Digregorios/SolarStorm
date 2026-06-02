@@ -23,6 +23,7 @@ from pathlib import Path
 import numpy as np
 import polars as pl
 
+from core.cli.routing import NWP_LEAD_CPS
 from core.contracts.station import load_station_config
 from core.ingest.nwp import SAFETY_MARGIN_DEFAULT, read_snapshots, select_nwp_v1
 from core.ingest.nwp_client import ECMWF_IFS_HRES, NCEP_GFS
@@ -161,6 +162,29 @@ def _any_causal(per_model_raw: dict[str, dict], *, cp_set: list[str], n_days: in
     return out
 
 
+def _serving_readiness(any_causal: dict, *, threshold: float) -> dict:
+    """P3a: serving-readiness over CP20-22 ONLY (the CPs the router can actually serve).
+
+    The general ``verdict`` keys off all 4 CPs (CP20-23 audit coverage), but serving
+    only ever fires at ``NWP_LEAD_CPS`` (CP20-22) -- CP23 is conservative Ridge and
+    needs no NWP. So readiness must be judged against CP20-22 alone: a CP23 NWP gap
+    must NOT mask serving readiness, and a CP20-22 gap must NOT be diluted by CP23.
+    Numbers are the unchanged ``any_causal`` rows, just sliced to the serving CPs.
+    """
+    serving_cps = {
+        cp: s for cp, s in any_causal.items()
+        if int(cp.split(":")[0]) in NWP_LEAD_CPS
+    }
+    offending = [cp for cp, s in serving_cps.items() if s["coverage"] < threshold]
+    all_full = bool(serving_cps) and not offending
+    return {
+        "cps": sorted(serving_cps),
+        "per_cp": serving_cps,
+        "serving_verdict": "GO" if all_full else "PAUSE",
+        "serving_offending_cps": offending,
+    }
+
+
 def main() -> int:
     load_station_config(REPO / "nzwn" / "config" / "station.yaml")
     dates = _dates(START, END)
@@ -181,6 +205,7 @@ def main() -> int:
     any_causal = _any_causal(per_model_raw, cp_set=CP_SET, n_days=len(dates))
     all_any_full = all(s["coverage"] >= COVERAGE_THRESHOLD for s in any_causal.values())
     offending = [cp for cp, s in any_causal.items() if s["coverage"] < COVERAGE_THRESHOLD]
+    serving_readiness = _serving_readiness(any_causal, threshold=COVERAGE_THRESHOLD)
 
     out = {
         "audit": "live_nwp_availability",
@@ -194,13 +219,16 @@ def main() -> int:
         "any_causal": any_causal,
         "verdict": "GO" if all_any_full else "PAUSE",
         "offending_cps": offending,
+        "serving_readiness": serving_readiness,
         "note": (
             "Read-only causal audit over local snapshots; no fetch, no model. "
             "run_time <= cp - 60min enforced by select_nwp_v1 and re-checked here. "
             "Per-model endpoints from ENDPOINT_BY_MODEL (ecmwf single_runs, gfs s3_grib). "
             f"Verdict threshold any_causal coverage >= {COVERAGE_THRESHOLD} on all CPs "
             "was frozen before the numbers. ECMWF pre-2024 absence is reported honestly "
-            "as a per-CP coverage gap, not a bug -- the audit measures reality."
+            "as a per-CP coverage gap, not a bug -- the audit measures reality. "
+            "serving_readiness (P3a) re-judges the SAME any_causal numbers over "
+            "CP20-22 (NWP_LEAD_CPS) only -- CP23 is conservative Ridge and needs no NWP."
         ),
         "generated_utc": datetime.now(timezone.utc).isoformat(),
     }
@@ -214,6 +242,10 @@ def main() -> int:
     (rep / "availability_audit.md").write_text(_render(out), encoding="ascii")
 
     print(f"VERDICT {out['verdict']} | any_causal>=thr {all_any_full} | offending {offending or '-'}")
+    print(
+        f"SERVING {serving_readiness['serving_verdict']} (CP20-22) | "
+        f"offending {serving_readiness['serving_offending_cps'] or '-'}"
+    )
     for label in per_model_summary:
         print(f"  [{label} @ {endpoints[label]}]")
         for cp, s in per_model_summary[label].items():
@@ -228,12 +260,15 @@ def main() -> int:
 
 
 def _render(out: dict) -> str:
+    sr = out["serving_readiness"]
     L = [
         f"# Live NWP availability audit (Onda 2-A) - **{out['verdict']}**",
         "",
         f"- git_sha: `{out['git_sha']}`  station: {out['station']}  "
         f"window: {out['window'][0]}..{out['window'][1]}  safety: {out['safety_margin_min']}min",
         f"- {out['note']}",
+        f"- **serving_readiness (CP20-22): {sr['serving_verdict']}** "
+        f"(offending: {sr['serving_offending_cps'] or '-'}) -- general verdict above is over all 4 CPs.",
         "",
         "## any_causal (router keys off EITHER model at CP20-22)",
         "",

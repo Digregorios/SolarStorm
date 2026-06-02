@@ -1,7 +1,8 @@
 # Live NWP availability audit (Onda 2-A) - **PAUSE**
 
-- git_sha: `119fba34dac2a545749e9c434f69ed09bfa028e1`  station: NZWN  window: 2021-01-01..2025-12-31  safety: 60min
-- Read-only causal audit over local snapshots; no fetch, no model. run_time <= cp - 60min enforced by select_nwp_v1 and re-checked here. Per-model endpoints from ENDPOINT_BY_MODEL (ecmwf single_runs, gfs s3_grib). Verdict threshold any_causal coverage >= 0.99 on all CPs was frozen before the numbers. ECMWF pre-2024 absence is reported honestly as a per-CP coverage gap, not a bug -- the audit measures reality.
+- git_sha: `b6ec9f2b120aa3a67fa124b33dac682b52b27f86`  station: NZWN  window: 2021-01-01..2025-12-31  safety: 60min
+- Read-only causal audit over local snapshots; no fetch, no model. run_time <= cp - 60min enforced by select_nwp_v1 and re-checked here. Per-model endpoints from ENDPOINT_BY_MODEL (ecmwf single_runs, gfs s3_grib). Verdict threshold any_causal coverage >= 0.99 on all CPs was frozen before the numbers. ECMWF pre-2024 absence is reported honestly as a per-CP coverage gap, not a bug -- the audit measures reality. serving_readiness (P3a) re-judges the SAME any_causal numbers over CP20-22 (NWP_LEAD_CPS) only -- CP23 is conservative Ridge and needs no NWP.
+- **serving_readiness (CP20-22): PAUSE** (offending: ['20:00', '21:00', '22:00']) -- general verdict above is over all 4 CPs.
 
 ## any_causal (router keys off EITHER model at CP20-22)
 

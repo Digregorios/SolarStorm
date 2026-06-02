@@ -26,6 +26,7 @@ from core.io.timeutil import day_local_window
 from core.labels.tmax import build_tmax_labels
 from core.models.ridge_band import RidgeBandConfig, fit_ridge_band, predict_dist as ridge_predict_dist
 from core.cli.routing import recommend_route, resolve_servable
+from core.cli.residual_serving import serve_residual
 
 
 def _join_reason(existing: str | None, new: str) -> str:
@@ -49,6 +50,13 @@ def _emit_routing_banner(routing: dict, ic_low: int, ic_high: int) -> None:
         err=True,
     )
     typer.echo(
+        f"  served={routing['served_model']} "
+        f"valid_time={routing['valid_time_utc'] or 'none'} "
+        f"dt_h={routing['valid_time_delta_h']} lead_h={routing['lead_h']} "
+        f"run_age_h={routing['run_age_h']}",
+        err=True,
+    )
+    typer.echo(
         f"  train: {routing['train_start']}..{routing['train_end']}  "
         f"IC80: [{ic_low}, {ic_high}]",
         err=True,
@@ -66,6 +74,7 @@ def run(
     model: str = typer.Option("empirical", "--model", help="Forecast model: 'empirical' (default baseline), 'ridge' (Phase 3 trained), or 'auto' (conservative per-CP router)."),
     nwp_root: Path = typer.Option(DEFAULT_NWP_ROOT, "--nwp-root", help="Root of local NWP snapshots for the --model auto causal probe."),
     nwp_probe: bool = typer.Option(True, "--nwp-probe/--no-nwp-probe", help="For --model auto: probe local snapshots for causal ECMWF/GFS availability. Off => treat NWP as unavailable (forces ridge fallback)."),
+    serve_residuals: bool = typer.Option(False, "--serve-residuals/--no-serve-residuals", help="For --model auto at CP20-22: serve the residual LGBM when causal NWP is available; deterministic Ridge fallback otherwise. CP23 always stays Ridge."),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
     """Emit a forecast row. Default model is the Phase-2 empirical baseline; ``--model ridge``
@@ -146,6 +155,53 @@ def run(
     else:
         effective_model = model
 
+    # Residual serving (Onda 2 Track B, opt-in via --serve-residuals): at CP20-22 the
+    # conservative router picks an *_residual route when causal NWP is available. With the
+    # flag on we SERVE the residual LGBM (eval == serving: same maxtraj anchor, PHASE4
+    # features, n_estimators); on any miss we fall back DETERMINISTICALLY to Ridge with a
+    # recorded reason. CP23 routes to ridge, so the flag is a no-op there (router unchanged).
+    residual_telemetry: dict[str, object | None] = {
+        "valid_time_utc": None,
+        "valid_time_delta_h": None,
+        "lead_h": None,
+        "run_age_h": None,
+    }
+    if (
+        model == "auto"
+        and serve_residuals
+        and route is not None
+        and route.model_route in ("ecmwf_residual", "gfs_residual")
+    ):
+        result, fallback_reason = serve_residual(
+            route_model=route.model_route,
+            station=cfg.icao,
+            obs=obs,
+            labels=labels,
+            climo=climo,
+            feats=feats,
+            support_k=sk,
+            cp_hhmm=cp_hhmm,
+            d=d,
+            tz_name=cfg.tz,
+            cp_set=cfg.cp_set_utc,
+            train_start_d=train_start_d,
+            train_end_d=train_end_d,
+            nwp_root=nwp_root,
+        )
+        if result is not None:
+            prob_dist = result.prob_dist
+            source = result.source
+            model_version = result.model_version
+            effective_model = result.served_model
+            residual_telemetry = {
+                "valid_time_utc": result.valid_time_utc,
+                "valid_time_delta_h": result.valid_time_delta_h,
+                "lead_h": result.lead_h,
+                "run_age_h": result.run_age_h,
+            }
+        else:
+            degraded_reason = _join_reason(degraded_reason, f"{fallback_reason}_fallback_ridge")
+
     if effective_model == "ridge":  # Phase 3 band-aware Ridge, clim anchor
         import numpy as np
 
@@ -220,6 +276,10 @@ def run(
             "ecmwf_endpoint": ecmwf_endpoint,
             "gfs_endpoint": gfs_endpoint,
             "nwp_run_time_utc": route.nwp_run_time_utc,
+            "valid_time_utc": residual_telemetry["valid_time_utc"],
+            "valid_time_delta_h": residual_telemetry["valid_time_delta_h"],
+            "lead_h": residual_telemetry["lead_h"],
+            "run_age_h": residual_telemetry["run_age_h"],
             "spread_used": route.spread_used,
             "train_start": train_start_d.isoformat(),
             "train_end": train_end_d.isoformat(),

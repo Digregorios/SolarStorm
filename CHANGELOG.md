@@ -4,6 +4,45 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:Onda2-B] - 2026-06-02 - residual serving v0 behind `--serve-residuals` (B1 shipped; B2 measured)
+
+Reviewer Onda 2 (`references/code-reviews/update.txt`) authorized **Track B** with a tight contract
+(no P1/P2 left on `b6ec9f2`). This pass ships the full Track B: the operational residual-serving path
+behind an explicit flag (B1), a backtest of the EXACT serve decision with the REAL fallback rate (B2),
+plus the two carried P3 items. The default is unchanged -- residual serving never fires without
+`--serve-residuals`. **Track C (MOS/EMOS-lite) stays deferred.**
+
+- **B1 -- residual serving path (`core/cli/residual_serving.py` + `core/cli/forecast.py`):** new
+  `forecast --model auto --serve-residuals` serves the Phase-4 residual LGBM at **CP20-22 only** when a
+  CAUSAL NWP run is available, with a **deterministic Ridge fallback** otherwise; **CP23 always stays
+  Ridge** (the conservative router in `core/cli/routing.py` is unchanged -- the flag is a no-op there).
+  eval == serving: the same `PHASE4_FEATURES` (13 obs + 7 NWP), the max-of-trajectory anchor
+  `nwp_t2m_maxtraj_c`, and `n_estimators=500` as `evaluate_serving_candidate_matrix.py`; the serve-row is
+  assembled to mirror `build_training_panel` exactly (derives `wind_dir_sin/cos`, `month_sin/cos`,
+  `clim_tmax_c_dec` -- the residual path does NOT inherit the ridge serve-row's pre-existing NaN-feature
+  gap). Causality is delegated unchanged to the frozen `select_nwp_v1` / `select_max_trajectory_anchor`.
+  The serving JSON records the full telemetry the reviewer asked for: `model_route`, `served_model`,
+  endpoints, `nwp_run_time_utc`, and (P3b) `valid_time_utc`, `valid_time_delta_h`, `lead_h`, `run_age_h`,
+  plus `degraded_reason` on every fallback (`no_causal_nwp_serve_row_fallback_ridge`,
+  `residual_insufficient_train_rows_*_fallback_ridge`). End-to-end CLI tests
+  (`tests/unit/test_cli_serve_residuals.py`): served path + telemetry, both fallbacks, CP23-ignores-flag,
+  flag-off no-op, and a **leakage pin** -- a too-fresh run (`run_time > cp - 60min`) yields
+  `(None, "no_causal_nwp_serve_row")` and the residual is NEVER fit from it.
+- **B2 -- offline serving report (`scripts/evaluate_residual_serving_v0.py`):** backtests the EXACT serve
+  decision over the ECMWF folds at CP20-22 so the gate items are measured, not asserted. Real fallback
+  rate (per-CP + pooled), `served_mae` vs `ridge_mae` (ALL + calm), `calm_ok` (served calm MAE <= ridge
+  calm MAE + 0.05, same ex-ante strata as the matrix), `leakage_ok` (delegated to `select_nwp_v1`; a
+  violation raises at panel build). **Result (2025 test folds):** fallback_rate **0.0** (ECMWF coverage
+  is ~complete post-2024), `calm_ok=True` and `leakage_ok=True` on every CP/fold, served MAE beats Ridge
+  throughout (e.g. CP22 0.58-0.67 vs 0.73-0.77). Cross-checked against the audit's `1 - any_causal`
+  (0.0444, full 2021-2025 window) with a recorded window-difference note -- both shown, NOT asserted
+  equal. Writes `reports/serving/residual_serving_v0.{json,md}`. Script entry point, not in the suite.
+- **P3a -- serving-readiness split (`scripts/live_nwp_availability_audit.py`):** the general `verdict`
+  keys off all 4 CPs; a new `serving_readiness` block re-judges the SAME `any_causal` numbers over
+  CP20-22 (`NWP_LEAD_CPS`) only, with its own `serving_verdict`/`serving_offending_cps` -- a CP23 NWP gap
+  must not mask serving readiness and a CP20-22 gap must not be diluted by CP23. Numbers unchanged
+  (CP20-22 any_causal 0.9556 < 0.99 -> `serving_verdict` PAUSE, honest). Helper unit-pinned.
+
 ## [phase11:Onda2-A] - 2026-06-02 - live NWP availability audit + P3 endpoint traceability
 
 Reviewer Onda 2 (`references/code-reviews/update.txt`): no P1/P2 left on `119fba3`; ship operational
