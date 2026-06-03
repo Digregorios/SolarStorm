@@ -1,9 +1,9 @@
-"""Snapshot-only causal NWP availability probe (Onda 1 / Phase 5 wiring).
+"""Causal NWP availability probe (Onda 1 / Phase 5 wiring).
 
-Read-only probe over EXISTING local NWP snapshots. No HTTP fetch here: the probe
-answers "is there a causal ECMWF/GFS run available for this station/date/CP on
-disk?" so that ``forecast --model auto`` can route on real availability instead of
-the hardcoded ``_PHASE3_*`` flags.
+Probes local NWP snapshots to answer "is there a causal ECMWF/GFS run available for this
+station/date/CP on disk?" so that ``forecast --model auto`` can route on real availability.
+Supports optional live download fetching/caching (`fetch_live=True`) to fetch and self-repair
+incomplete cached snapshots over a lookback window of 4 expected cycles (up to 18h lookback).
 
 Endpoints are per-model: the canonical project layout stores ECMWF under
 ``single_runs`` and GFS under ``s3_grib`` (see the eval / serving-matrix scripts).
@@ -17,9 +17,11 @@ Causality is delegated to ``select_nwp_v1`` (it filters to runs with
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
+
+import polars as pl
 
 from core.ingest.nwp import (
     SAFETY_MARGIN_DEFAULT,
@@ -53,6 +55,28 @@ class NwpProbe:
     ecmwf_endpoint: str
     gfs_endpoint: str
 
+    ecmwf_fetch_attempted: bool = False
+    ecmwf_cache_hit: bool = False
+    ecmwf_fetch_status: str = "fetch_disabled"
+    ecmwf_attempted_run_times: list[str] = field(default_factory=list)
+    ecmwf_fetch_error_type: str | None = None
+
+    gfs_fetch_attempted: bool = False
+    gfs_cache_hit: bool = False
+    gfs_fetch_status: str = "fetch_disabled"
+    gfs_attempted_run_times: list[str] = field(default_factory=list)
+    gfs_fetch_error_type: str | None = None
+
+
+@dataclass(frozen=True)
+class _ModelProbeResult:
+    run_time_utc: str | None
+    fetch_attempted: bool
+    cache_hit: bool
+    fetch_status: str
+    attempted_run_times: list[str]
+    fetch_error_type: str | None
+
 
 def _probe_one(
     *,
@@ -66,81 +90,120 @@ def _probe_one(
     fetch_live: bool = False,
     lat: float | None = None,
     lon: float | None = None,
-) -> str | None:
-    """Return the causal run_time_utc (ISO) if a usable selection exists, else None.
+) -> _ModelProbeResult:
+    """Return the _ModelProbeResult containing causal run_time_utc and telemetry."""
+    fetch_attempted = False
+    cache_hit = False
+    fetch_status = "fetch_disabled"
+    attempted_run_times: list[str] = []
+    fetch_error_type: str | None = None
 
-    Any failure to read the snapshot root (missing dir, empty frame) is treated as
-    "unavailable": ``read_snapshots`` already returns an empty frame for a missing
-    root and ``select_nwp_v1`` returns None for an empty frame, so no raise escapes.
-    """
-    if fetch_live and lat is not None and lon is not None:
-        # Determine candidate run times starting from the latest cycle <= cutoff.
-        # Cycle hours are 6-hourly: 00, 06, 12, 18 UTC.
-        cutoff = cp_utc - safety_margin
-        base = cutoff.replace(minute=0, second=0, microsecond=0)
-        h = (base.hour // 6) * 6
-        expected_latest = base.replace(hour=h)
-        candidates = [expected_latest - timedelta(hours=6 * i) for i in range(4)]
+    if fetch_live:
+        if lat is None or lon is None:
+            fetch_status = "lat_lon_missing"
+        else:
+            fetch_attempted = True
+            cutoff = cp_utc - safety_margin
+            base = cutoff.replace(minute=0, second=0, microsecond=0)
+            h = (base.hour // 6) * 6
+            expected_latest = base.replace(hour=h)
+            candidates = [expected_latest - timedelta(hours=6 * i) for i in range(4)]
+            attempted_run_times = [c.isoformat() for c in candidates]
 
-        try:
-            snaps = read_snapshots(
-                station=station, model=model, endpoint=endpoint, out_root=out_root
-            )
-            if snaps.height > 0:
-                col = snaps["run_time_utc"]
-                if col.dtype.time_zone is not None:
-                    col = col.dt.replace_time_zone(None)
-                cached_runs = set(col.to_list())
-            else:
+            try:
+                snaps = read_snapshots(
+                    station=station, model=model, endpoint=endpoint, out_root=out_root
+                )
+                if snaps.height > 0:
+                    col = snaps["run_time_utc"]
+                    if col.dtype.time_zone is not None:
+                        col = col.dt.replace_time_zone(None)
+                    cached_runs = set(col.to_list())
+                else:
+                    cached_runs = set()
+            except Exception:
                 cached_runs = set()
-        except Exception:
-            cached_runs = set()
 
-        for cand in candidates:
-            cand_naive = cand.replace(tzinfo=None)
-            if cand_naive in cached_runs:
-                # Latest causal run available is already cached. Stop checking older ones.
-                break
-            else:
-                # Not cached. Attempt to download it.
-                try:
-                    from core.ingest.nwp import snapshot_single_run
-                    import typer
-                    typer.echo(
-                        f"[live-nwp] Fetching {model.id} run_time={cand.isoformat()} for CP {cp_utc.isoformat()}...",
-                        err=True,
-                    )
-                    snapshot_single_run(
-                        lat=lat,
-                        lon=lon,
-                        station=station,
-                        model=model,
-                        run_time_utc=cand,
-                        out_root=out_root,
-                        endpoint=endpoint,
-                    )
-                    # Successfully fetched and saved to cache!
+            cache_valid_found = False
+            for cand in candidates:
+                cand_naive = cand.replace(tzinfo=None)
+                cache_valid = False
+                if cand_naive in cached_runs:
+                    try:
+                        if snaps["run_time_utc"].dtype.time_zone is not None:
+                            cand_snap = snaps.filter(pl.col("run_time_utc") == cand)
+                        else:
+                            cand_snap = snaps.filter(pl.col("run_time_utc") == cand_naive)
+                        sel = select_nwp_v1(
+                            cand_snap,
+                            cp_utc=cp_utc,
+                            target_valid_utc=target_valid_utc,
+                            safety_margin=safety_margin,
+                        )
+                        if sel is not None and sel.t2m_c is not None:
+                            cache_valid = True
+                    except Exception as e:
+                        import traceback
+                        traceback.print_exc()
+
+                if cache_valid:
+                    cache_hit = True
+                    fetch_status = "cache_hit"
+                    cache_valid_found = True
                     break
-                except Exception as exc:
-                    import typer
-                    exc_msg = str(exc)
-                    if "400" in exc_msg or "404" in exc_msg:
+                else:
+                    try:
+                        from core.ingest.nwp import snapshot_single_run
+                        import typer
                         typer.echo(
-                            f"[live-nwp] {model.id} run_time={cand.isoformat()} not published yet. Checking older runs...",
+                            f"[live-nwp] Fetching {model.id} run_time={cand.isoformat()} for CP {cp_utc.isoformat()}...",
                             err=True,
                         )
-                    else:
-                        typer.echo(
-                            f"[live-nwp] Failed to fetch {model.id} run_time={cand.isoformat()}: {exc_msg}. Checking older...",
-                            err=True,
+                        snapshot_single_run(
+                            lat=lat,
+                            lon=lon,
+                            station=station,
+                            model=model,
+                            run_time_utc=cand,
+                            out_root=out_root,
+                            endpoint=endpoint,
                         )
+                        fetch_status = "success"
+                        cache_valid_found = True
+                        break
+                    except Exception as exc:
+                        exc_type = type(exc).__name__
+                        fetch_error_type = exc_type
+                        import typer
+                        exc_msg = str(exc)
+                        if "400" in exc_msg or "404" in exc_msg:
+                            typer.echo(
+                                f"[live-nwp] {model.id} run_time={cand.isoformat()} not published yet. Checking older runs...",
+                                err=True,
+                            )
+                        else:
+                            typer.echo(
+                                f"[live-nwp] Failed to fetch {model.id} run_time={cand.isoformat()}: {exc_msg}. Checking older...",
+                                err=True,
+                            )
+
+            if not cache_valid_found:
+                fetch_status = "failed"
 
     try:
         snaps = read_snapshots(
             station=station, model=model, endpoint=endpoint, out_root=out_root
         )
     except (OSError, ValueError):
-        return None
+        return _ModelProbeResult(
+            run_time_utc=None,
+            fetch_attempted=fetch_attempted,
+            cache_hit=cache_hit,
+            fetch_status=fetch_status if fetch_status != "fetch_disabled" else "failed",
+            attempted_run_times=attempted_run_times,
+            fetch_error_type=fetch_error_type or "OSError",
+        )
+
     sel = select_nwp_v1(
         snaps,
         cp_utc=cp_utc,
@@ -148,8 +211,23 @@ def _probe_one(
         safety_margin=safety_margin,
     )
     if sel is None or sel.t2m_c is None:
-        return None
-    return sel.run_time_utc.isoformat()
+        return _ModelProbeResult(
+            run_time_utc=None,
+            fetch_attempted=fetch_attempted,
+            cache_hit=cache_hit,
+            fetch_status=fetch_status if fetch_status not in ("cache_hit", "success") else "failed",
+            attempted_run_times=attempted_run_times,
+            fetch_error_type=fetch_error_type,
+        )
+
+    return _ModelProbeResult(
+        run_time_utc=sel.run_time_utc.isoformat(),
+        fetch_attempted=fetch_attempted,
+        cache_hit=cache_hit,
+        fetch_status=fetch_status,
+        attempted_run_times=attempted_run_times,
+        fetch_error_type=None if fetch_status in ("cache_hit", "success") else fetch_error_type,
+    )
 
 
 def probe_causal_nwp(
@@ -178,7 +256,7 @@ def probe_causal_nwp(
     cp_utc = cp_to_utc(target_date, cp_hhmm)
     target_valid_utc = cp_utc
 
-    ecmwf_run = _probe_one(
+    ecmwf_res = _probe_one(
         station=station,
         model=ECMWF_IFS_HRES,
         cp_utc=cp_utc,
@@ -190,7 +268,7 @@ def probe_causal_nwp(
         lat=lat,
         lon=lon,
     )
-    gfs_run = _probe_one(
+    gfs_res = _probe_one(
         station=station,
         model=NCEP_GFS,
         cp_utc=cp_utc,
@@ -203,7 +281,10 @@ def probe_causal_nwp(
         lon=lon,
     )
 
+    ecmwf_run = ecmwf_res.run_time_utc
+    gfs_run = gfs_res.run_time_utc
     nwp_run = ecmwf_run if ecmwf_run is not None else gfs_run
+
     return NwpProbe(
         ecmwf_available=ecmwf_run is not None,
         gfs_available=gfs_run is not None,
@@ -213,4 +294,14 @@ def probe_causal_nwp(
         probe_root=str(out_root),
         ecmwf_endpoint=ecmwf_ep,
         gfs_endpoint=gfs_ep,
+        ecmwf_fetch_attempted=ecmwf_res.fetch_attempted,
+        ecmwf_cache_hit=ecmwf_res.cache_hit,
+        ecmwf_fetch_status=ecmwf_res.fetch_status,
+        ecmwf_attempted_run_times=ecmwf_res.attempted_run_times,
+        ecmwf_fetch_error_type=ecmwf_res.fetch_error_type,
+        gfs_fetch_attempted=gfs_res.fetch_attempted,
+        gfs_cache_hit=gfs_res.cache_hit,
+        gfs_fetch_status=gfs_res.fetch_status,
+        gfs_attempted_run_times=gfs_res.attempted_run_times,
+        gfs_fetch_error_type=gfs_res.fetch_error_type,
     )

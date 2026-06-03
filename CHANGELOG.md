@@ -4,6 +4,15 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:Phase5 patch-forward] - 2026-06-03 - Operational safeguards, cache repair & telemetry
+
+Operational safeguards and evaluator fixes following Phase 5 review:
+
+- **Track C Evaluator Coverage Guard:** Introduced a strict 70% minimum coverage guard (`MIN_COVERAGE = 0.70`) in `scripts/evaluate_mos_emos_lite_v0.py`. Candidates below this coverage in any fold/CP are marked ineligible, preventing promotion of empty/low-coverage candidates inheriting incumbent predictions.
+- **Cache Self-Repair:** Updated `_probe_one` in `core/ingest/nwp_live.py` to verify the usability of cached snapshot files using `select_nwp_v1`. If a cached snapshot lacks valid forecast points, it is treated as a cache miss and successfully re-downloaded and repaired.
+- **Expanded Operational Telemetry:** Propagated new detailed telemetry parameters (attempt statuses, cache hits, candidate cycles, and errors per model) through `NwpProbe`, `_probe_one`, and CLI forecast routing JSON for auditability.
+- **Verification:** Unit tests in `tests/unit/test_live_nwp_fetch.py` and `tests/unit/test_mos_emos_lite.py` verify cache repair, coverage guards, and telemetry recording.
+
 ## [phase11:Phase5] - 2026-06-03 - Live NWP operational fetch & shadow logs
 
 Phase 5 operational tasks are now complete and verified.

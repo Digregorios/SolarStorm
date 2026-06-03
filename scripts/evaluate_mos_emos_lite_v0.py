@@ -72,6 +72,7 @@ CALM_TOLERANCE = 0.05
 RPS_TOLERANCE = 0.0
 MAE_TOLERANCE = 0.0
 MIN_CALIB_ROWS = 20
+MIN_COVERAGE = 0.70
 
 MOS_FEATURES = ("nwp_t2m_maxtraj_c", "clim_tmax_c_dec", "nwp_t2m_at_cp_minus_obs_c")
 EMOS2_FEATURES = ("ens_mean_maxtraj", "ens_abs_spread_maxtraj", "clim_tmax_c_dec")
@@ -427,6 +428,9 @@ def _evaluate_one_cp(
     )
     calm_mask = ~non_calm_mask
 
+    mos_engaged_n = len(te_ecmwf_ok) if mos is not None else 0
+    emos_engaged_n = len(te_emos2) if emos2 is not None else 0
+
     arms = {
         "ridge": (ridge_int, ridge_latent, ridge_pd, None),
         "served_v0": (served_int, served_latent, served_pd, None),
@@ -441,8 +445,19 @@ def _evaluate_one_cp(
         "arms": {},
     }
     for name, (pred, latent, pds, sigma) in arms.items():
+        if name == "mos_ecmwf":
+            engaged_n = mos_engaged_n
+        elif name == "emos2_lite":
+            engaged_n = emos_engaged_n
+        else:
+            engaged_n = len(test_dates)
+
+        coverage = engaged_n / len(test_dates) if len(test_dates) > 0 else 0.0
+
         out["arms"][name] = {
             "sigma": None if sigma is None else round(float(sigma), 4),
+            "engaged_n": int(engaged_n),
+            "coverage": round(float(coverage), 4),
             "ALL": _metrics(pred, latent, pds, y_true),
             "calm": _metrics(pred, latent, pds, y_true, mask=calm_mask),
             "non_calm": _metrics(pred, latent, pds, y_true, mask=non_calm_mask),
@@ -507,6 +522,10 @@ def _decide(per_cp_folds: dict[str, list[dict]]) -> dict:
                 and calm["mae"] <= served_calm["mae"] + CALM_TOLERANCE
                 and calm_folds_ok == len(rows)
             )
+            coverage_ok = all(
+                row["arms"][cand]["coverage"] >= MIN_COVERAGE
+                for row in rows
+            )
             eligible = (
                 pooled["rps"] is not None
                 and served["rps"] is not None
@@ -517,6 +536,7 @@ def _decide(per_cp_folds: dict[str, list[dict]]) -> dict:
                 and folds_won_rps == len(rows)
                 and folds_won_mae == len(rows)
                 and calm_ok
+                and coverage_ok
             )
             cp_detail["candidates"][cand] = {
                 "pooled": pooled,
@@ -526,6 +546,7 @@ def _decide(per_cp_folds: dict[str, list[dict]]) -> dict:
                 "calm_folds_ok": calm_folds_ok,
                 "n_folds": len(rows),
                 "calm_ok": calm_ok,
+                "coverage_ok": bool(coverage_ok),
                 "eligible_for_followup_prereg": bool(eligible),
             }
         detail[cp] = cp_detail
@@ -671,8 +692,8 @@ def _render(report: dict) -> str:
         "",
         "## Gate Summary",
         "",
-        "| CP | candidate | eligible | RPS | incumbent RPS | MAE | incumbent MAE | calm_ok | calm folds | folds RPS | folds MAE |",
-        "|----|-----------|----------|-----|---------------|-----|---------------|---------|------------|-----------|-----------|",
+        "| CP | candidate | eligible | RPS | incumbent RPS | MAE | incumbent MAE | calm_ok | calm folds | coverage_ok | folds RPS | folds MAE |",
+        "|----|-----------|----------|-----|---------------|-----|---------------|---------|------------|-------------|-----------|-----------|",
     ]
     for cp, d in report["decision"].items():
         inc_rows = report["per_cp_folds"][cp]
@@ -682,15 +703,15 @@ def _render(report: dict) -> str:
             lines.append(
                 f"| {cp} | {cand} | {c['eligible_for_followup_prereg']} | {p['rps']} | "
                 f"{inc['rps']} | {p['mae']} | {inc['mae']} | {c['calm_ok']} | "
-                f"{c['calm_folds_ok']}/{c['n_folds']} | "
+                f"{c['calm_folds_ok']}/{c['n_folds']} | {c['coverage_ok']} | "
                 f"{c['folds_won_rps']}/{c['n_folds']} | {c['folds_won_mae']}/{c['n_folds']} |"
             )
     lines += [
         "",
         "## Per CP x Fold",
         "",
-        "| CP | fold | arm | n | MAE | RPS | BM | IC80 cov | IC80 width | sigma |",
-        "|----|------|-----|---|-----|-----|----|----------|------------|-------|",
+        "| CP | fold | arm | n | engaged_n | coverage | MAE | RPS | BM | IC80 cov | IC80 width | sigma |",
+        "|----|------|-----|---|-----------|----------|-----|-----|----|----------|------------|-------|",
     ]
     for cp in report["serving_cps"]:
         for row in report["per_cp_folds"].get(cp, []):
@@ -698,7 +719,7 @@ def _render(report: dict) -> str:
                 a = row["arms"][arm]
                 m = a["ALL"]
                 lines.append(
-                    f"| {cp} | {row['split']} | {arm} | {m['n']} | {m['mae']} | {m['rps']} | "
+                    f"| {cp} | {row['split']} | {arm} | {m['n']} | {a['engaged_n']} | {a['coverage']} | {m['mae']} | {m['rps']} | "
                     f"{m['bracket_match']} | {m['ic80_coverage']} | {m['ic80_mean_width']} | {a['sigma']} |"
                 )
     return "\n".join(lines) + "\n"

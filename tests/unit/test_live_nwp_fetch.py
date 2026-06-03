@@ -182,3 +182,113 @@ def test_live_fetch_degrades_gracefully_when_all_fail(tmp_path):
         )
         assert probe.ecmwf_available is False
         assert probe.gfs_available is False
+
+
+def test_live_fetch_repairs_incomplete_cache(tmp_path):
+    """If a run is cached but lacks valid forecast points (t2m_c is None), we treat it as miss and re-download/repair."""
+    cp_utc = cp_to_utc(TARGET_DATE, CP)
+    expected_run = cp_utc.replace(hour=18, minute=0, second=0, microsecond=0)
+
+    # Cache an incomplete frame (t2m_c is None)
+    _write_snap(
+        tmp_path, ECMWF_IFS_HRES.id, ECMWF_EP,
+        _snap_frame(ECMWF_IFS_HRES.id, ECMWF_EP, run_time=expected_run,
+                    valid_time=cp_utc, t2m_c=None),
+    )
+
+    def side_effect(lat, lon, station, model, run_time_utc, out_root, endpoint):
+        frame = _snap_frame(model.id, endpoint, run_time=run_time_utc, valid_time=cp_utc, t2m_c=16.0)
+        _write_snap(Path(out_root), model.id, endpoint, frame)
+
+    with patch("core.ingest.nwp.snapshot_single_run", side_effect=side_effect) as mock_snapshot:
+        probe = probe_causal_nwp(
+            station=STATION,
+            target_date=TARGET_DATE,
+            cp_hhmm=CP,
+            out_root=tmp_path,
+            fetch_live=True,
+            lat=-41.3272,
+            lon=174.8053,
+        )
+        # ECMWF should be re-downloaded to repair the cache
+        assert mock_snapshot.call_count > 0
+        assert probe.ecmwf_available is True
+        assert probe.ecmwf_run_time_utc == expected_run.isoformat()
+
+
+def test_live_fetch_records_full_telemetry(tmp_path):
+    """Verify that NwpProbe correctly captures all expanded telemetry fields for fetch and cache statuses."""
+    cp_utc = cp_to_utc(TARGET_DATE, CP)
+    expected_run = cp_utc.replace(hour=18, minute=0, second=0, microsecond=0)
+
+    # 1) Fetch Disabled
+    probe_disabled = probe_causal_nwp(
+        station=STATION,
+        target_date=TARGET_DATE,
+        cp_hhmm=CP,
+        out_root=tmp_path,
+        fetch_live=False,
+    )
+    assert probe_disabled.ecmwf_fetch_attempted is False
+    assert probe_disabled.ecmwf_fetch_status == "fetch_disabled"
+    assert probe_disabled.ecmwf_cache_hit is False
+
+    # 2) Cache Hit
+    _write_snap(
+        tmp_path, ECMWF_IFS_HRES.id, ECMWF_EP,
+        _snap_frame(ECMWF_IFS_HRES.id, ECMWF_EP, run_time=expected_run,
+                    valid_time=cp_utc, t2m_c=14.5),
+    )
+    with patch("core.ingest.nwp.snapshot_single_run") as mock_snap:
+        probe_hit = probe_causal_nwp(
+            station=STATION,
+            target_date=TARGET_DATE,
+            cp_hhmm=CP,
+            out_root=tmp_path,
+            fetch_live=True,
+            lat=-41.3272,
+            lon=174.8053,
+        )
+    assert probe_hit.ecmwf_fetch_attempted is True
+    assert probe_hit.ecmwf_cache_hit is True
+    assert probe_hit.ecmwf_fetch_status == "cache_hit"
+    assert len(probe_hit.ecmwf_attempted_run_times) == 4
+    assert probe_hit.ecmwf_fetch_error_type is None
+
+    # 3) Fetch Success (reusing tmp_path but for GFS which is missing)
+    def side_effect(lat, lon, station, model, run_time_utc, out_root, endpoint):
+        frame = _snap_frame(model.id, endpoint, run_time=run_time_utc, valid_time=cp_utc, t2m_c=12.5)
+        _write_snap(Path(out_root), model.id, endpoint, frame)
+
+    with patch("core.ingest.nwp.snapshot_single_run", side_effect=side_effect):
+        probe_success = probe_causal_nwp(
+            station=STATION,
+            target_date=TARGET_DATE,
+            cp_hhmm=CP,
+            out_root=tmp_path,
+            fetch_live=True,
+            lat=-41.3272,
+            lon=174.8053,
+        )
+        assert probe_success.gfs_fetch_attempted is True
+        assert probe_success.gfs_cache_hit is False
+        assert probe_success.gfs_fetch_status == "success"
+        assert probe_success.gfs_fetch_error_type is None
+
+    # 4) Fetch Failed
+    with patch("core.ingest.nwp.snapshot_single_run", side_effect=RuntimeError("Connection Timeout")):
+        # Clear cache first by mock out_root using a new subdir
+        fail_path = tmp_path / "fail_sub"
+        probe_fail = probe_causal_nwp(
+            station=STATION,
+            target_date=TARGET_DATE,
+            cp_hhmm=CP,
+            out_root=fail_path,
+            fetch_live=True,
+            lat=-41.3272,
+            lon=174.8053,
+        )
+        assert probe_fail.ecmwf_fetch_attempted is True
+        assert probe_fail.ecmwf_cache_hit is False
+        assert probe_fail.ecmwf_fetch_status == "failed"
+        assert probe_fail.ecmwf_fetch_error_type == "RuntimeError"

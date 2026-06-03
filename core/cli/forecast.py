@@ -136,6 +136,18 @@ def run(
     # the SAME table and probe - no routing-logic change.
     route = None
     degraded_reason = None
+    ecmwf_fetch_attempted = False
+    ecmwf_cache_hit = False
+    ecmwf_fetch_status = "fetch_disabled"
+    ecmwf_attempted_run_times: list[str] = []
+    ecmwf_fetch_error_type: str | None = None
+
+    gfs_fetch_attempted = False
+    gfs_cache_hit = False
+    gfs_fetch_status = "fetch_disabled"
+    gfs_attempted_run_times: list[str] = []
+    gfs_fetch_error_type: str | None = None
+
     if model == "auto":
         if nwp_probe:
             probe = probe_causal_nwp(
@@ -152,6 +164,18 @@ def run(
             nwp_run_time = probe.nwp_run_time_utc
             ecmwf_endpoint = probe.ecmwf_endpoint
             gfs_endpoint = probe.gfs_endpoint
+
+            ecmwf_fetch_attempted = probe.ecmwf_fetch_attempted
+            ecmwf_cache_hit = probe.ecmwf_cache_hit
+            ecmwf_fetch_status = probe.ecmwf_fetch_status
+            ecmwf_attempted_run_times = probe.ecmwf_attempted_run_times
+            ecmwf_fetch_error_type = probe.ecmwf_fetch_error_type
+
+            gfs_fetch_attempted = probe.gfs_fetch_attempted
+            gfs_cache_hit = probe.gfs_cache_hit
+            gfs_fetch_status = probe.gfs_fetch_status
+            gfs_attempted_run_times = probe.gfs_attempted_run_times
+            gfs_fetch_error_type = probe.gfs_fetch_error_type
         else:
             ecmwf_available = False
             gfs_available = False
@@ -299,6 +323,16 @@ def run(
             "spread_used": route.spread_used,
             "train_start": train_start_d.isoformat(),
             "train_end": train_end_d.isoformat(),
+            "ecmwf_fetch_attempted": ecmwf_fetch_attempted,
+            "ecmwf_cache_hit": ecmwf_cache_hit,
+            "ecmwf_fetch_status": ecmwf_fetch_status,
+            "ecmwf_attempted_run_times": ecmwf_attempted_run_times,
+            "ecmwf_fetch_error_type": ecmwf_fetch_error_type,
+            "gfs_fetch_attempted": gfs_fetch_attempted,
+            "gfs_cache_hit": gfs_cache_hit,
+            "gfs_fetch_status": gfs_fetch_status,
+            "gfs_attempted_run_times": gfs_attempted_run_times,
+            "gfs_fetch_error_type": gfs_fetch_error_type,
         }
         _emit_routing_banner(forecast_row["routing"], int(low), int(high))
 

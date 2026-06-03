@@ -78,12 +78,21 @@ def _metric(n=20, mae=1.0, rps=1.0):
     }
 
 
-def _fold(*, mos_mae, mos_rps, mos_calm_mae):
+def _fold(*, mos_mae, mos_rps, mos_calm_mae, mos_cov=1.0):
     return {
         "arms": {
-            "served_v0": {"ALL": _metric(mae=1.0, rps=1.0), "calm": _metric(mae=1.0, rps=1.0)},
-            "mos_ecmwf": {"ALL": _metric(mae=mos_mae, rps=mos_rps), "calm": _metric(mae=mos_calm_mae, rps=0.9)},
-            "emos2_lite": {"ALL": _metric(mae=1.2, rps=1.2), "calm": _metric(mae=1.2, rps=1.2)},
+            "served_v0": {
+                "ALL": _metric(mae=1.0, rps=1.0), "calm": _metric(mae=1.0, rps=1.0),
+                "coverage": 1.0, "engaged_n": 20,
+            },
+            "mos_ecmwf": {
+                "ALL": _metric(mae=mos_mae, rps=mos_rps), "calm": _metric(mae=mos_calm_mae, rps=0.9),
+                "coverage": mos_cov, "engaged_n": int(20 * mos_cov),
+            },
+            "emos2_lite": {
+                "ALL": _metric(mae=1.2, rps=1.2), "calm": _metric(mae=1.2, rps=1.2),
+                "coverage": 1.0, "engaged_n": 20,
+            },
         }
     }
 
@@ -114,3 +123,27 @@ def test_track_c_decision_requires_all_fold_wins_and_calm_guard():
         ]
     })
     assert calm_regresses["20:00"]["candidates"]["mos_ecmwf"]["eligible_for_followup_prereg"] is False
+
+
+def test_track_c_decision_requires_min_coverage():
+    from scripts.evaluate_mos_emos_lite_v0 import _decide
+
+    # 1. High coverage -> eligible
+    ok = _decide({
+        "20:00": [
+            _fold(mos_mae=0.9, mos_rps=0.9, mos_calm_mae=1.0, mos_cov=0.9),
+            _fold(mos_mae=0.8, mos_rps=0.8, mos_calm_mae=1.0, mos_cov=0.8),
+        ]
+    })
+    assert ok["20:00"]["candidates"]["mos_ecmwf"]["coverage_ok"] is True
+    assert ok["20:00"]["candidates"]["mos_ecmwf"]["eligible_for_followup_prereg"] is True
+
+    # 2. Low coverage on one fold -> coverage_ok is False -> not eligible
+    low_cov = _decide({
+        "20:00": [
+            _fold(mos_mae=0.9, mos_rps=0.9, mos_calm_mae=1.0, mos_cov=0.9),
+            _fold(mos_mae=0.8, mos_rps=0.8, mos_calm_mae=1.0, mos_cov=0.5), # 50% coverage < 70% threshold
+        ]
+    })
+    assert low_cov["20:00"]["candidates"]["mos_ecmwf"]["coverage_ok"] is False
+    assert low_cov["20:00"]["candidates"]["mos_ecmwf"]["eligible_for_followup_prereg"] is False
