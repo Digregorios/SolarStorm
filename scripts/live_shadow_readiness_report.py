@@ -133,6 +133,16 @@ class ReadinessMetrics:
     # CP coverage per date (for per-date completeness audit)
     cp_coverage_per_date: dict[str, int] = field(default_factory=dict)
 
+    # Wave 2: missing date/CP inventory.
+    missing_inventory: list[tuple[str, list[int]]] = field(default_factory=list)
+
+    # Wave 2: fallback distribution by CP and by model.
+    fallback_by_cp: dict[int, int] = field(default_factory=dict)
+    fallback_by_model: dict[str, int] = field(default_factory=dict)
+
+    # Wave 2: NWP fetch/cache summary by endpoint (ECMWF / GFS).
+    nwp_endpoint_summary: dict[str, dict[str, int]] = field(default_factory=dict)
+
 
 def _check_leakage(cp_utc_str: str, routing: dict) -> bool:
     """Return True if the record has leakage (NWP run_time > cp_utc - safety margin).
@@ -294,6 +304,16 @@ def compute_metrics(
                     # Check fallback.
                     if routing.get("fallback_used"):
                         metrics.fallback_used_count += 1
+                        # Wave 2: fallback by CP.
+                        if cp_hour is not None:
+                            metrics.fallback_by_cp[cp_hour] = (
+                                metrics.fallback_by_cp.get(cp_hour, 0) + 1
+                            )
+                        # Wave 2: fallback by model.
+                        served = routing.get("served_model", "unknown")
+                        metrics.fallback_by_model[served] = (
+                            metrics.fallback_by_model.get(served, 0) + 1
+                        )
                         reason = routing.get("fallback_reason")
                         if reason:
                             metrics.fallback_reasons_classified += 1
@@ -359,6 +379,29 @@ def compute_metrics(
         # Check that ALL expected CPs are present and NO extras (exact set match).
         if date_valid_cps == set(expected_cps):
             metrics.dates_complete += 1
+        else:
+            # Wave 2: record missing CPs for this date.
+            missing_cps = sorted(set(expected_cps) - date_valid_cps)
+            if missing_cps:
+                metrics.missing_inventory.append(
+                    (file_date.isoformat(), missing_cps)
+                )
+
+    # Wave 2: build NWP endpoint summary from telemetry counts.
+    metrics.nwp_endpoint_summary = {
+        "ecmwf": {
+            "cache_hit": metrics.ecmwf_cache_hit_count,
+            "fetch_success": metrics.ecmwf_fetch_success_count,
+            "cache_repair": metrics.ecmwf_cache_repair_count,
+            "fetch_error": metrics.ecmwf_fetch_error_count,
+        },
+        "gfs": {
+            "cache_hit": metrics.gfs_cache_hit_count,
+            "fetch_success": metrics.gfs_fetch_success_count,
+            "cache_repair": metrics.gfs_cache_repair_count,
+            "fetch_error": metrics.gfs_fetch_error_count,
+        },
+    }
 
     # --- Read decision artifacts for odds stats (P3) ---
     if decisions_dir.exists():
@@ -483,8 +526,148 @@ def render_json(metrics: ReadinessMetrics, gates: list[GateResult], git_sha: str
             "odds_unavailable": metrics.odds_unavailable_count,
             "unexpected_cp_records": metrics.unexpected_cp_records,
             "duplicate_cp_records": metrics.duplicate_cp_records,
+            "missing_inventory": metrics.missing_inventory,
+            "fallback_by_cp": metrics.fallback_by_cp,
+            "fallback_by_model": metrics.fallback_by_model,
+            "nwp_endpoint_summary": metrics.nwp_endpoint_summary,
         },
     }
+
+
+def render_weekly_markdown(
+    metrics: ReadinessMetrics,
+    gates: list[GateResult],
+    git_sha: str,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> str:
+    """Render a weekly shadow ops summary report.
+
+    Covers the same metrics as the readiness report but formatted as a
+    consolidated weekly view with trend-oriented headings.
+    """
+    all_passed = all(g.passed for g in gates)
+    verdict = "READY" if all_passed else "NOT_READY"
+    period = ""
+    if start_date and end_date:
+        period = f"{start_date.isoformat()} to {end_date.isoformat()}"
+    elif start_date:
+        period = f"from {start_date.isoformat()}"
+    elif end_date:
+        period = f"up to {end_date.isoformat()}"
+    else:
+        period = "all available data"
+
+    lines = [
+        "# Shadow Ops Weekly Report v1",
+        "",
+        f"- period: {period}",
+        f"- git_sha: `{git_sha}`",
+        f"- verdict: **{verdict}**",
+        "",
+        "## Completeness",
+        "",
+        f"- expected_records: {metrics.expected_records}",
+        f"- found_records: {metrics.found_records}",
+        f"- missing_records: {metrics.missing_records}",
+        f"- completeness: {metrics.completeness:.4f}",
+        f"- dates_expected: {metrics.dates_expected}",
+        f"- dates_found: {metrics.dates_found}",
+        f"- dates_complete: {metrics.dates_complete}",
+        "",
+        "## Quality Gates",
+        "",
+    ]
+
+    for g in gates:
+        status = "PASS" if g.passed else "FAIL"
+        actual_str = f"{g.actual:.4f}" if isinstance(g.actual, float) else str(g.actual)
+        lines.append(f"- {g.name}: {status} (actual={actual_str}, threshold={g.threshold})")
+
+    lines.extend([
+        "",
+        "## Fallback Distribution",
+        "",
+        "### By CP",
+        "",
+    ])
+    if metrics.fallback_by_cp:
+        for cp in sorted(metrics.fallback_by_cp):
+            lines.append(f"- CP{cp:02d}: {metrics.fallback_by_cp[cp]}")
+    else:
+        lines.append("- (no fallbacks)")
+
+    lines.extend([
+        "",
+        "### By Model",
+        "",
+    ])
+    if metrics.fallback_by_model:
+        for model in sorted(metrics.fallback_by_model):
+            lines.append(f"- {model}: {metrics.fallback_by_model[model]}")
+    else:
+        lines.append("- (no fallbacks)")
+
+    lines.extend([
+        "",
+        "### By Reason",
+        "",
+    ])
+    if metrics.fallback_reason_counts:
+        for reason, count in sorted(metrics.fallback_reason_counts.items(), key=lambda x: -x[1]):
+            lines.append(f"- {reason}: {count}")
+    else:
+        lines.append("- (no fallbacks)")
+
+    lines.extend([
+        "",
+        "## NWP Endpoint Summary",
+        "",
+    ])
+    for endpoint, summary in metrics.nwp_endpoint_summary.items():
+        lines.append(f"- {endpoint}:")
+        for key, value in summary.items():
+            lines.append(f"  - {key}: {value}")
+
+    lines.extend([
+        "",
+        "## Residual Served (CP20-22)",
+        "",
+        f"- rate: {metrics.residual_served_rate_cp20_22:.4f}",
+        f"- count: {metrics.residual_served_cp20_22_count}/{metrics.total_cp20_22_count}",
+        "",
+        "## Missing Date/CP Inventory",
+        "",
+    ])
+    if metrics.missing_inventory:
+        for date_iso, missing_cps in metrics.missing_inventory:
+            lines.append(f"- {date_iso}: missing CPs {missing_cps}")
+    else:
+        lines.append("- (no missing CPs)")
+
+    lines.extend([
+        "",
+        "## Anomalies",
+        "",
+        f"- unexpected_cp_records: {metrics.unexpected_cp_records}",
+        f"- duplicate_cp_records: {metrics.duplicate_cp_records}",
+        "",
+        "## Odds Availability",
+        "",
+        f"- available: {metrics.odds_available_count}",
+        f"- unavailable: {metrics.odds_unavailable_count}",
+        "",
+        "## Timing",
+        "",
+        f"- run_age_h p50: {metrics.run_age_h_p50:.2f}" if metrics.run_age_h_p50 else "- run_age_h p50: N/A",
+        f"- run_age_h p95: {metrics.run_age_h_p95:.2f}" if metrics.run_age_h_p95 else "- run_age_h p95: N/A",
+        f"- valid_time_delta_h mean: {metrics.valid_time_delta_h_mean:.2f}"
+        if metrics.valid_time_delta_h_mean
+        else "- valid_time_delta_h mean: N/A",
+        "",
+    ])
+
+    return "\n".join(lines)
 
 
 def render_markdown(metrics: ReadinessMetrics, gates: list[GateResult], git_sha: str) -> str:
@@ -569,7 +752,50 @@ def render_markdown(metrics: ReadinessMetrics, gates: list[GateResult], git_sha:
         f"- available: {metrics.odds_available_count}",
         f"- unavailable: {metrics.odds_unavailable_count}",
         "",
+        "### Missing Date/CP Inventory",
+        "",
     ])
+
+    if metrics.missing_inventory:
+        for date_iso, missing_cps in metrics.missing_inventory:
+            lines.append(f"- {date_iso}: missing CPs {missing_cps}")
+    else:
+        lines.append("- (no missing CPs)")
+
+    lines.extend([
+        "",
+        "### Fallback Distribution by CP",
+        "",
+    ])
+
+    if metrics.fallback_by_cp:
+        for cp in sorted(metrics.fallback_by_cp):
+            lines.append(f"- CP{cp:02d}: {metrics.fallback_by_cp[cp]}")
+    else:
+        lines.append("- (no fallbacks)")
+
+    lines.extend([
+        "",
+        "### Fallback Distribution by Model",
+        "",
+    ])
+
+    if metrics.fallback_by_model:
+        for model in sorted(metrics.fallback_by_model):
+            lines.append(f"- {model}: {metrics.fallback_by_model[model]}")
+    else:
+        lines.append("- (no fallbacks)")
+
+    lines.extend([
+        "",
+        "### NWP Endpoint Summary",
+        "",
+    ])
+
+    for endpoint, summary in metrics.nwp_endpoint_summary.items():
+        lines.append(f"- {endpoint}:")
+        for key, value in summary.items():
+            lines.append(f"  - {key}: {value}")
 
     return "\n".join(lines)
 
@@ -630,6 +856,7 @@ def main() -> int:
     args.out_root.mkdir(parents=True, exist_ok=True)
     json_path = args.out_root / "readiness_v1.json"
     md_path = args.out_root / "readiness_v1.md"
+    weekly_path = args.out_root / "shadow_ops_weekly_v1.md"
 
     with open(json_path, "w", encoding="ascii") as fh:
         json.dump(json_output, fh, ensure_ascii=True, indent=2, sort_keys=True)
@@ -638,6 +865,11 @@ def main() -> int:
     with open(md_path, "w", encoding="utf-8") as fh:
         fh.write(md_output)
     print(f"Wrote: {md_path}")
+
+    weekly_md = render_weekly_markdown(metrics, gates, args.git_sha, start_date, end_date)
+    with open(weekly_path, "w", encoding="utf-8") as fh:
+        fh.write(weekly_md)
+    print(f"Wrote: {weekly_path}")
 
     # Print summary.
     verdict = json_output["verdict"]

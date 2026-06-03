@@ -31,6 +31,7 @@ from live_shadow_readiness_report import (
     evaluate_gates,
     render_json,
     render_markdown,
+    render_weekly_markdown,
 )
 
 
@@ -566,3 +567,149 @@ def test_dates_complete_requires_exact_expected_set(tmp_path: Path):
     assert metrics.unexpected_cp_records == 1
     assert metrics.dates_complete == 0  # CP23 missing
     assert metrics.completeness == pytest.approx(0.75)
+
+
+# --- Wave 2: missing inventory, fallback distribution, NWP endpoint, weekly ---
+
+
+def test_compute_metrics_missing_inventory(tmp_path: Path):
+    """Missing CPs are recorded in missing_inventory."""
+    forecasts_dir = tmp_path / "forecasts"
+    records = [
+        _make_record(cp_hour=20),
+        _make_record(cp_hour=21),
+    ]
+    _write_fixture_jsonl(forecasts_dir, date(2025, 1, 15), records)
+
+    metrics = compute_metrics(tmp_path, expected_cps=(20, 21, 22, 23))
+    assert len(metrics.missing_inventory) == 1
+    date_iso, missing = metrics.missing_inventory[0]
+    assert date_iso == "2025-01-15"
+    assert missing == [22, 23]
+
+
+def test_compute_metrics_no_missing_inventory_when_complete(tmp_path: Path):
+    """When all CPs are present, missing_inventory is empty."""
+    forecasts_dir = tmp_path / "forecasts"
+    _write_fixture_jsonl(forecasts_dir, date(2025, 1, 15))
+
+    metrics = compute_metrics(tmp_path, expected_cps=(20, 21, 22, 23))
+    assert metrics.missing_inventory == []
+
+
+def test_compute_metrics_fallback_by_cp(tmp_path: Path):
+    """Fallbacks are counted per CP."""
+    forecasts_dir = tmp_path / "forecasts"
+    records = [
+        _make_record(cp_hour=20, fallback_used=True, fallback_reason="nwp_unavailable"),
+        _make_record(cp_hour=21, fallback_used=True, fallback_reason="cache_miss"),
+        _make_record(cp_hour=22, fallback_used=False),
+        _make_record(cp_hour=23, fallback_used=True, fallback_reason="nwp_unavailable"),
+    ]
+    _write_fixture_jsonl(forecasts_dir, date(2025, 1, 15), records)
+
+    metrics = compute_metrics(tmp_path)
+    assert metrics.fallback_by_cp[20] == 1
+    assert metrics.fallback_by_cp[21] == 1
+    assert metrics.fallback_by_cp[23] == 1
+    assert 22 not in metrics.fallback_by_cp
+
+
+def test_compute_metrics_fallback_by_model(tmp_path: Path):
+    """Fallbacks are counted per served_model."""
+    forecasts_dir = tmp_path / "forecasts"
+    records = [
+        _make_record(cp_hour=20, fallback_used=True, served_model="ridge"),
+        _make_record(cp_hour=21, fallback_used=True, served_model="ridge"),
+        _make_record(cp_hour=22, fallback_used=True, served_model="ecmwf_residual"),
+        _make_record(cp_hour=23, fallback_used=False, served_model="gfs_residual"),
+    ]
+    _write_fixture_jsonl(forecasts_dir, date(2025, 1, 15), records)
+
+    metrics = compute_metrics(tmp_path)
+    assert metrics.fallback_by_model["ridge"] == 2
+    assert metrics.fallback_by_model["ecmwf_residual"] == 1
+    assert "gfs_residual" not in metrics.fallback_by_model
+
+
+def test_compute_metrics_nwp_endpoint_summary(tmp_path: Path):
+    """NWP endpoint summary aggregates ECMWF and GFS telemetry."""
+    forecasts_dir = tmp_path / "forecasts"
+    records = [
+        _make_record(cp_hour=20),
+        _make_record(cp_hour=21),
+    ]
+    for r in records:
+        r["routing"]["gfs_cache_hit"] = True
+        r["routing"]["gfs_fetch_status"] = "success"
+        r["routing"]["gfs_fetch_error_type"] = None
+    _write_fixture_jsonl(forecasts_dir, date(2025, 1, 15), records)
+
+    metrics = compute_metrics(tmp_path)
+    assert "ecmwf" in metrics.nwp_endpoint_summary
+    assert "gfs" in metrics.nwp_endpoint_summary
+    assert metrics.nwp_endpoint_summary["ecmwf"]["cache_hit"] == 2
+    assert metrics.nwp_endpoint_summary["gfs"]["cache_hit"] == 2
+
+
+def test_render_weekly_markdown_structure():
+    """Weekly report contains all Wave 2 sections."""
+    metrics = ReadinessMetrics(
+        expected_records=4,
+        found_records=4,
+        leakage_violations=0,
+        fallback_by_cp={20: 1},
+        fallback_by_model={"ridge": 1},
+        missing_inventory=[("2025-01-15", [23])],
+        nwp_endpoint_summary={
+            "ecmwf": {"cache_hit": 2, "fetch_success": 2, "cache_repair": 0, "fetch_error": 0},
+            "gfs": {"cache_hit": 1, "fetch_success": 1, "cache_repair": 0, "fetch_error": 0},
+        },
+    )
+    gates = evaluate_gates(metrics)
+    output = render_weekly_markdown(metrics, gates, "sha1")
+
+    assert "# Shadow Ops Weekly Report v1" in output
+    assert "sha1" in output
+    assert "READY" in output
+    assert "### By CP" in output
+    assert "### By Model" in output
+    assert "### By Reason" in output
+    assert "## Missing Date/CP Inventory" in output
+    assert "2025-01-15: missing CPs [23]" in output
+    assert "## NWP Endpoint Summary" in output
+    assert "ecmwf:" in output
+    assert "gfs:" in output
+
+
+def test_render_markdown_includes_wave2_sections():
+    """Readiness markdown (not weekly) includes Wave 2 sections."""
+    metrics = ReadinessMetrics(
+        expected_records=4,
+        found_records=4,
+        missing_inventory=[("2025-01-15", [23])],
+        fallback_by_cp={20: 1},
+        fallback_by_model={"ridge": 1},
+        nwp_endpoint_summary={
+            "ecmwf": {"cache_hit": 2, "fetch_success": 2, "cache_repair": 0, "fetch_error": 0},
+        },
+    )
+    gates = evaluate_gates(metrics)
+    output = render_markdown(metrics, gates, "sha1")
+
+    assert "## Missing Date/CP Inventory" in output
+    assert "2025-01-15: missing CPs [23]" in output
+    assert "### Fallback Distribution by CP" in output
+    assert "### Fallback Distribution by Model" in output
+    assert "### NWP Endpoint Summary" in output
+    assert "ecmwf:" in output
+
+
+def test_render_weekly_markdown_no_fallbacks():
+    """Weekly report handles zero-fallback gracefully."""
+    metrics = ReadinessMetrics(expected_records=4, found_records=4)
+    gates = evaluate_gates(metrics)
+    output = render_weekly_markdown(metrics, gates, "sha1")
+
+    assert "(no fallbacks)" in output
+    assert "(no missing CPs)" in output
