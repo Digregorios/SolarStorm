@@ -118,6 +118,20 @@ artifacts/snapshots/**
 !artifacts/snapshots/.gitkeep
 artifacts/tuning/**
 !artifacts/tuning/.gitkeep
+artifacts/decisions/**
+artifacts/shadow_ops/**
+artifacts/_cqr_eval_run.log
+artifacts/_smoke_phase3/
+
+# External reference projects (not part of this codebase)
+projetos_github/
+
+# Quarantine / stale code
+quarentena/
+
+# Research notebooks and reports (not versioned)
+research/
+reports/research_*.md
 
 # Large legacy CSV (kept by reference, not in git)
 references/legacy/datasets/*.csv

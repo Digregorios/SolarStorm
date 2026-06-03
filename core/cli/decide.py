@@ -22,6 +22,77 @@ from core.ingest.iem_csv import load_observations
 from core.ingest.odds import event_url, snapshot_live
 from core.io.logging import log_event, new_run_id
 from core.labels.tmax import build_tmax_labels
+from core.ops.schemas import ShadowSchemaError, validate_record
+
+
+class ForecastChainError(Exception):
+    """Raised when forecast-decision chain validation fails."""
+
+
+def _load_forecast_json(
+    forecast_path: Path,
+    *,
+    expected_date: str | None = None,
+    expected_cp: str | None = None,
+) -> tuple[dict, dict]:
+    """Load and validate a forecast JSON file for the decision chain.
+
+    Args:
+        forecast_path: Path to forecast JSON file.
+        expected_date: If provided, verify forecast date_local matches.
+        expected_cp: If provided (e.g. "20"), verify forecast cp_utc hour matches.
+
+    Returns:
+        Tuple of (prob_dist dict, metadata dict with run_id, model_version).
+
+    Raises:
+        ForecastChainError: If file missing, validation fails, or date/CP mismatch.
+    """
+    if not forecast_path.exists():
+        raise ForecastChainError(f"Forecast file not found: {forecast_path}")
+
+    with open(forecast_path, "r", encoding="ascii") as fh:
+        raw = json.load(fh)
+
+    try:
+        record = validate_record(raw)
+    except ShadowSchemaError as exc:
+        raise ForecastChainError(f"Forecast validation failed: {exc}") from exc
+
+    # Cross-validate date_local.
+    if expected_date is not None and record.date_local != expected_date:
+        raise ForecastChainError(
+            f"Forecast date mismatch: file has {record.date_local}, "
+            f"expected {expected_date}"
+        )
+
+    # Cross-validate cp_utc hour.
+    if expected_cp is not None:
+        cp_utc_str = record.cp_utc
+        cp_hour_in_file: str | None = None
+        if "T" in cp_utc_str:
+            try:
+                cp_hour_in_file = cp_utc_str.split("T")[1].split(":")[0]
+            except (IndexError, ValueError):
+                pass
+        expected_cp_padded = f"{int(expected_cp):02d}"
+        if cp_hour_in_file is not None and cp_hour_in_file != expected_cp_padded:
+            raise ForecastChainError(
+                f"Forecast CP mismatch: file has CP{cp_hour_in_file}, "
+                f"expected CP{expected_cp_padded}"
+            )
+
+    # Convert string keys back to int for prob_dist.
+    prob_dist = {int(k): v for k, v in record.prob_dist.items()}
+
+    metadata = {
+        "forecast_run_id": record.run_id,
+        "forecast_model_version": record.model_version,
+        "forecast_file": str(forecast_path),
+        "prob_dist_source": raw.get("prob_dist_source", "shadow_forecast_json"),
+    }
+
+    return prob_dist, metadata
 
 
 def run(
@@ -34,8 +105,17 @@ def run(
     train_end: str | None = typer.Option(None, "--train-end"),
     out_root: Path = typer.Option(Path("artifacts/decisions"), "--out-root"),
     dry_run: bool = typer.Option(False, "--dry-run"),
+    forecast_json: Path | None = typer.Option(
+        None, "--forecast-json",
+        help="Path to a forecast JSON file. If provided, uses its prob_dist instead of computing internally.",
+    ),
 ) -> None:
-    """Emit a live decision row: forecast + odds + sizing."""
+    """Emit a live decision row: forecast + odds + sizing.
+
+    When --forecast-json is provided, the decision consumes the probability
+    distribution from that file directly (no internal forecast reconstruction).
+    This creates an auditable chain: forecast file -> decision.
+    """
     rid = new_run_id()
     cfg = load_station_config(station_yaml)
     cp_hhmm = f"{int(cp):02d}:00"
@@ -70,11 +150,31 @@ def run(
     sk = support_K(
         p10, p90, tmp_min=cfg.tmp_c_int_plausibility.min, tmp_max=cfg.tmp_c_int_plausibility.max
     )
-    kcp = feats.features.get("k_cp")
-    kcp_for_pred = int(kcp) if kcp is not None else Q(climo.tmax_dec_for(d))
-    prob_dist, source = empirical.predict_dist(
-        month=d.month, cp=cp_hhmm, k_cp=kcp_for_pred, support_k=sk
-    )
+
+    # Forecast chain: either load from file or compute internally.
+    forecast_linkage: dict | None = None
+    if forecast_json is not None:
+        # Load prob_dist from external forecast file (no implicit fallback).
+        # Cross-validate that the forecast matches the requested date and CP.
+        prob_dist, forecast_linkage = _load_forecast_json(
+            forecast_json,
+            expected_date=target_date,
+            expected_cp=cp,
+        )
+        source = forecast_linkage["prob_dist_source"]
+        typer.echo(
+            f"[decide --forecast-json] Using prob_dist from {forecast_json.name} "
+            f"(run_id={forecast_linkage['forecast_run_id']})",
+            err=True,
+        )
+    else:
+        # Compute internally (original behavior).
+        kcp = feats.features.get("k_cp")
+        kcp_for_pred = int(kcp) if kcp is not None else Q(climo.tmax_dec_for(d))
+        prob_dist, source = empirical.predict_dist(
+            month=d.month, cp=cp_hhmm, k_cp=kcp_for_pred, support_k=sk
+        )
+        forecast_linkage = None
 
     # Phase 5 confidence not ready; set 1.0 so gate never blocks.
     confidence_score = 1.0
@@ -153,6 +253,12 @@ def run(
         "notes": notes,
     }
 
+    # Add forecast linkage if loaded from external file.
+    if forecast_linkage is not None:
+        decision_row["forecast_run_id"] = forecast_linkage["forecast_run_id"]
+        decision_row["forecast_model_version"] = forecast_linkage["forecast_model_version"]
+        decision_row["forecast_file"] = forecast_linkage["forecast_file"]
+
     log_event(
         "decision",
         "decision.emit",
@@ -173,4 +279,4 @@ def run(
     typer.echo(f"OK: {out_path}")
 
 
-__all__ = ["run"]
+__all__ = ["run", "ForecastChainError", "_load_forecast_json"]
