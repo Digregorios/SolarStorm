@@ -641,6 +641,8 @@ def main() -> int:
             "candidate_must_win_mae_all_folds": True,
             "calm_tolerance": CALM_TOLERANCE,
             "no_cli_or_default_serving_change": True,
+            "min_coverage_required": MIN_COVERAGE,
+            "coverage_guard": "all_folds_must_have_coverage_ge_MIN_COVERAGE",
         },
         "per_cp_folds": per_cp_folds,
         "decision": decision,

@@ -139,13 +139,17 @@ def run(
     ecmwf_fetch_attempted = False
     ecmwf_cache_hit = False
     ecmwf_fetch_status = "fetch_disabled"
-    ecmwf_attempted_run_times: list[str] = []
+    ecmwf_candidate_run_times: list[str] = []
+    ecmwf_http_attempted_run_times: list[str] = []
+    ecmwf_selected_run_time: str | None = None
     ecmwf_fetch_error_type: str | None = None
 
     gfs_fetch_attempted = False
     gfs_cache_hit = False
     gfs_fetch_status = "fetch_disabled"
-    gfs_attempted_run_times: list[str] = []
+    gfs_candidate_run_times: list[str] = []
+    gfs_http_attempted_run_times: list[str] = []
+    gfs_selected_run_time: str | None = None
     gfs_fetch_error_type: str | None = None
 
     if model == "auto":
@@ -168,13 +172,17 @@ def run(
             ecmwf_fetch_attempted = probe.ecmwf_fetch_attempted
             ecmwf_cache_hit = probe.ecmwf_cache_hit
             ecmwf_fetch_status = probe.ecmwf_fetch_status
-            ecmwf_attempted_run_times = probe.ecmwf_attempted_run_times
+            ecmwf_candidate_run_times = probe.ecmwf_candidate_run_times
+            ecmwf_http_attempted_run_times = probe.ecmwf_http_attempted_run_times
+            ecmwf_selected_run_time = probe.ecmwf_selected_run_time
             ecmwf_fetch_error_type = probe.ecmwf_fetch_error_type
 
             gfs_fetch_attempted = probe.gfs_fetch_attempted
             gfs_cache_hit = probe.gfs_cache_hit
             gfs_fetch_status = probe.gfs_fetch_status
-            gfs_attempted_run_times = probe.gfs_attempted_run_times
+            gfs_candidate_run_times = probe.gfs_candidate_run_times
+            gfs_http_attempted_run_times = probe.gfs_http_attempted_run_times
+            gfs_selected_run_time = probe.gfs_selected_run_time
             gfs_fetch_error_type = probe.gfs_fetch_error_type
         else:
             ecmwf_available = False
@@ -326,12 +334,16 @@ def run(
             "ecmwf_fetch_attempted": ecmwf_fetch_attempted,
             "ecmwf_cache_hit": ecmwf_cache_hit,
             "ecmwf_fetch_status": ecmwf_fetch_status,
-            "ecmwf_attempted_run_times": ecmwf_attempted_run_times,
+            "ecmwf_candidate_run_times": ecmwf_candidate_run_times,
+            "ecmwf_http_attempted_run_times": ecmwf_http_attempted_run_times,
+            "ecmwf_selected_run_time": ecmwf_selected_run_time,
             "ecmwf_fetch_error_type": ecmwf_fetch_error_type,
             "gfs_fetch_attempted": gfs_fetch_attempted,
             "gfs_cache_hit": gfs_cache_hit,
             "gfs_fetch_status": gfs_fetch_status,
-            "gfs_attempted_run_times": gfs_attempted_run_times,
+            "gfs_candidate_run_times": gfs_candidate_run_times,
+            "gfs_http_attempted_run_times": gfs_http_attempted_run_times,
+            "gfs_selected_run_time": gfs_selected_run_time,
             "gfs_fetch_error_type": gfs_fetch_error_type,
         }
         _emit_routing_banner(forecast_row["routing"], int(low), int(high))

@@ -1,16 +1,23 @@
-Escolha **2. B1 first**.
+Phase 5 patch-forward status (current):
 
-É o passo certo para manter velocidade sem transformar Track B num mega-commit leakage-sensitive. B1 entrega o caminho operacional real, mas atrás de `--serve-residuals`, então não muda o default nem declara promoção.
+Shipped:
+- B1: forecast --model auto --serve-residuals with per-CP router and NWP causality.
+- CP20-22 residual serving behind flag; CP23 remains Ridge.
+- Fallback to Ridge when no causal NWP available.
+- Full routing telemetry in JSON output.
+- CLI end-to-end tests for ECMWF residual, GFS residual, fallback Ridge, CP23 Ridge.
+- Leakage test: no residual served with run_time_utc > cp_utc - safety_margin.
 
-Escopo desta passada:
+Patch-forward (this pass):
+- [P2] Cache repair now validates freshly downloaded snapshot with select_nwp_v1 before
+  breaking the cycle loop; if t2m_c is unusable for CP, continues to older cycles.
+- [P2] MOS/EMOS-lite evaluator now serializes min_coverage_required (0.70) and
+  coverage_guard in gate_contract; reports regenerated with engaged_n/coverage fields.
+- [P3] Telemetry expanded: candidate_run_times (all evaluated), http_attempted_run_times
+  (actually fetched over HTTP), selected_run_time (cycle used for serving).
+- [P3] Cache validation errors now use logging.debug instead of traceback.print_exc.
 
-- `forecast --model auto --serve-residuals`.
-- Só CP20-22 podem servir residual; CP23 continua Ridge.
-- Se não houver NWP causal, fallback determinístico para Ridge.
-- Telemetria completa no JSON: `model_route`, `served_model`, endpoints, `run_time_utc`, `valid_time_utc`, `valid_time_delta_h`, `lead_h`, `run_age_h`, `fallback_reason`.
-- Testes CLI end-to-end para ECMWF residual, GFS residual, fallback Ridge, CP23 Ridge.
-- Leakage test explícito: nenhum residual servido com `run_time_utc > cp_utc - 60min`.
-
-Não marcar “Track B completo” ainda. O commit deve dizer claramente: **B1 shipped; B2 deferred**.
-
-B2 vem logo depois como relatório offline: backtest do caminho exato de serving, fallback rate real, calm guard, leakage gate e evidência para o reviewer. Sem B2, o path pode existir atrás da flag, mas não deve ser promovido nem usado como prova de readiness.
+Deferred:
+- B2: offline backtest report (serving path, fallback rate, calm guard, leakage gate).
+- Shadow Ops v1: 7-14 day live forecast run with fetch_success_rate, cache_repair_count,
+  fallback_rate, residual_served_rate, run_age_h, valid_time_delta_h, json_completeness.

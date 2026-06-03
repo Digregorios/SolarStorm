@@ -1,7 +1,7 @@
 {
   "task": "phase11-Onda2-C MOS/EMOS-lite offline evaluator",
   "status": "read_only_no_serving_change",
-  "git_sha": "43bb88bc46507fe6a59d00ad77cbb929991eb03b",
+  "git_sha": "03d59e154a2583002d49ccb516ac89c004c1faa6",
   "seed": 42,
   "deterministic": true,
   "window": [
@@ -29,7 +29,9 @@
     "candidate_must_win_rps_all_folds": true,
     "candidate_must_win_mae_all_folds": true,
     "calm_tolerance": 0.05,
-    "no_cli_or_default_serving_change": true
+    "no_cli_or_default_serving_change": true,
+    "min_coverage_required": 0.7,
+    "coverage_guard": "all_folds_must_have_coverage_ge_MIN_COVERAGE"
   },
   "per_cp_folds": {
     "20:00": [
@@ -101,7 +103,9 @@
                   "n": 139
                 }
               ]
-            }
+            },
+            "engaged_n": 181,
+            "coverage": 1.0
           },
           "served_v0": {
             "sigma": null,
@@ -160,7 +164,9 @@
                   "n": 125
                 }
               ]
-            }
+            },
+            "engaged_n": 181,
+            "coverage": 1.0
           },
           "mos_ecmwf": {
             "sigma": 1.2493,
@@ -235,7 +241,9 @@
                   "n": 23
                 }
               ]
-            }
+            },
+            "engaged_n": 177,
+            "coverage": 0.9779
           },
           "emos2_lite": {
             "sigma": 1.2476,
@@ -310,7 +318,9 @@
                   "n": 23
                 }
               ]
-            }
+            },
+            "engaged_n": 177,
+            "coverage": 0.9779
           }
         },
         "split": "ecmwf-2025H1",
@@ -391,7 +401,9 @@
                   "n": 131
                 }
               ]
-            }
+            },
+            "engaged_n": 184,
+            "coverage": 1.0
           },
           "served_v0": {
             "sigma": null,
@@ -450,7 +462,9 @@
                   "n": 126
                 }
               ]
-            }
+            },
+            "engaged_n": 184,
+            "coverage": 1.0
           },
           "mos_ecmwf": {
             "sigma": 0.9797,
@@ -517,7 +531,9 @@
                   "n": 90
                 }
               ]
-            }
+            },
+            "engaged_n": 184,
+            "coverage": 1.0
           },
           "emos2_lite": {
             "sigma": 1.0469,
@@ -584,7 +600,9 @@
                   "n": 114
                 }
               ]
-            }
+            },
+            "engaged_n": 184,
+            "coverage": 1.0
           }
         },
         "split": "ecmwf-2025H2",
@@ -667,7 +685,9 @@
                   "n": 122
                 }
               ]
-            }
+            },
+            "engaged_n": 181,
+            "coverage": 1.0
           },
           "served_v0": {
             "sigma": null,
@@ -726,7 +746,9 @@
                   "n": 122
                 }
               ]
-            }
+            },
+            "engaged_n": 181,
+            "coverage": 1.0
           },
           "mos_ecmwf": {
             "sigma": 1.2314,
@@ -801,7 +823,9 @@
                   "n": 16
                 }
               ]
-            }
+            },
+            "engaged_n": 177,
+            "coverage": 0.9779
           },
           "emos2_lite": {
             "sigma": 1.2476,
@@ -876,7 +900,9 @@
                   "n": 23
                 }
               ]
-            }
+            },
+            "engaged_n": 177,
+            "coverage": 0.9779
           }
         },
         "split": "ecmwf-2025H1",
@@ -957,7 +983,9 @@
                   "n": 128
                 }
               ]
-            }
+            },
+            "engaged_n": 184,
+            "coverage": 1.0
           },
           "served_v0": {
             "sigma": null,
@@ -1016,7 +1044,9 @@
                   "n": 132
                 }
               ]
-            }
+            },
+            "engaged_n": 184,
+            "coverage": 1.0
           },
           "mos_ecmwf": {
             "sigma": 1.0406,
@@ -1083,7 +1113,9 @@
                   "n": 115
                 }
               ]
-            }
+            },
+            "engaged_n": 184,
+            "coverage": 1.0
           },
           "emos2_lite": {
             "sigma": 1.0469,
@@ -1150,7 +1182,9 @@
                   "n": 114
                 }
               ]
-            }
+            },
+            "engaged_n": 184,
+            "coverage": 1.0
           }
         },
         "split": "ecmwf-2025H2",
@@ -1233,7 +1267,9 @@
                   "n": 119
                 }
               ]
-            }
+            },
+            "engaged_n": 181,
+            "coverage": 1.0
           },
           "served_v0": {
             "sigma": null,
@@ -1292,7 +1328,9 @@
                   "n": 120
                 }
               ]
-            }
+            },
+            "engaged_n": 181,
+            "coverage": 1.0
           },
           "mos_ecmwf": {
             "sigma": 1.2185,
@@ -1367,7 +1405,9 @@
                   "n": 17
                 }
               ]
-            }
+            },
+            "engaged_n": 177,
+            "coverage": 0.9779
           },
           "emos2_lite": {
             "sigma": 1.2476,
@@ -1442,7 +1482,9 @@
                   "n": 23
                 }
               ]
-            }
+            },
+            "engaged_n": 177,
+            "coverage": 0.9779
           }
         },
         "split": "ecmwf-2025H1",
@@ -1523,7 +1565,9 @@
                   "n": 133
                 }
               ]
-            }
+            },
+            "engaged_n": 184,
+            "coverage": 1.0
           },
           "served_v0": {
             "sigma": null,
@@ -1582,7 +1626,9 @@
                   "n": 128
                 }
               ]
-            }
+            },
+            "engaged_n": 184,
+            "coverage": 1.0
           },
           "mos_ecmwf": {
             "sigma": 1.0787,
@@ -1649,7 +1695,9 @@
                   "n": 140
                 }
               ]
-            }
+            },
+            "engaged_n": 184,
+            "coverage": 1.0
           },
           "emos2_lite": {
             "sigma": 1.0469,
@@ -1716,7 +1764,9 @@
                   "n": 114
                 }
               ]
-            }
+            },
+            "engaged_n": 184,
+            "coverage": 1.0
           }
         },
         "split": "ecmwf-2025H2",
@@ -1757,6 +1807,7 @@
           "calm_folds_ok": 0,
           "n_folds": 2,
           "calm_ok": false,
+          "coverage_ok": true,
           "eligible_for_followup_prereg": false
         },
         "emos2_lite": {
@@ -1781,6 +1832,7 @@
           "calm_folds_ok": 0,
           "n_folds": 2,
           "calm_ok": false,
+          "coverage_ok": true,
           "eligible_for_followup_prereg": false
         }
       }
@@ -1810,6 +1862,7 @@
           "calm_folds_ok": 0,
           "n_folds": 2,
           "calm_ok": false,
+          "coverage_ok": true,
           "eligible_for_followup_prereg": false
         },
         "emos2_lite": {
@@ -1834,6 +1887,7 @@
           "calm_folds_ok": 0,
           "n_folds": 2,
           "calm_ok": false,
+          "coverage_ok": true,
           "eligible_for_followup_prereg": false
         }
       }
@@ -1863,6 +1917,7 @@
           "calm_folds_ok": 0,
           "n_folds": 2,
           "calm_ok": false,
+          "coverage_ok": true,
           "eligible_for_followup_prereg": false
         },
         "emos2_lite": {
@@ -1887,6 +1942,7 @@
           "calm_folds_ok": 0,
           "n_folds": 2,
           "calm_ok": false,
+          "coverage_ok": true,
           "eligible_for_followup_prereg": false
         }
       }

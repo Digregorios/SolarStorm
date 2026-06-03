@@ -58,6 +58,29 @@ def _write_snap(root: Path, model_id: str, endpoint: str, frame: pl.DataFrame) -
     frame.write_parquet(part / f"{vt.month:02d}.parquet")
 
 
+def _merge_snap(root: Path, model_id: str, endpoint: str, frame: pl.DataFrame) -> None:
+    """Merge *frame* into the existing parquet partition (concat, not overwrite).
+
+    This mirrors production _write_partitioned semantics: new rows are appended
+    to existing data and de-duplicated by (model, endpoint, run_time_utc,
+    valid_time_utc), keeping the latest entry.
+    """
+    vt = frame["valid_time_utc"].to_list()[0]
+    part = root / STATION / model_id / endpoint / f"{vt.year:04d}"
+    part.mkdir(parents=True, exist_ok=True)
+    path = part / f"{vt.month:02d}.parquet"
+    if path.exists():
+        existing = pl.read_parquet(path)
+        merged = pl.concat([existing, frame], how="vertical_relaxed")
+        merged = merged.unique(
+            subset=["model", "endpoint", "run_time_utc", "valid_time_utc"],
+            keep="last",
+        )
+        merged.write_parquet(path)
+    else:
+        frame.write_parquet(path)
+
+
 def test_live_fetch_no_op_when_cached(tmp_path):
     """If the target run is already cached, fetch_live must not trigger any fetches."""
     cp_utc = cp_to_utc(TARGET_DATE, CP)
@@ -252,7 +275,9 @@ def test_live_fetch_records_full_telemetry(tmp_path):
     assert probe_hit.ecmwf_fetch_attempted is True
     assert probe_hit.ecmwf_cache_hit is True
     assert probe_hit.ecmwf_fetch_status == "cache_hit"
-    assert len(probe_hit.ecmwf_attempted_run_times) == 4
+    assert len(probe_hit.ecmwf_candidate_run_times) == 4
+    assert len(probe_hit.ecmwf_http_attempted_run_times) == 0
+    assert probe_hit.ecmwf_selected_run_time == expected_run.isoformat()
     assert probe_hit.ecmwf_fetch_error_type is None
 
     # 3) Fetch Success (reusing tmp_path but for GFS which is missing)
@@ -292,3 +317,48 @@ def test_live_fetch_records_full_telemetry(tmp_path):
         assert probe_fail.ecmwf_cache_hit is False
         assert probe_fail.ecmwf_fetch_status == "failed"
         assert probe_fail.ecmwf_fetch_error_type == "RuntimeError"
+        assert len(probe_fail.ecmwf_http_attempted_run_times) == 4
+        assert probe_fail.ecmwf_selected_run_time is None
+
+
+def test_live_fetch_validates_downloaded_snapshot_before_break(tmp_path):
+    """If latest cycle downloads but t2m_c is unusable for CP, loop must continue
+    to older cycles. Uses _merge_snap (concat) to replicate real production cache
+    write semantics where an invalid newer run coexists with an older valid run
+    in the same parquet partition.
+    """
+    cp_utc = cp_to_utc(TARGET_DATE, CP)
+    expected_run = cp_utc.replace(hour=18, minute=0, second=0, microsecond=0)
+    fallback_run = expected_run - timedelta(hours=6)  # 12Z run
+
+    def side_effect(lat, lon, station, model, run_time_utc, out_root, endpoint):
+        if run_time_utc == expected_run:
+            # Latest cycle downloads but produces unusable data for this CP (t2m_c=None).
+            # _merge_snap preserves any previously written runs in the same partition.
+            frame = _snap_frame(model.id, endpoint, run_time=run_time_utc,
+                                valid_time=cp_utc, t2m_c=None)
+            _merge_snap(Path(out_root), model.id, endpoint, frame)
+        else:
+            # Older cycle has usable data.
+            frame = _snap_frame(model.id, endpoint, run_time=run_time_utc,
+                                valid_time=cp_utc, t2m_c=13.5)
+            _merge_snap(Path(out_root), model.id, endpoint, frame)
+
+    with patch("core.ingest.nwp.snapshot_single_run", side_effect=side_effect) as mock_snapshot:
+        probe = probe_causal_nwp(
+            station=STATION,
+            target_date=TARGET_DATE,
+            cp_hhmm=CP,
+            out_root=tmp_path,
+            fetch_live=True,
+            lat=-41.3272,
+            lon=174.8053,
+        )
+        # Latest cycle was fetched but unusable, so fallback to older cycle.
+        # ECMWF: 18Z (downloaded but invalid) -> 12Z (downloaded and valid)
+        # GFS: same pattern
+        assert mock_snapshot.call_count >= 2
+        assert probe.ecmwf_available is True
+        assert probe.ecmwf_run_time_utc == fallback_run.isoformat()
+        assert probe.ecmwf_fetch_status == "success"
+        assert probe.ecmwf_selected_run_time == fallback_run.isoformat()

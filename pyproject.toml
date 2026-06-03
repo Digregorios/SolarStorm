@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "polymarket-tmax-forecaster"
-version = "0.1.0"
+version = "0.2.0"
 description = "Intraday Tmax forecaster for NZWN with CP-aware causality, calibrated confidence and forensic anti-nowcaster audit."
 readme = ".kiro/specs/polymarket-tmax-forecaster/README.md"
 requires-python = ">=3.11,<3.13"
