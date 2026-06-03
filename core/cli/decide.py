@@ -51,7 +51,14 @@ def run(
         tmp_max_c=cfg.tmp_c_int_plausibility.max,
     )
     labels = build_tmax_labels(obs, tz_name=cfg.tz, cp_set_utc=cfg.cp_set_utc)
-    panel = build_panel(obs, labels, tz_name=cfg.tz, cp_set=cfg.cp_set_utc)
+    if labels is not None:
+        train_dates = [
+            d_val for d_val in labels["date_local"].unique().to_list()
+            if d_val is not None and train_start_d <= d_val <= train_end_d
+        ]
+    else:
+        train_dates = None
+    panel = build_panel(obs, labels, tz_name=cfg.tz, cp_set=cfg.cp_set_utc, dates=train_dates)
     train_panel = panel.filter(
         (panel["date_local"] >= train_start_d) & (panel["date_local"] <= train_end_d)
     )

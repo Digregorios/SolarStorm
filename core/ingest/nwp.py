@@ -63,6 +63,7 @@ def snapshot_single_run(
     model: ModelSpec,
     run_time_utc: datetime,
     out_root: Path | str,
+    endpoint: str | None = None,
 ) -> Path:
     if run_time_utc < datetime.combine(model.archive_start, datetime.min.time(), tzinfo=timezone.utc):
         raise ValueError(
@@ -74,8 +75,9 @@ def snapshot_single_run(
         payload, station=station, model=model, run_time_utc=run_time_utc
     )
     out_root = Path(out_root)
+    ep = endpoint or "single_runs"
     return _write_partitioned(
-        df, station=station, model=model, endpoint="single_runs", out_root=out_root
+        df, station=station, model=model, endpoint=ep, out_root=out_root
     )
 
 

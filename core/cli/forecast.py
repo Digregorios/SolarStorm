@@ -74,6 +74,7 @@ def run(
     model: str = typer.Option("empirical", "--model", help="Forecast model: 'empirical' (default baseline), 'ridge' (Phase 3 trained), or 'auto' (conservative per-CP router)."),
     nwp_root: Path = typer.Option(DEFAULT_NWP_ROOT, "--nwp-root", help="Root of local NWP snapshots for the --model auto causal probe."),
     nwp_probe: bool = typer.Option(True, "--nwp-probe/--no-nwp-probe", help="For --model auto: probe local snapshots for causal ECMWF/GFS availability. Off => treat NWP as unavailable (forces ridge fallback)."),
+    nwp_fetch_live: bool = typer.Option(False, "--nwp-fetch-live/--no-nwp-fetch-live", help="For --model auto: fetch live causal NWP runs from Open-Meteo if they are missing locally on disk."),
     serve_residuals: bool = typer.Option(False, "--serve-residuals/--no-serve-residuals", help="For --model auto at CP20-22: serve the residual LGBM when causal NWP is available; deterministic Ridge fallback otherwise. CP23 always stays Ridge."),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
@@ -99,7 +100,14 @@ def run(
     labels = build_tmax_labels(
         obs, tz_name=cfg.tz, cp_set_utc=cfg.cp_set_utc
     )
-    panel = build_panel(obs, labels, tz_name=cfg.tz, cp_set=cfg.cp_set_utc)
+    if labels is not None:
+        train_dates = [
+            d_val for d_val in labels["date_local"].unique().to_list()
+            if d_val is not None and train_start_d <= d_val <= train_end_d
+        ]
+    else:
+        train_dates = None
+    panel = build_panel(obs, labels, tz_name=cfg.tz, cp_set=cfg.cp_set_utc, dates=train_dates)
     train_panel = panel.filter(
         (panel["date_local"] >= train_start_d) & (panel["date_local"] <= train_end_d)
     )
@@ -131,7 +139,13 @@ def run(
     if model == "auto":
         if nwp_probe:
             probe = probe_causal_nwp(
-                station=cfg.icao, target_date=d, cp_hhmm=cp_hhmm, out_root=nwp_root
+                station=cfg.icao,
+                target_date=d,
+                cp_hhmm=cp_hhmm,
+                out_root=nwp_root,
+                fetch_live=nwp_fetch_live,
+                lat=getattr(cfg, "lat", None),
+                lon=getattr(cfg, "lon", None),
             )
             ecmwf_available = probe.ecmwf_available
             gfs_available = probe.gfs_available

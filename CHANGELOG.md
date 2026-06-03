@@ -4,6 +4,16 @@ Notable contract/method/feature changes across the project. Versioned method cha
 tamper-evident via the canonical PREREG sha256 pinned in `core/eval/preregistration.py`. For the
 narrative path (attempts, failures, decisions) see `docs/PROJECT_JOURNEY.md`.
 
+## [phase11:Phase5] - 2026-06-03 - Live NWP operational fetch & shadow logs
+
+Phase 5 operational tasks are now complete and verified.
+
+- **Live NWP Fetching/Caching (`core/ingest/nwp_live.py`):** Added a lookback mechanism (4 cycles, 24h) to determine the expected causal run from the cutoff time. If the snapshot is not cached locally and `fetch_live=True`, fetches/downloads and snapshots the run to the local cache under the correct endpoint structure (ECMWF to `single_runs`, GFS to `s3_grib`).
+- **CLI Ingest & Forecast Integration (`core/cli/forecast.py`):** Exposed `--nwp-fetch-live` / `--no-nwp-fetch-live` option flags to trigger the live fetch logic. Added latent fallback/graceful path if the HTTP fetch fails or is delayed.
+- **Decision Engine & Shadow Logs (`core/cli/decide.py`):** Verified shadow logging path to `artifacts/decisions/<run_id>.json`. The command now correctly records complete live event decisions (prob_dist, live odds/brackets fetched from Polymarket, Kelly fraction, sizing stake) in the shadow run log.
+- **Optimization:** Optimized `build_panel` calls in `decide.py` and `forecast.py` to only process dates within the active training window, significantly improving execution speeds during live prediction/backtesting runs.
+- **Verification:** Unit tests in `tests/unit/test_live_nwp_fetch.py` cover download caching, fallback delays, and offline-graceful errors. All 436 tests are passing successfully.
+
 ## [phase11:Onda2-C] - 2026-06-03 - MOS/EMOS-lite offline evaluator
 
 Track C is now measured, not wired into serving. This pass adds a read-only MOS/EMOS-lite evaluator
