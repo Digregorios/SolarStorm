@@ -30,8 +30,10 @@ from core.ops.shadow_runner import (
     ShadowRunnerConfig,
     ShadowRunnerError,
     _atomic_write,
+    _decisions_path,
     _output_path,
     _parse_forecast_output,
+    _is_decisions_complete,
 )
 
 
@@ -301,6 +303,457 @@ def test_default_config():
     assert config.cps == DEFAULT_CPS
     assert config.force is False
     assert config.timeout_s == 120
+    assert config.with_decisions is False
+
+
+# --- Wave 1: with_decisions tests ---------------------------------------------
+
+
+def _mock_decision_stdout(record: dict | None = None) -> str:
+    """Generate mock stdout from `tmax decide --dry-run`."""
+    r = record or {
+        "run_id": "decision-run-456",
+        "date_local": "2025-01-15",
+        "cp_utc": "2025-01-15T20:00:00+00:00",
+        "city": "Wellington",
+        "event_url": "https://example.com",
+        "execution_version": "1.0",
+        "prob_dist": {"18": 0.3, "19": 0.5, "20": 0.2},
+        "brackets": [],
+        "odds_status": "unavailable",
+        "odds_sha256": None,
+        "notes": [],
+        "forecast_run_id": "forecast-chain-test-123",
+        "forecast_model_version": "phase3-ridge-band-v1.0",
+        "forecast_file": "/tmp/forecast.json",
+    }
+    return f"[decide] banner\n{json.dumps(r)}"
+
+
+def test_with_decisions_generates_decisions_jsonl(tmp_path: Path):
+    """When with_decisions=True, runner generates decisions/{date}.jsonl."""
+    config = ShadowRunnerConfig(
+        shadow_root=tmp_path,
+        cps=(20, 21),
+        with_decisions=True,
+    )
+
+    def side_effect(*args, **kwargs):
+        cmd = args[0]
+        if "forecast" in cmd:
+            cp = int(cmd[cmd.index("--cp") + 1])
+            record = _valid_record()
+            record["cp_utc"] = f"2025-01-15T{cp:02d}:00:00+00:00"
+            return MagicMock(
+                returncode=0,
+                stdout=_mock_forecast_stdout(record),
+                stderr="",
+            )
+        elif "decide" in cmd:
+            cp = int(cmd[cmd.index("--cp") + 1])
+            return MagicMock(
+                returncode=0,
+                stdout=_mock_decision_stdout({
+                    "run_id": f"decision-run-{cp}",
+                    "date_local": "2025-01-15",
+                    "cp_utc": f"2025-01-15T{cp:02d}:00:00+00:00",
+                    "city": "Wellington",
+                    "event_url": "https://example.com",
+                    "execution_version": "1.0",
+                    "prob_dist": {"18": 0.3, "19": 0.5, "20": 0.2},
+                    "brackets": [],
+                    "odds_status": "unavailable",
+                    "odds_sha256": None,
+                    "notes": [],
+                    "forecast_run_id": "forecast-chain-test-123",
+                    "forecast_model_version": "phase3-ridge-band-v1.0",
+                    "forecast_file": "/tmp/forecast.json",
+                }),
+                stderr="",
+            )
+        return MagicMock(returncode=1, stdout="", stderr="unknown command")
+
+    with patch("subprocess.run", side_effect=side_effect):
+        runner = ShadowRunner(config)
+        result = runner.run_date(date(2025, 1, 15))
+
+    assert result.n_success == 2
+    assert result.n_failed == 0
+
+    # Verify decisions JSONL exists.
+    dec_path = _decisions_path(tmp_path, date(2025, 1, 15))
+    assert dec_path.exists()
+    lines = dec_path.read_text().strip().split("\n")
+    assert len(lines) == 2
+    for line in lines:
+        decision = json.loads(line)
+        assert "run_id" in decision
+        assert "odds_status" in decision
+        assert "forecast_run_id" in decision
+
+
+def test_decision_linkage_fields_present(tmp_path: Path):
+    """Decision rows must contain mandatory linkage fields from the forecast."""
+    config = ShadowRunnerConfig(
+        shadow_root=tmp_path,
+        cps=(20,),
+        with_decisions=True,
+    )
+    forecast_record = _valid_record()
+    forecast_record["run_id"] = "linkage-test-789"
+    forecast_record["model_version"] = "test-model-v2"
+
+    def side_effect(*args, **kwargs):
+        cmd = args[0]
+        if "forecast" in cmd:
+            return MagicMock(
+                returncode=0,
+                stdout=_mock_forecast_stdout(forecast_record),
+                stderr="",
+            )
+        elif "decide" in cmd:
+            # The decide CLI should receive --forecast-json and include linkage.
+            return MagicMock(
+                returncode=0,
+                stdout=_mock_decision_stdout({
+                    "run_id": "dec-run-001",
+                    "date_local": "2025-01-15",
+                    "cp_utc": "2025-01-15T20:00:00+00:00",
+                    "forecast_run_id": "linkage-test-789",
+                    "forecast_model_version": "test-model-v2",
+                    "forecast_file": str(tmp_path / "_tmp" / "2025-01-15_cp20.json"),
+                    "odds_status": "unavailable",
+                    "brackets": [],
+                    "notes": [],
+                }),
+                stderr="",
+            )
+        return MagicMock(returncode=1, stdout="", stderr="")
+
+    with patch("subprocess.run", side_effect=side_effect):
+        runner = ShadowRunner(config)
+        runner.run_date(date(2025, 1, 15))
+
+    dec_path = _decisions_path(tmp_path, date(2025, 1, 15))
+    decisions = [json.loads(line) for line in dec_path.read_text().strip().split("\n")]
+    assert len(decisions) == 1
+    assert decisions[0]["forecast_run_id"] == "linkage-test-789"
+    assert decisions[0]["forecast_model_version"] == "test-model-v2"
+    assert "forecast_file" in decisions[0]
+
+
+def test_decision_dry_run_no_live_orders(tmp_path: Path):
+    """The decide subprocess must ALWAYS include --dry-run (never place orders)."""
+    config = ShadowRunnerConfig(
+        shadow_root=tmp_path,
+        cps=(20,),
+        with_decisions=True,
+    )
+
+    calls: list[list[str]] = []
+
+    def capture_call(*args, **kwargs):
+        calls.append(args[0])
+        if "forecast" in args[0]:
+            return MagicMock(returncode=0, stdout=_mock_forecast_stdout(), stderr="")
+        return MagicMock(returncode=0, stdout=_mock_decision_stdout(), stderr="")
+
+    with patch("subprocess.run", side_effect=capture_call):
+        runner = ShadowRunner(config)
+        runner.run_date(date(2025, 1, 15))
+
+    # Find the decide call.
+    decide_calls = [c for c in calls if "decide" in c]
+    assert len(decide_calls) == 1
+    assert "--dry-run" in decide_calls[0]
+    # Also verify --forecast-json is present.
+    assert "--forecast-json" in decide_calls[0]
+
+
+def test_decision_idempotent(tmp_path: Path):
+    """Re-running with existing complete decisions (including linkage) should skip when not forced."""
+    config = ShadowRunnerConfig(
+        shadow_root=tmp_path,
+        cps=(20,),
+        with_decisions=True,
+        force=False,
+    )
+
+    # Pre-create forecast and decisions files with FULL linkage.
+    out_path = _output_path(tmp_path, date(2025, 1, 15))
+    out_path.parent.mkdir(parents=True)
+    valid = _valid_record()
+    with open(out_path, "w") as fh:
+        fh.write(json.dumps(valid) + "\n")
+
+    dec_path = _decisions_path(tmp_path, date(2025, 1, 15))
+    dec_path.parent.mkdir(parents=True, exist_ok=True)
+    decision = {
+        "run_id": "dec-run",
+        "date_local": "2025-01-15",
+        "cp_utc": "2025-01-15T20:00:00+00:00",
+        "odds_status": "unavailable",
+        "forecast_run_id": valid["run_id"],
+        "forecast_model_version": valid["model_version"],
+        "forecast_file": str(out_path),
+        "brackets": [],
+        "notes": [],
+    }
+    with open(dec_path, "w") as fh:
+        fh.write(json.dumps(decision) + "\n")
+
+    with patch("subprocess.run") as mock_run:
+        runner = ShadowRunner(config)
+        result = runner.run_date(date(2025, 1, 15))
+
+    assert result.skipped
+    # No subprocess calls because files are complete (forecasts + decisions with linkage).
+    mock_run.assert_not_called()
+
+
+def test_decision_handles_subprocess_failure(tmp_path: Path):
+    """Decision subprocess failure should be recorded as a decision error, not forecast error."""
+    config = ShadowRunnerConfig(
+        shadow_root=tmp_path,
+        cps=(20, 21),
+        with_decisions=True,
+    )
+
+    def side_effect(*args, **kwargs):
+        cmd = args[0]
+        if "forecast" in cmd:
+            cp = int(cmd[cmd.index("--cp") + 1])
+            record = _valid_record()
+            record["cp_utc"] = f"2025-01-15T{cp:02d}:00:00+00:00"
+            return MagicMock(returncode=0, stdout=_mock_forecast_stdout(record), stderr="")
+        elif "decide" in cmd:
+            cp = int(cmd[cmd.index("--cp") + 1])
+            if cp == 20:
+                return MagicMock(returncode=0, stdout=_mock_decision_stdout(), stderr="")
+            else:
+                return MagicMock(returncode=1, stdout="", stderr="odds fetch failed")
+        return MagicMock(returncode=1, stdout="", stderr="")
+
+    with patch("subprocess.run", side_effect=side_effect):
+        runner = ShadowRunner(config)
+        result = runner.run_date(date(2025, 1, 15))
+
+    # Forecasts: 2 success, 0 failed. Decisions: 1 success, 1 failure.
+    assert result.n_success == 2
+    assert result.n_failed == 0
+    assert result.n_decision_failed == 1
+    assert any(cp == 21 for cp, _ in result.decision_errors)
+
+
+def test_is_decisions_complete_exact_match(tmp_path: Path):
+    """_is_decisions_complete accepts exact CP set, date, and linkage fields."""
+    target = date(2025, 1, 15)
+    dec_path = tmp_path / "decisions" / f"{target.isoformat()}.jsonl"
+    dec_path.parent.mkdir(parents=True)
+
+    lines = []
+    for cp in (20, 21, 22, 23):
+        lines.append(json.dumps({
+            "run_id": f"dec-{cp}",
+            "date_local": "2025-01-15",
+            "cp_utc": f"2025-01-15T{cp:02d}:00:00+00:00",
+            "odds_status": "unavailable",
+            "forecast_run_id": "f1",
+            "forecast_model_version": "v1",
+            "forecast_file": "/tmp/f.json",
+        }))
+    with open(dec_path, "w") as fh:
+        fh.write("\n".join(lines) + "\n")
+
+    assert _is_decisions_complete(dec_path, target, (20, 21, 22, 23))
+
+
+def test_is_decisions_complete_rejects_wrong_date(tmp_path: Path):
+    """_is_decisions_complete rejects records with wrong date_local (all linkage present)."""
+    target = date(2025, 1, 15)
+    dec_path = tmp_path / "decisions" / f"{target.isoformat()}.jsonl"
+    dec_path.parent.mkdir(parents=True)
+
+    with open(dec_path, "w") as fh:
+        fh.write(json.dumps({
+            "run_id": "dec-1",
+            "date_local": "2025-01-14",
+            "cp_utc": "2025-01-14T20:00:00+00:00",
+            "odds_status": "unavailable",
+            "forecast_run_id": "f1",
+            "forecast_model_version": "v1",
+            "forecast_file": "/tmp/f.json",
+        }) + "\n")
+
+    assert not _is_decisions_complete(dec_path, target, (20,))
+
+
+def test_with_decisions_false_no_decisions_created(tmp_path: Path):
+    """When with_decisions=False, no decisions directory or file should be created."""
+    config = ShadowRunnerConfig(
+        shadow_root=tmp_path,
+        cps=(20,),
+        with_decisions=False,
+    )
+
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout=_mock_forecast_stdout(),
+            stderr="",
+        )
+        runner = ShadowRunner(config)
+        runner.run_date(date(2025, 1, 15))
+
+    dec_path = _decisions_path(tmp_path, date(2025, 1, 15))
+    assert not dec_path.exists()
+    # The decisions directory should not even be created.
+    assert not (tmp_path / "decisions").exists()
+
+
+def test_cli_args_parsed_to_config(tmp_path: Path):
+    """Verify that run_shadow_ops_v1 CLI arguments map to ShadowRunnerConfig."""
+    from scripts.run_shadow_ops_v1 import parse_args
+
+    # Simulate CLI invocation with --with-decisions and custom paths.
+    import sys
+    original_argv = sys.argv
+    try:
+        sys.argv = [
+            "run_shadow_ops_v1.py",
+            "--date", "2025-01-15",
+            "--with-decisions",
+            "--station-config", "custom/station.yaml",
+            "--csv", "custom/data.csv",
+            "--shadow-root", str(tmp_path),
+        ]
+        args = parse_args()
+        assert args.with_decisions is True
+        assert args.station_config == Path("custom/station.yaml")
+        assert args.csv == Path("custom/data.csv")
+        assert args.shadow_root == tmp_path
+    finally:
+        sys.argv = original_argv
+
+
+def test_is_decisions_complete_rejects_missing_fields(tmp_path: Path):
+    """_is_decisions_complete rejects records missing mandatory fields."""
+    target = date(2025, 1, 15)
+    dec_path = tmp_path / "decisions" / f"{target.isoformat()}.jsonl"
+    dec_path.parent.mkdir(parents=True)
+
+    # Missing 'odds_status', linkage fields, and 'cp_utc' — should be rejected.
+    with open(dec_path, "w") as fh:
+        fh.write(json.dumps({
+            "run_id": "dec-1",
+            "date_local": "2025-01-15",
+        }) + "\n")
+
+    assert not _is_decisions_complete(dec_path, target, (20,))
+
+
+def test_is_decisions_complete_rejects_duplicate_cps(tmp_path: Path):
+    """_is_decisions_complete rejects files with duplicate CPs."""
+    target = date(2025, 1, 15)
+    dec_path = tmp_path / "decisions" / f"{target.isoformat()}.jsonl"
+    dec_path.parent.mkdir(parents=True)
+
+    lines = []
+    for _ in range(2):
+        lines.append(json.dumps({
+            "run_id": "dec-1",
+            "date_local": "2025-01-15",
+            "cp_utc": "2025-01-15T20:00:00+00:00",
+            "odds_status": "unavailable",
+            "forecast_run_id": "f1",
+            "forecast_model_version": "v1",
+            "forecast_file": "/tmp/f.json",
+        }))
+    with open(dec_path, "w") as fh:
+        fh.write("\n".join(lines) + "\n")
+
+    # Duplicate CP20 -> not complete even though set matches.
+    assert not _is_decisions_complete(dec_path, target, (20,))
+
+
+def test_is_decisions_complete_rejects_wrong_line_count(tmp_path: Path):
+    """_is_decisions_complete rejects files with extra valid lines (superset)."""
+    target = date(2025, 1, 15)
+    dec_path = tmp_path / "decisions" / f"{target.isoformat()}.jsonl"
+    dec_path.parent.mkdir(parents=True)
+
+    lines = []
+    for cp in (20, 21, 22):
+        lines.append(json.dumps({
+            "run_id": f"dec-{cp}",
+            "date_local": "2025-01-15",
+            "cp_utc": f"2025-01-15T{cp:02d}:00:00+00:00",
+            "odds_status": "unavailable",
+            "forecast_run_id": "f1",
+            "forecast_model_version": "v1",
+            "forecast_file": "/tmp/f.json",
+        }))
+    with open(dec_path, "w") as fh:
+        fh.write("\n".join(lines) + "\n")
+
+    # File has 3 lines but only 2 expected -> not complete.
+    assert not _is_decisions_complete(dec_path, target, (20, 21))
+
+
+def test_decision_incomplete_without_linkage_gets_regenerated(tmp_path: Path):
+    """A decision file complete in CPs but missing linkage fields is NOT complete and triggers regeneration.
+
+    Note: mock_run.return_value is a single return value because forecasts are
+    already complete on disk, so only the decide subprocess is invoked.
+    """
+    config = ShadowRunnerConfig(
+        shadow_root=tmp_path,
+        cps=(20,),
+        with_decisions=True,
+        force=False,
+    )
+
+    # Pre-create forecast file (complete).
+    out_path = _output_path(tmp_path, date(2025, 1, 15))
+    out_path.parent.mkdir(parents=True)
+    valid = _valid_record()
+    with open(out_path, "w") as fh:
+        fh.write(json.dumps(valid) + "\n")
+
+    # Pre-create decision file with ALL CPs but NO linkage fields.
+    dec_path = _decisions_path(tmp_path, date(2025, 1, 15))
+    dec_path.parent.mkdir(parents=True, exist_ok=True)
+    decision = {
+        "run_id": "dec-run",
+        "date_local": "2025-01-15",
+        "cp_utc": "2025-01-15T20:00:00+00:00",
+        "odds_status": "unavailable",
+        # Missing forecast_run_id, forecast_model_version, forecast_file
+        "brackets": [],
+        "notes": [],
+    }
+    with open(dec_path, "w") as fh:
+        fh.write(json.dumps(decision) + "\n")
+
+    with patch("subprocess.run") as mock_run:
+        # Mock the decide CLI to return a proper decision with linkage.
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout=_mock_decision_stdout(),
+            stderr="",
+        )
+        runner = ShadowRunner(config)
+        result = runner.run_date(date(2025, 1, 15))
+
+    # Should NOT be skipped because decision lacks linkage -> incomplete.
+    assert not result.skipped
+    # Forecasts were already complete, so only decide subprocess should run.
+    assert result.n_success == 1
+    assert result.n_decision_failed == 0
+    # Verify the decision file was overwritten with a proper linkage record.
+    decisions = [json.loads(line) for line in dec_path.read_text().strip().split("\n")]
+    assert len(decisions) == 1
+    assert decisions[0]["forecast_run_id"] == "forecast-chain-test-123"
 
 
 # --- Negative test scenarios (patch-forward) ----------------------------------

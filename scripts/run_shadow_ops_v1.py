@@ -69,6 +69,23 @@ def parse_args() -> argparse.Namespace:
         default=120,
         help="Subprocess timeout in seconds (default: 120).",
     )
+    parser.add_argument(
+        "--with-decisions",
+        action="store_true",
+        help="Generate decision artifacts after forecasts (Wave 1). Always uses --dry-run, never places live orders.",
+    )
+    parser.add_argument(
+        "--station-config",
+        type=Path,
+        default=Path("nzwn/config/station.yaml"),
+        help="Station config for decide (default: nzwn/config/station.yaml).",
+    )
+    parser.add_argument(
+        "--csv",
+        type=Path,
+        default=Path("NZWN.csv"),
+        help="Observations CSV for decide (default: NZWN.csv).",
+    )
     return parser.parse_args()
 
 
@@ -93,6 +110,9 @@ def main() -> int:
         cps=cps,
         force=args.force,
         timeout_s=args.timeout,
+        with_decisions=args.with_decisions,
+        station_yaml=args.station_config,
+        csv_path=args.csv,
     )
 
     runner = ShadowRunner(config)
@@ -102,21 +122,32 @@ def main() -> int:
     total_success = sum(r.n_success for r in results)
     total_failed = sum(r.n_failed for r in results)
     total_skipped = sum(1 for r in results if r.skipped)
+    total_decision_failed = sum(r.n_decision_failed for r in results)
 
     print(f"Shadow Ops Run Complete")
     print(f"  Dates: {start} .. {end} ({len(results)} days)")
     print(f"  Success: {total_success} forecasts")
-    print(f"  Failed: {total_failed} checkpoints")
+    print(f"  Failed: {total_failed} forecast checkpoints")
     print(f"  Skipped: {total_skipped} dates (already exist)")
+    if args.with_decisions:
+        print(f"  Decision failures: {total_decision_failed}")
 
-    # Print errors if any.
+    # Print forecast errors if any.
     for r in results:
         if r.errors:
-            print(f"\n  {r.date_local}:")
+            print(f"\n  {r.date_local} forecast errors:")
             for cp, err in r.errors:
                 print(f"    CP{cp}: {err}")
 
-    return 0 if total_failed == 0 else 1
+    # Print decision errors if any.
+    if args.with_decisions:
+        for r in results:
+            if r.decision_errors:
+                print(f"\n  {r.date_local} decision errors:")
+                for cp, err in r.decision_errors:
+                    print(f"    CP{cp}: {err}")
+
+    return 0 if total_failed == 0 and total_decision_failed == 0 else 1
 
 
 if __name__ == "__main__":
