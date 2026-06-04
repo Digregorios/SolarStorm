@@ -1,0 +1,76 @@
+"""Leaderboard: the permanent scoreboard artifact (P5)."""
+from __future__ import annotations
+
+import datetime as dt
+import json
+from pathlib import Path
+
+from solarstorm.baselines._ladder import LadderResult
+
+
+def build_leaderboard(
+    *,
+    results: list[LadderResult],
+    segments: dict[str, list[LadderResult]],
+    window_start: dt.date,
+    window_end: dt.date,
+    gates: dict | None = None,
+) -> dict:
+    by_cp: dict[str, list[dict]] = {}
+    for r in results:
+        by_cp.setdefault(r.cp, []).append({
+            "level": r.level, "name": r.name,
+            "mae": r.mae, "rmse": r.rmse, "bias": r.bias,
+            "bracket_match": r.bracket_match, "rps": r.rps,
+            "fallback_rate": r.fallback_rate, "n": r.n,
+        })
+
+    best_nulls = {}
+    for cp, entries in by_cp.items():
+        best = min(entries, key=lambda e: e["mae"])
+        best_nulls[cp] = best["name"]
+
+    return {
+        "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "window": {"start": window_start.isoformat(), "end": window_end.isoformat()},
+        "by_cp": by_cp,
+        "best_nulls": best_nulls,
+        "segments": {k: [{"name": r.name, "mae": r.mae, "n": r.n} for r in v]
+                      for k, v in segments.items()},
+        "gates": gates or {},
+        "summary": f"Best null varies by CP. {len(results)} baseline results across {len(by_cp)} CPs.",
+    }
+
+
+def export_leaderboard(board: dict, output_dir: Path) -> tuple[Path, Path]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    today = dt.date.today().isoformat()
+    json_path = output_dir / f"{today}-leaderboard.json"
+    md_path = output_dir / f"{today}-leaderboard.md"
+
+    json_path.write_text(json.dumps(board, indent=2, default=str))
+
+    lines = [
+        f"# SolarStorm Baseline Leaderboard — {today}",
+        f"Window: {board['window']['start']} to {board['window']['end']}",
+        "",
+    ]
+    for cp, entries in board.get("by_cp", {}).items():
+        best = board["best_nulls"].get(cp, "?")
+        lines.append(f"## CP={cp} (best null: {best})")
+        for e in entries:
+            fb = f"fallback={e['fallback_rate']:.0%}" if e.get("fallback_rate") is not None else ""
+            lines.append(f"- {e['level']} {e['name']}: MAE={e['mae']:.2f}  BM={e['bracket_match']:.2f}  RPS={e['rps']:.2f}  {fb}")
+        lines.append("")
+
+    if board.get("segments"):
+        lines.append("## Segments")
+        for seg_name, seg_entries in board["segments"].items():
+            lines.append(f"### {seg_name}")
+            for e in seg_entries:
+                lines.append(f"- {e['name']}: MAE={e['mae']:.2f}  n={e['n']}")
+
+    lines.append(f"\n{board['summary']}")
+    md_path.write_text("\n".join(lines))
+
+    return json_path, md_path
