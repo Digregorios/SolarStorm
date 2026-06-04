@@ -48,7 +48,7 @@ def export_leaderboard(board: dict, output_dir: Path) -> tuple[Path, Path]:
     json_path = output_dir / f"{today}-leaderboard.json"
     md_path = output_dir / f"{today}-leaderboard.md"
 
-    json_path.write_text(json.dumps(board, indent=2, default=str))
+    json_path.write_text(json.dumps(board, indent=2, default=str), encoding="utf-8")
 
     lines = [
         f"# SolarStorm Baseline Leaderboard — {today}",
@@ -70,7 +70,15 @@ def export_leaderboard(board: dict, output_dir: Path) -> tuple[Path, Path]:
             for e in seg_entries:
                 lines.append(f"- {e['name']}: MAE={e['mae']:.2f}  n={e['n']}")
 
+    # Feature null section
+    if board.get("feature_nulls"):
+        lines.append("## Baseline+Feature Nulls")
+        for entry in board["feature_nulls"]:
+            corr = f"  corr_diff={entry['corr_diff']:.4f}" if entry.get("corr_diff") is not None else ""
+            lines.append(f"- feature {entry['name']} (CP={entry['cp']}): MAE={entry['mae']:.2f}  n={entry['n']}{corr}")
+        lines.append("")
+
     lines.append(f"\n{board['summary']}")
-    md_path.write_text("\n".join(lines))
+    md_path.write_text("\n".join(lines), encoding="utf-8")
 
     return json_path, md_path

@@ -9,6 +9,7 @@ import datetime as dt
 import json
 from pathlib import Path
 
+import numpy as np
 import polars as pl
 import typer
 
@@ -25,6 +26,8 @@ from solarstorm.baselines._ladder import LadderResult, best_null_for_cp
 from solarstorm.eval._leaderboard import build_leaderboard, export_leaderboard
 from solarstorm.eda._hypotheses import Hypothesis
 from solarstorm.eda._catalog import SEED_HYPOTHESES
+from solarstorm.features.builder import build_features, build_coverage_manifest, BLOCKED_FEATURES
+from solarstorm.eda._validate import validate_hypotheses, _fit_ols_challenger
 
 app = typer.Typer(help="SolarStorm — intraday Tmax forecaster for NZWN")
 CACHE_DIR = Path("./.cache/iem")
@@ -97,6 +100,125 @@ def baselines(
 
 
 @app.command()
+def features(
+    obs_path: str = typer.Option("./data/obs.parquet", help="Path to obs parquet"),
+    labels_path: str = typer.Option("./data/labels.parquet", help="Path to labels parquet"),
+    output_dir: str = typer.Option("./data", help="Output directory for features.parquet"),
+):
+    """Compute causal feature table from obs + labels (bridge P3)."""
+    obs = pl.read_parquet(obs_path)
+    labels = pl.read_parquet(labels_path)
+    print(f"Loaded {obs.height} obs rows, {labels.height} label rows")
+
+    result = build_features(obs, labels)
+    out = Path(output_dir)
+    out.mkdir(exist_ok=True)
+    result.write_parquet(out / "features.parquet")
+    print(f"Features: {result.height} rows, {len(result.columns)} columns")
+
+    # Coverage manifest
+    manifest = build_coverage_manifest(result)
+    today_iso = dt.date.today().isoformat()
+    report_dir = REPORTS_DIR / today_iso
+    report_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = report_dir / "feature_coverage.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    # Summary
+    n_computable = sum(1 for v in manifest.values() if v["status"] == "computable")
+    n_blocked = sum(1 for v in manifest.values() if v["status"] == "BLOCKED")
+    print(f"Coverage manifest: {n_computable} computable, {n_blocked} BLOCKED")
+    print(f"  {manifest_path}")
+
+
+@app.command()
+def validate(
+    features_path: str = typer.Option("./data/features.parquet", help="Path to features parquet"),
+    labels_path: str = typer.Option("./data/labels.parquet", help="Path to labels parquet"),
+):
+    """Run hypothesis validation harness (bridge P3)."""
+    features = pl.read_parquet(features_path)
+    labels = pl.read_parquet(labels_path)
+    print(f"Loaded {features.height} feature rows, {labels.height} label rows")
+
+    all_results, contract = validate_hypotheses(
+        features, labels, SEED_HYPOTHESES,
+    )
+    print(f"Validation complete: {contract['n_validated']} validated, "
+          f"{contract['n_rejected']} rejected")
+
+    today_iso = dt.date.today().isoformat()
+    report_dir = REPORTS_DIR / today_iso
+    report_dir.mkdir(parents=True, exist_ok=True)
+
+    # ---- JSON export ----
+    results_json = []
+    for r in all_results:
+        d = {
+            "id": r.id,
+            "feature_column": r.feature_column,
+            "cp": r.cp,
+            "regime": r.regime,
+            "effect_size": r.effect_size,
+            "ci_lo": r.ci_lo,
+            "ci_hi": r.ci_hi,
+            "p_value": r.p_value,
+            "fdr_adjusted": r.fdr_adjusted,
+            "passes": r.passes,
+            "n_days": r.n_days,
+            "status": r.status,
+            "blocked_reason": r.blocked_reason,
+        }
+        if r.gate_results:
+            d["gates"] = {
+                k: {"passed": g.passed, "status": g.status, "detail": g.detail}
+                for k, g in r.gate_results.items()
+            }
+        results_json.append(d)
+
+    json_path = report_dir / "hypothesis_results.json"
+    json_path.write_text(json.dumps(results_json, indent=2), encoding="utf-8")
+
+    # ---- Markdown table ----
+    md_lines = [
+        f"# Hypothesis Validation Results — {today_iso}",
+        "",
+        "| id | feature | cp | regime | effect_size | ci_lo | ci_hi | p_value | fdr | passes | gates | status |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for r in all_results:
+        fdr = "Y" if r.fdr_adjusted else "N"
+        passes = "Y" if r.passes else "N"
+        gates_str = " ".join(
+            f"{k}:{g.status}" for k, g in (r.gate_results or {}).items()
+        )
+        es = f"{r.effect_size:.4f}" if r.effect_size is not None else ""
+        clo = f"{r.ci_lo:.4f}" if r.ci_lo is not None else ""
+        chi = f"{r.ci_hi:.4f}" if r.ci_hi is not None else ""
+        pv = f"{r.p_value:.6f}" if r.p_value is not None else ""
+        md_lines.append(
+            f"| {r.id} | {r.feature_column} | {r.cp} | {r.regime} "
+            f"| {es} | {clo} | {chi} | {pv} "
+            f"| {fdr} | {passes} | {gates_str} | {r.status} |"
+        )
+
+    md_path = report_dir / "hypothesis_results.md"
+    md_path.write_text("\n".join(md_lines), encoding="utf-8")
+
+    # ---- Validated contract ----
+    contract_path = report_dir / "validated_feature_contract.json"
+    contract_path.write_text(json.dumps(contract, indent=2), encoding="utf-8")
+
+    print(f"\nExported to {report_dir}:")
+    print(f"  {json_path.name}")
+    print(f"  {md_path.name}")
+    print(f"  {contract_path.name}")
+    print(f"\nValidated: {contract.get('n_validated', 0)}  "
+          f"Rejected: {contract.get('n_rejected', 0)}  "
+          f"BLOCKED: {len(contract.get('blocked', []))}")
+
+
+@app.command()
 def leaderboard(
     labels_path: str = typer.Option("./data/labels.parquet", help="Path to labels parquet"),
     window_days: int = typer.Option(30, help="Recent window size in days"),
@@ -119,11 +241,27 @@ def leaderboard(
 
     # Fit baselines on all data up to window_start
     train_end = window_start - dt.timedelta(days=1)
+    train_labels = complete.filter(pl.col("date_local") <= train_end)
+
     climo = fit_climatology(
-        complete.filter(pl.col("date_local") <= train_end),
+        train_labels,
         train_start=dt.date(2009, 1, 1),
         train_end=train_end,
     )
+
+    # ---- L4 empirical conditional ----
+    history_start = complete["date_local"].min()
+    emp = fit_empirical_conditional(
+        train_labels,
+        train_window=(history_start, train_end),
+    )
+    support_k = sorted(complete["tmax_int"].unique().to_list())
+
+    # ---- Date-to-tmax lookup for L1 (dminus1) ----
+    tmax_by_date: dict[dt.date, int] = {
+        row["date_local"]: row["tmax_int"]
+        for row in complete.iter_rows(named=True)
+    }
 
     results: list[LadderResult] = []
     for row in recent.iter_rows(named=True):
@@ -137,14 +275,23 @@ def leaderboard(
             if kcp is None:
                 continue
 
+            kcp_int = int(kcp)
+
             # L0: persistence
             results.append(LadderResult(
                 level="L0", name="persistence", cp=cp_str,
-                mae=abs(kcp - truth), n=1,
+                mae=abs(kcp_int - truth), n=1,
             ))
 
             # L1: dminus1
-            dminus1 = row.get("tmax_int")  # placeholder — needs previous day lookup
+            prev_day = d - dt.timedelta(days=1)
+            tmax_dminus1 = tmax_by_date.get(prev_day)
+            if tmax_dminus1 is not None:
+                results.append(LadderResult(
+                    level="L1", name="dminus1", cp=cp_str,
+                    mae=abs(tmax_dminus1 - truth), n=1,
+                ))
+
             # L2: climatology
             clim_pred = round(climo.tmax_dec_for(d))
             results.append(LadderResult(
@@ -152,11 +299,110 @@ def leaderboard(
                 mae=abs(clim_pred - truth), n=1,
             ))
 
-    # Build and export
+            # L4: empirical conditional (mode of distribution)
+            dist, source = emp.predict_dist(
+                month=d.month, cp=str(cp_str), k_cp=kcp_int,
+                support_k=support_k,
+            )
+            l4_p50 = max(dist, key=dist.get)
+            results.append(LadderResult(
+                level="L4", name="empirical_conditional", cp=cp_str,
+                mae=abs(l4_p50 - truth), n=1,
+                fallback_rate=0.0 if source == "conditional" else 1.0,
+            ))
+
+    # ---- Build and export ----
     board = build_leaderboard(
         results=results, segments={},
         window_start=window_start, window_end=today - dt.timedelta(days=1),
     )
+
+    # ---- Baseline+Feature Nulls ----
+    today_iso = dt.date.today().isoformat()
+    contract_path = REPORTS_DIR / today_iso / "validated_feature_contract.json"
+    features_path = Path("./data/features.parquet")
+
+    if contract_path.exists() and features_path.exists():
+        contract = json.loads(contract_path.read_text(encoding="utf-8"))
+        features_df = pl.read_parquet(features_path)
+        feature_rows: list[LadderResult] = []
+
+        for vf in contract.get("validated_features", []):
+            fc = vf["feature_column"]
+            cp_str = vf["cp"]
+
+            # Skip regime-specific results; use the "all" aggregate
+            if vf.get("regime", "all") != "all":
+                continue
+
+            # Fit OLS challenger on training data
+            train_feats_cp = features_df.filter(
+                (pl.col("date_local") <= train_end) & (pl.col("cp") == cp_str)
+            )
+            ols = _fit_ols_challenger(train_feats_cp, complete, fc, cp_str)
+            if ols is None:
+                continue
+
+            intercept, slope = ols
+            k_col = f"k_cp__cp_{cp_str.replace(':', '')}"
+
+            errors: list[float] = []
+            preds: list[float] = []
+            truths: list[float] = []
+            base_preds: list[float] = []
+
+            for trow in recent.iter_rows(named=True):
+                td = trow["date_local"]
+                truth_val = trow["tmax_int"]
+                kcp_val = trow.get(k_col)
+                if kcp_val is None:
+                    continue
+
+                feat_row = features_df.filter(
+                    (pl.col("date_local") == td) & (pl.col("cp") == cp_str)
+                )
+                if feat_row.height == 0:
+                    continue
+
+                feat_np = feat_row[fc].to_numpy()
+                if len(feat_np) == 0 or np.isnan(float(feat_np[0])):
+                    continue
+
+                pred_rw = intercept + slope * float(feat_np[0])
+                pred_tmax = round(kcp_val + pred_rw)
+
+                errors.append(abs(pred_tmax - truth_val))
+                preds.append(float(pred_tmax))
+                truths.append(float(truth_val))
+                base_preds.append(float(kcp_val))
+
+            if len(errors) >= 5:
+                mean_ae = sum(errors) / len(errors)
+
+                # corr_diff
+                pa = np.array(preds)
+                ta = np.array(truths)
+                ba = np.array(base_preds)
+                mask = ~(np.isnan(pa) | np.isnan(ta))
+                if mask.sum() > 2:
+                    r_model = float(np.corrcoef(pa[mask], ta[mask])[0, 1])
+                    r_base = float(np.corrcoef(ba[mask], ta[mask])[0, 1])
+                    cdiff = r_model - r_base
+                else:
+                    cdiff = None
+
+                feature_rows.append(LadderResult(
+                    level="feature", name=fc, cp=cp_str,
+                    mae=mean_ae, n=len(errors), corr_diff=cdiff,
+                ))
+
+        if feature_rows:
+            board["feature_nulls"] = [
+                {"name": r.name, "cp": r.cp, "mae": r.mae, "n": r.n,
+                 "corr_diff": r.corr_diff}
+                for r in feature_rows
+            ]
+
     json_path, md_path = export_leaderboard(board, REPORTS_DIR / "leaderboard")
     print(f"Leaderboard exported:")
     print(f"  {json_path}")
