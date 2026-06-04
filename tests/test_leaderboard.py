@@ -30,7 +30,8 @@ def test_export_leaderboard_writes_json(tmp_path):
     }
     out_path = tmp_path / "leaderboard"
     export_leaderboard(board, out_path)
-    assert (out_path / "2026-06-04-leaderboard.json").exists()
-    assert (out_path / "2026-06-04-leaderboard.md").exists()
-    data = json.loads((out_path / "2026-06-04-leaderboard.json").read_text())
+    today = dt.date.today().isoformat()
+    assert (out_path / f"{today}-leaderboard.json").exists()
+    assert (out_path / f"{today}-leaderboard.md").exists()
+    data = json.loads((out_path / f"{today}-leaderboard.json").read_text())
     assert data["summary"] == "test"

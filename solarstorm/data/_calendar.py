@@ -4,10 +4,6 @@ from __future__ import annotations
 import datetime as dt
 from zoneinfo import ZoneInfo
 
-# Earliest valid checkpoint hour (local). CPs before this hour are considered
-# invalid — they fall in the pre-dawn period before any meaningful trading day.
-_CP_WINDOW_START_HOUR = 6
-
 
 def day_local_window(d: dt.date, tz_name: str) -> tuple[dt.datetime, dt.datetime]:
     """Return UTC [start, end) covering the full local day `d` in `tz_name`.
@@ -21,32 +17,36 @@ def day_local_window(d: dt.date, tz_name: str) -> tuple[dt.datetime, dt.datetime
 
 
 def cp_to_utc(d: dt.date, cp_hhmm: str, tz_name: str) -> dt.datetime:
-    """Convert a local-date + HH:MM checkpoint string to a UTC-aware datetime.
+    """Convert a local-date + UTC checkpoint string to a UTC-aware datetime.
+
+    The checkpoint hour is interpreted as **UTC** (METAR convention). For
+    Wellington (UTC+12/13), UTC CPs 20:00-23:00 fall on UTC date D-1 and
+    correspond to local morning (08-11 NZST / 09-12 NZDT) on date D.
 
     Args:
         d: Local date.
-        cp_hhmm: Checkpoint hour as "HH:MM" (e.g. "23:00").
+        cp_hhmm: Checkpoint hour in **UTC** (e.g. "20:00" = 20:00 UTC).
         tz_name: IANA timezone name.
 
     Returns:
-        UTC-aware datetime for that checkpoint.
+        UTC-aware datetime for that checkpoint (tzinfo=UTC).
 
     Raises:
-        ValueError: If the checkpoint hour is before the valid CP window start
-            (_CP_WINDOW_START_HOUR) or at/after midnight of the next local day.
+        ValueError: If no UTC date maps the CP to local date *d*.
     """
     tz = ZoneInfo(tz_name)
     hour = int(cp_hhmm.split(":")[0])
-    local_naive = dt.datetime(d.year, d.month, d.day, hour, 0, 0)
-    local_aware = local_naive.replace(tzinfo=tz)
 
-    # Valid CP window: [_CP_WINDOW_START_HOUR:00, midnight-next-day)
-    cp_window_start = dt.datetime(d.year, d.month, d.day, _CP_WINDOW_START_HOUR, 0, 0, tzinfo=tz)
-    cp_window_end = dt.datetime.combine(d, dt.time.min, tzinfo=tz) + dt.timedelta(days=1)
-    if not (cp_window_start <= local_aware < cp_window_end):
-        raise ValueError(
-            f"CP {cp_hhmm} on {d} resolved to {local_aware.isoformat()}, "
-            f"outside valid CP window [{cp_window_start.isoformat()}, {cp_window_end.isoformat()})"
-        )
+    # Try the CP at UTC hour on UTC date D, then D-1.  For NZ tz offsets
+    # the CP almost always lands on D-1, but we try both to stay generic.
+    utc_dt = dt.datetime(d.year, d.month, d.day, hour, 0, 0, tzinfo=dt.timezone.utc)
+    if utc_dt.astimezone(tz).date() == d:
+        return utc_dt
 
-    return local_aware
+    utc_dt = utc_dt - dt.timedelta(days=1)
+    if utc_dt.astimezone(tz).date() == d:
+        return utc_dt
+
+    raise ValueError(
+        f"CP {cp_hhmm} UTC cannot be mapped to local date {d} in {tz_name}"
+    )
