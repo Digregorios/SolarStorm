@@ -1,0 +1,32 @@
+"""Shared test fixtures."""
+import datetime as dt
+from pathlib import Path
+
+import polars as pl
+import pytest
+
+
+@pytest.fixture
+def sample_obs_calm_day() -> pl.DataFrame:
+    """A calm winter day: T rises gently to 15°C at 14:00 local, then eases off.
+
+    Hourly NZST observations across the full local daytime of 2025-06-15
+    (06:00–19:00 local). A single local date with full intraday coverage so
+    ``day_complete`` is satisfied and the Tmax peak lands in the afternoon.
+    """
+    nzst = dt.timezone(dt.timedelta(hours=12))
+    rows = []
+    for local_hour in range(6, 20):  # 06:00–19:00 local on 2025-06-15
+        # Gentle morning warming to a 15°C peak at 14:00 local, then easing.
+        t = 8 + local_hour * 0.5 if local_hour < 14 else 15 - (local_hour - 14) * 0.4
+        ts = dt.datetime(2025, 6, 15, local_hour, 0, 0, tzinfo=nzst)
+        rows.append({
+            "valid": ts,
+            "metar": f"NZWN {ts:%d%H%M}Z AUTO 36005KT 9999 FEW020 {int(round(t)):02d}/08 Q1020",
+            "tmpf": t * 9/5 + 32,
+            "dwpf": 46.0, "sknt": 5.0, "drct": 360.0, "alti": 30.12, "p01i": 0.0,
+            "tmp_c_int": int(round(t)),
+            "dwp_c_int": 8,
+            "dq_tmp_c_int": "ok",
+        })
+    return pl.DataFrame(rows)
