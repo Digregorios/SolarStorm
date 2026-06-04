@@ -1,47 +1,19 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
-name = "polymarket-tmax-forecaster"
-version = "0.2.0"
-description = "Intraday Tmax forecaster for NZWN with CP-aware causality, calibrated confidence and forensic anti-nowcaster audit."
-readme = ".kiro/specs/polymarket-tmax-forecaster/README.md"
-requires-python = ">=3.11,<3.13"
-license = {text = "Proprietary"}
-authors = [{name = "Wellington Tmax Forecaster team"}]
-dependencies = [
-    "polars>=0.20,<2.0",
-    "pyarrow>=14.0",
-    "numpy>=1.26",
-    "scipy>=1.11",
-    "scikit-learn>=1.3",
-    "lightgbm>=4.0",
-    "typer>=0.12",
-    "structlog>=24.1",
-    "pyyaml>=6.0",
-    "pydantic>=2.5",
-    "httpx>=0.27",
-]
+name = "solarstorm"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["polars>=1.0", "numpy>=1.26", "typer>=0.12"]
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=8.0",
-    "pytest-cov>=4.1",
-    "ruff>=0.5",
-    "mypy>=1.10",
-]
+dev = ["pytest>=8", "httpx>=0.27"]
 
 [project.scripts]
-tmax = "core.cli.app:app"
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["core*", "nzwn*", "audits*"]
-exclude = ["tests*", "experiments*", "artifacts*", "reports*", "references*"]
+tmax = "solarstorm.__main__:app"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = ["test_*.py"]
-addopts = ["-ra", "--strict-markers"]
-filterwarnings = ["error"]
+pythonpath = ["."]
