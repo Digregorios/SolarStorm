@@ -29,16 +29,25 @@ def classify_regime(day_obs: pl.DataFrame) -> tuple[str, dict]:
     max_delta = obs["delta_t_per_h"].max() or 0.0
     dwp_depression = (obs["tmp_c_int"] - obs["dwp_c_int"]).mean()
 
-    # Wind direction stability
-    dirs = obs["wind_dir_deg"].drop_nulls()
-    wind_nw = dirs.filter((dirs >= 270) | (dirs <= 45)).len() / max(dirs.len(), 1)
+    # NW-sector flow strength. Wellington foehn is a STRONG downslope NW flow, so
+    # wind *intensity within the NW sector* (not just direction + drying) is the
+    # physical discriminator: a 4 kt and a 22 kt northerly are meteorologically
+    # different events that a direction-only test conflates. We therefore use a
+    # composite — the mean wind speed of observations actually blowing from the
+    # NW quadrant — rather than direction fraction alone. Source: the project's
+    # own foehn-like proxy (scripts/eda_regime_path.py:262-274 — NW/W wind +
+    # rising temp + drying) plus standard foehn physics (intensity is part of the
+    # definition). nw_flow_strength is 0 when no obs sit in the NW sector.
+    in_nw = obs.filter(
+        (pl.col("wind_dir_deg") >= 270) | (pl.col("wind_dir_deg") <= 45)
+    )
+    nw_flow_strength = (in_nw["sknt"].mean() or 0.0) if in_nw.height > 0 else 0.0
 
-    # Mean wind speed. Wellington foehn is a STRONG downslope NW flow, so wind
-    # speed (not just direction + drying) is the physical discriminator. Source:
-    # scripts/eda_regime_path.py:262-274 defines the foehn-like proxy as NW/W
-    # wind + rising temp + drying; the strong-wind cut separates true foehn from
-    # ordinary calm/late days that also happen to sit in the northerly quadrant.
-    mean_sknt = obs["sknt"].mean() or 0.0
+    # foehn_score couples flow strength with dryness so neither alone fires the
+    # regime. Threshold is the physical floor (>= ~15 kt strong NW flow AND a
+    # >= ~4 C dewpoint depression => 15 * 4 = 60), derived from the foehn floor
+    # NOT reverse-engineered from the unit fixtures.
+    foehn_score = nw_flow_strength * (dwp_depression if dwp_depression is not None else 0.0)
 
     # Precipitation
     has_precip = (obs["p01i"].sum() or 0.0) > 0.01
@@ -62,7 +71,7 @@ def classify_regime(day_obs: pl.DataFrame) -> tuple[str, dict]:
     # Classify
     if has_precip or max_delta < -2.0:
         regime = "disrupted"
-    elif wind_nw > 0.5 and dwp_depression > 4.0 and mean_sknt > 15.0:
+    elif foehn_score > 60.0:
         regime = "foehn_nw"
     elif late_warming:
         regime = "late_warming"
