@@ -70,3 +70,16 @@ def parse_tmp_c_int_from_row(
         return None, None, "missing", True
 
     return tt, dwp, "ok", False
+
+
+def parse_dwp_c_int_from_row(
+    metar_raw: str | None, dwpf: float | None = None
+) -> tuple[int | None, str]:
+    """Extract just the dewpoint integer from raw METAR.
+
+    Reuses the existing TT/DD regex via ``parse_tmp_c_int_from_row``.
+    The ``dwpf`` parameter is accepted for signature compatibility; dewpoint
+    is always sourced from the METAR text itself.
+    """
+    _, dwp, dq, _ = parse_tmp_c_int_from_row(metar_raw, None)
+    return dwp, dq

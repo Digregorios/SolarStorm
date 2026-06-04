@@ -36,6 +36,9 @@ def _fetch_iem_raw(station: str, start: dt.date, end: dt.date) -> pl.DataFrame:
             "valid": pl.Utf8, "tmpf": pl.Float64, "dwpf": pl.Float64,
             "sknt": pl.Float64, "drct": pl.Float64, "alti": pl.Float64,
             "p01i": pl.Float64, "metar": pl.Utf8,
+            "skyc1": pl.Utf8, "skyc2": pl.Utf8, "skyc3": pl.Utf8, "skyc4": pl.Utf8,
+            "skyl1": pl.Utf8, "skyl2": pl.Utf8, "skyl3": pl.Utf8, "skyl4": pl.Utf8,
+            "wxcodes": pl.Utf8,
         },
     )
 

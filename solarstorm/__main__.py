@@ -15,6 +15,7 @@ import typer
 from solarstorm._config import SEED
 from solarstorm.data._iem import fetch_iem_asos
 from solarstorm.data._metar import parse_tmp_c_int_from_row
+from solarstorm.data._obs import persist_obs
 from solarstorm.data._labels import build_tmax_labels, DayCompleteParams
 from solarstorm.data._calendar import cp_to_utc
 from solarstorm.data._settlement import bracket_for, flip_risk
@@ -57,12 +58,14 @@ def ingest(
         pl.Series("dq_tmp_c_int", dq_vals, dtype=pl.Utf8),
     )
 
+    data_dir = Path("./data")
+    data_dir.mkdir(exist_ok=True)
+    df = persist_obs(df, data_dir)
+
     labels = build_tmax_labels(df, DayCompleteParams())
     complete = labels.filter(pl.col("day_complete"))
     print(f"Labels: {labels.height} days, {complete.height} complete")
 
-    data_dir = Path("./data")
-    data_dir.mkdir(exist_ok=True)
     labels.write_parquet(data_dir / "labels.parquet")
     print(f"Saved labels to {data_dir / 'labels.parquet'}")
 
