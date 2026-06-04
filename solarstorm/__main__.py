@@ -42,11 +42,20 @@ def ingest(
     print(f"Ingested {df.height:,} rows ({station}, {start} to {end})")
 
     stats = {"n_total": 0, "n_ok": 0, "n_imputed": 0, "n_missing": 0}
+    tmp_c_int_vals: list[int | None] = []
+    dq_vals: list[str] = []
     for row in df.iter_rows(named=True):
         tt, _, dq, _ = parse_tmp_c_int_from_row(row["metar"], row.get("tmpf"))
         stats["n_total"] += 1
         stats[f"n_{dq}"] += 1
+        tmp_c_int_vals.append(tt)
+        dq_vals.append(dq)
     print(f"Parse stats: {stats}")
+
+    df = df.with_columns(
+        pl.Series("tmp_c_int", tmp_c_int_vals, dtype=pl.Int64),
+        pl.Series("dq_tmp_c_int", dq_vals, dtype=pl.Utf8),
+    )
 
     labels = build_tmax_labels(df, DayCompleteParams())
     complete = labels.filter(pl.col("day_complete"))
@@ -177,13 +186,13 @@ def eda(
     out.mkdir(parents=True, exist_ok=True)
     today = dt.date.today().isoformat()
     json_path = out / f"{today}-hypotheses.json"
-    json_path.write_text(json.dumps(results, indent=2))
+    json_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
 
     md_lines = ["# Hypothesis Catalog", f"Generated: {today}", ""]
     for r in results:
         md_lines.append(f"- **{r['id']}** [{r['status']}]: {r['description']} (source: {r['source']})")
     md_path = out / f"{today}-hypotheses.md"
-    md_path.write_text("\n".join(md_lines))
+    md_path.write_text("\n".join(md_lines), encoding="utf-8")
 
     print(f"Hypothesis results exported to {out}")
     print(f"  {json_path}")

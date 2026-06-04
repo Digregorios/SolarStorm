@@ -99,6 +99,9 @@ authorized_keys
 .coverage
 htmlcov/
 
+# Raw IEM API response cache (regenerable; keyed by station+date range)
+.cache/
+
 # Project artefacts
 artifacts/raw/**
 !artifacts/raw/.gitkeep

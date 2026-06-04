@@ -1,0 +1,114 @@
+[
+  {
+    "id": "H1",
+    "description": "Slope 3h (\u0394T/hour) improves remaining_warming forecast",
+    "feature_column": "slope_3h",
+    "source": "Reestrutura\u00e7\u00e3o Achado 13",
+    "status": "pending"
+  },
+  {
+    "id": "H2",
+    "description": "Expected peak hour (by month\u00d7regime) improves MAE at CP",
+    "feature_column": "hours_to_expected_peak",
+    "source": "Reestrutura\u00e7\u00e3o Achado 13",
+    "status": "pending"
+  },
+  {
+    "id": "H3",
+    "description": "Regime (calm/transition/late-warming) separates error significantly",
+    "feature_column": "regime_label",
+    "source": "model_error_taxonomy.md",
+    "status": "pending"
+  },
+  {
+    "id": "H4",
+    "description": "Dewpoint depression at CP carries signal for Tmax",
+    "feature_column": "dewpoint_depression",
+    "source": "Wilson & Fovell 2018",
+    "status": "pending"
+  },
+  {
+    "id": "H5",
+    "description": "T(D\u22121) adds predictive value beyond dminus1 pure",
+    "feature_column": "tmax_dminus1",
+    "source": "Auditoria #19",
+    "status": "pending"
+  },
+  {
+    "id": "H6",
+    "description": "Tmin of the day influences delta Tmax by regime\u00d7month",
+    "feature_column": "tmin_delta_tmax",
+    "source": "Auditoria #20",
+    "status": "pending"
+  },
+  {
+    "id": "H7",
+    "description": "Intraday regime transitions cause systematic error",
+    "feature_column": "intraday_regime_change",
+    "source": "Auditoria #14",
+    "status": "pending"
+  },
+  {
+    "id": "H8",
+    "description": "Wind direction change S\u2192N precedes late-warming",
+    "feature_column": "wind_dir_change_s_to_n",
+    "source": "EDA projeto, foehn literature",
+    "status": "pending"
+  },
+  {
+    "id": "H9",
+    "description": "Day sequences (A\u2192B\u2192C) have predictive structure",
+    "feature_column": "day_sequence_pattern",
+    "source": "Auditoria #16",
+    "status": "pending"
+  },
+  {
+    "id": "H10",
+    "description": "Rain/clearing/post-frontal recovery cause regime errors",
+    "feature_column": "precip_disruption",
+    "source": "Auditoria #11, #15",
+    "status": "pending"
+  },
+  {
+    "id": "H11",
+    "description": "Tmax hour varies significantly by month\u00d7regime (P2)",
+    "feature_column": "tmax_hour_by_regime_month",
+    "source": "Auditoria #12, #22",
+    "status": "pending"
+  },
+  {
+    "id": "H12",
+    "description": "Cloud cover reduces Tmax vs month\u00d7regime expectation",
+    "feature_column": "cloud_cover_suppression",
+    "source": "Auditoria #15",
+    "status": "pending"
+  },
+  {
+    "id": "H13",
+    "description": "Pressure trend (3h) signals regime change",
+    "feature_column": "pressure_trend_3h",
+    "source": "Foehn literature, Reestrutura\u00e7\u00e3o",
+    "status": "pending"
+  },
+  {
+    "id": "H14",
+    "description": "Composite foehn_score (NW-sector flow strength \u00d7 dewpoint depression) segments error better than a direction-only or hard wind-speed cut",
+    "feature_column": "foehn_score",
+    "source": "Regime classifier review 2026-06-04; eda_regime_path.py:262",
+    "status": "pending"
+  },
+  {
+    "id": "H15",
+    "description": "Late-warming measured as \u0394T anomaly vs the hour's train-only climatology ('surprise') beats absolute Tmax-hour timing for segmenting late-warming error",
+    "feature_column": "late_warming_anomaly",
+    "source": "Regime classifier review 2026-06-04; late_warming_bias_audit.md",
+    "status": "pending"
+  },
+  {
+    "id": "H16",
+    "description": "A continuous score-based regime classifier (argmax over foehn/late/calm/transition scores) generalizes better across seasons / ENSO phases than fixed boolean thresholds",
+    "feature_column": "regime_score_argmax",
+    "source": "Regime classifier review 2026-06-04",
+    "status": "pending"
+  }
+]
