@@ -1,12 +1,10 @@
-target-version = "py311"
+target-version = "py312"
 line-length = 110
 exclude = [
-    "references/legacy",
-    "artifacts",
-    "experiments/**/scratch",
     ".venv",
     "build",
     "dist",
+    "notebooks",
 ]
 
 [lint]
@@ -18,4 +16,3 @@ ignore = [
 
 [lint.per-file-ignores]
 "tests/**" = ["B", "N802", "N803"]
-"audits/**" = ["B"]
