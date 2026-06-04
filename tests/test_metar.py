@@ -50,3 +50,16 @@ def test_parse_metar_implausible_temperature():
     assert tt is None
     assert dq == "missing"
     assert implausible
+
+
+def test_parse_metar_temp_group_at_end_of_string():
+    """TT/DD as the final token (no trailing space) must still parse as 'ok'
+    via integer-truth, not silently fall back to tmpf imputation."""
+    tt, dwp, dq, _ = parse_tmp_c_int_from_row(
+        "NZWN 150300Z AUTO 36015KT 9999 FEW020 18/12",
+        tmpf=99.9,  # would mis-impute to 38°C if the regex misses the group
+    )
+    assert tt == 18
+    assert dwp == 12
+    assert dq == "ok"
+

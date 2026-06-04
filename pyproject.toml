@@ -17,3 +17,6 @@ tmax = "solarstorm.__main__:app"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "network: test hits the live IEM ASOS endpoint (deselect with -m 'not network')",
+]

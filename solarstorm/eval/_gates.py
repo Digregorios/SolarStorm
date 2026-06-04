@@ -48,10 +48,15 @@ def _g3_p50_collapse(p50_mode_share: float) -> GateResult:
 
 
 def _g4_anti_nowcaster(
-    corr_diff: float,
+    corr_diff: float | None,
     corr_diff_ci95: tuple[float, float] | None = None,
 ) -> GateResult:
-    if corr_diff_ci95 is not None:
+    if corr_diff is None:
+        # Non-demotable: a missing discriminant cannot CLEAR the gate. Surface
+        # it as a failing G4, never let it vanish (the old project's failure).
+        passed = False
+        detail = "corr_diff unavailable — cannot clear anti-nowcaster gate"
+    elif corr_diff_ci95 is not None:
         lo, hi = corr_diff_ci95
         passed = corr_diff >= 0.05 and lo > 0.0
         detail = f"corr_diff={corr_diff:.4f}, ci95=[{lo:.4f}, {hi:.4f}]"
@@ -90,8 +95,7 @@ def apply_all_gates(
         "G1": _g1_null_not_beaten(model_mae, best_null_mae),
         "G2": _g2_fallback_dominance(fallback_rate),
         "G3": _g3_p50_collapse(p50_mode_share),
+        "G4": _g4_anti_nowcaster(corr_diff, corr_diff_ci95),
         "G5": _g5_per_cp(cp, per_cp_passed),
     }
-    if corr_diff is not None:
-        results["G4"] = _g4_anti_nowcaster(corr_diff, corr_diff_ci95)
     return results

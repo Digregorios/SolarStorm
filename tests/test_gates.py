@@ -63,3 +63,17 @@ def test_all_gates_pass_for_clean_model():
         corr_diff=0.25, corr_diff_ci95=(0.10, 0.40),
     )
     assert all(g.passed for g in result.values())
+
+
+def test_g4_present_and_fails_when_corr_diff_missing():
+    """G4 is non-demotable: a missing corr_diff must surface as a FAILING G4,
+    never as a silently-absent gate (the old project's exact failure mode)."""
+    result = apply_all_gates(
+        model_mae=1.5, best_null_mae=2.0, cp="23:00",
+        fallback_rate=0.1, p50_mode_share=0.2,
+        corr_diff=None,
+    )
+    assert "G4" in result
+    assert not result["G4"].passed
+    assert result["G4"].status == "NOWCAST_SUSPECT"
+

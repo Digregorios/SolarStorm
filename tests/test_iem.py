@@ -1,8 +1,10 @@
 import datetime as dt
 import polars as pl
+import pytest
 from solarstorm.data._iem import fetch_iem_asos
 
 
+@pytest.mark.network
 def test_fetch_iem_asos_returns_expected_columns():
     df = fetch_iem_asos(
         station="NZWN",
@@ -14,6 +16,7 @@ def test_fetch_iem_asos_returns_expected_columns():
         assert col in df.columns
 
 
+@pytest.mark.network
 def test_fetch_iem_asos_dates_in_range():
     df = fetch_iem_asos(
         station="NZWN",

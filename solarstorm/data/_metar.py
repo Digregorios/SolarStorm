@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-_METAR_TT_DD = re.compile(r"\s(M?\d{1,2})/(M?\d{1,2})\s")
+_METAR_TT_DD = re.compile(r"\s(M?\d{1,2})/(M?\d{1,2})(?=\s|$)")
 
 
 @dataclass
