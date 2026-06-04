@@ -7,7 +7,7 @@
 - Walk-forward harness: expanding splits, holdout windows 7/14/30d
 - Frozen gates G1-G5 (G4 anti-nowcaster hard, non-demotable)
 - Regime classifier: calm/transition/late_warming/foehn_nw/disrupted
-- Hypothesis catalog H1-H16 with bootstrap CI framework
+- Hypothesis catalog H1-H23 with bootstrap CI framework (H17-H23 mined from prior overfitted protocols — registered as gated tests, not baked in)
 - CLI: ingest, baselines, leaderboard, eda
 - Leaderboard artifact: JSON+MD auto-generated per run (P5)
 

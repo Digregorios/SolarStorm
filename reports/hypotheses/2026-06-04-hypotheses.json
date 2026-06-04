@@ -110,5 +110,54 @@
     "feature_column": "regime_score_argmax",
     "source": "Regime classifier review 2026-06-04",
     "status": "pending"
+  },
+  {
+    "id": "H17",
+    "description": "Pre-CP morning warming rate (T09-T06)/3 segments regime better than wind direction: it integrates radiation + advection + mixing into one causal scalar (>2 C/h => active dry/foehn engine)",
+    "feature_column": "warming_rate_06_09",
+    "source": "Old Reports: Postmortem_50Theses IV-13; Protocol_14_0 C15/D02",
+    "status": "pending"
+  },
+  {
+    "id": "H18",
+    "description": "Peak-already-passed detector: flat morning (T07\u2248T08\u2248T09, range <=0.5 C) with strong N flow + low cloud implies turbulent nocturnal mixing put Tmax before the CP; the anchor is a ceiling not a launch",
+    "feature_column": "nocturnal_plateau_flag",
+    "source": "Old Reports: Protocol_15_1 (DPN); Postmortem_Apr16 \u00a76",
+    "status": "pending"
+  },
+  {
+    "id": "H19",
+    "description": "For S/SE onshore regimes, recent Cook Strait SST + ~4 C is a physical upper bound on Tmax (advected water-temp-limited air mass); test as a soft cap feature, never a hard clamp",
+    "feature_column": "sst_maritime_cap",
+    "source": "Old Reports: Protocol_15_0 \u00a71.3; Postmortem_50Theses II-14/IV-11",
+    "status": "pending"
+  },
+  {
+    "id": "H20",
+    "description": "Absolute dewpoint DROP rate (dTd_3h), not the depression level, is the cleaner foehn marker \u2014 captures dry continental subsidence arriving; distinct from H4/H5 which measure a level not a rate",
+    "feature_column": "dewpoint_collapse_rate_3h",
+    "source": "Old Reports: Postmortem_50Theses IV-12",
+    "status": "pending"
+  },
+  {
+    "id": "H21",
+    "description": "Falling QNH (3h) + no precip yet + N/NW flow opens a pre-frontal window for a final 1-2 C before cloud/rain arrives; anecdotal in the old docs so demand a strong CI before trusting",
+    "feature_column": "prefrontal_warming_window",
+    "source": "Old Reports: Protocol_14_0 C09/D10; Postmortem_Apr12_13 (WSP)",
+    "status": "pending"
+  },
+  {
+    "id": "H22",
+    "description": "NW/W flow (280-310\u00b0) crossing cold Cook Strait dries WITHOUT warming (adiabatic descent over water) \u2014 a false-positive foehn sector to exclude; sharpens foehn_nw vs the N/NNE warm sector",
+    "feature_column": "nw_sector_not_foehn",
+    "source": "Old Reports: Postmortem_Apr16 \u00a73.5; Postmortem_50Theses II-07/IV-14/IV-15",
+    "status": "pending"
+  },
+  {
+    "id": "H23",
+    "description": "Cloud suppression scales with base HEIGHT: BKN>=8000ft transmits most April insolation while low cloud (<2500ft) suppresses; a flat cloud penalty is wrong. Refines H12 with base-height dependence",
+    "feature_column": "cloud_base_transparency",
+    "source": "Old Reports: Protocol_14_1 HCT-01; Postmortem_Apr12_13",
+    "status": "pending"
   }
 ]
