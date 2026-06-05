@@ -9,6 +9,7 @@ CP_OPERATIONAL: str = "23:00"
 
 # --- Settlement ---
 TMP_C_INT_PLAUSIBILITY: tuple[int, int] = (-10, 40)
+DWP_C_INT_PLAUSIBILITY: tuple[int, int] = (-50, 35)
 
 # --- Reproducibility ---
 SEED: int = 42

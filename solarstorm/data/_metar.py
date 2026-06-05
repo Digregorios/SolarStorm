@@ -69,6 +69,12 @@ def parse_tmp_c_int_from_row(
     if tt < tmp_min_c or tt > tmp_max_c:
         return None, None, "missing", True
 
+    from solarstorm._config import DWP_C_INT_PLAUSIBILITY
+    dwp_min, dwp_max = DWP_C_INT_PLAUSIBILITY
+    if dwp < dwp_min or dwp > dwp_max:
+        dwp = None
+        return tt, None, "ok", True
+
     return tt, dwp, "ok", False
 
 

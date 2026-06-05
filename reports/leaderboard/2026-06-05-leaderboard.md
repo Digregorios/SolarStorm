@@ -1,3 +1,5 @@
+⚠️ **SUPERSEDED** — produzido com bugs de causalidade (ver `code-review-forense.md`). Não usar para decisão.
+
 # SolarStorm Baseline Leaderboard — 2026-06-05
 Window: 2026-05-06 to 2026-06-04
 

@@ -16,9 +16,13 @@ def sample_obs_calm_day() -> pl.DataFrame:
     """
     nzst = dt.timezone(dt.timedelta(hours=12))
     rows = []
-    for local_hour in range(6, 20):  # 06:00–19:00 local on 2025-06-15
-        # Gentle morning warming to a 15°C peak at 14:00 local, then easing.
-        t = 8 + local_hour * 0.5 if local_hour < 14 else 15 - (local_hour - 14) * 0.4
+    for local_hour in range(0, 24):  # full day 2025-06-15
+        if local_hour < 6:
+            t = 8.0  # stable overnight
+        elif local_hour < 14:
+            t = 8 + local_hour * 0.5  # morning warming
+        else:
+            t = 15 - (local_hour - 14) * 0.4  # afternoon cooling
         ts = dt.datetime(2025, 6, 15, local_hour, 0, 0, tzinfo=nzst)
         rows.append({
             "valid": ts,

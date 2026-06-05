@@ -31,6 +31,10 @@ def persist_obs(df: pl.DataFrame, data_dir: Path) -> pl.DataFrame:
     df = df.with_columns(
         (pl.col("tmp_c_int") - pl.col("dwp_c_int")).alias("dw_depression_c_int"),
     )
+    # Flag physically impossible dewpoint > temperature
+    df = df.with_columns(
+        (pl.col("dwp_c_int") > pl.col("tmp_c_int")).alias("dwp_gt_tmp_flag"),
+    )
 
     for col in df.columns:
         if col.startswith("skyl"):

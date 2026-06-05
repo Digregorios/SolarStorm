@@ -16,6 +16,7 @@ import typer
 
 from solarstorm._config import SEED
 from solarstorm.data._iem import fetch_iem_asos
+from solarstorm.data._settlement import integer_settlement
 from solarstorm.data._metar import parse_tmp_c_int_from_row
 from solarstorm.data._obs import persist_obs
 from solarstorm.data._labels import build_tmax_labels, DayCompleteParams
@@ -314,7 +315,7 @@ def leaderboard(
                 n_missing_dminus1 += 1
 
             # L2: climatology
-            clim_pred = round(climo.tmax_dec_for(d))
+            clim_pred = integer_settlement(climo.tmax_dec_for(d))
             error_l2 = clim_pred - truth
             results.append(LadderResult(
                 level="L2", name="climatology_doy", cp=cp_str,
@@ -441,7 +442,7 @@ def leaderboard(
                     continue
 
                 pred_rw = intercept + slope * float(feat_np[0])
-                pred_tmax = round(kcp_val + pred_rw)
+                pred_tmax = integer_settlement(kcp_val + pred_rw)
 
                 errors.append(abs(pred_tmax - truth_val))
                 preds.append(float(pred_tmax))

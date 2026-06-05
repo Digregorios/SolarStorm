@@ -361,22 +361,24 @@ def test_precip_disruption():
 
 
 def test_day_sequence_pattern():
-    """H9: warming/cooling/peaked/troughed/flat."""
-    dates = [dt.date(2025, 6, 13), dt.date(2025, 6, 14), dt.date(2025, 6, 15)]
+    """H9: warming/cooling/peaked/troughed/flat (uses D-1, D-2, D-3 only — causal, Fix 2)."""
+    dates = [dt.date(2025, 6, 12), dt.date(2025, 6, 13), dt.date(2025, 6, 14), dt.date(2025, 6, 15)]
     hours = [16, 18, 19]
     obs = _make_obs(dates, hours)
 
-    labels_warming = _make_labels(dates, tmax=[12, 14, 16])
+    # D-3=12, D-2=14, D-1=16 → warming pattern on D=15
+    labels_warming = _make_labels(dates, tmax=[10, 12, 14, 16])
     result = build_features(obs, labels_warming)
     row = result.filter(
-        (pl.col("date_local") == dates[2]) & (pl.col("cp") == "20:00")
+        (pl.col("date_local") == dates[3]) & (pl.col("cp") == "20:00")
     )
     assert row["day_sequence_pattern"].to_list()[0] == "warming"
 
-    labels_cooling = _make_labels(dates, tmax=[16, 14, 12])
+    # D-3=16, D-2=14, D-1=12 → cooling pattern on D=15
+    labels_cooling = _make_labels(dates, tmax=[18, 16, 14, 12])
     result = build_features(obs, labels_cooling)
     row = result.filter(
-        (pl.col("date_local") == dates[2]) & (pl.col("cp") == "20:00")
+        (pl.col("date_local") == dates[3]) & (pl.col("cp") == "20:00")
     )
     assert row["day_sequence_pattern"].to_list()[0] == "cooling"
 

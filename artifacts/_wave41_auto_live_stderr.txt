@@ -1,0 +1,121 @@
++--------------------- Traceback (most recent call last) ---------------------+
+| D:\Downloads\Wellington\core\cli\forecast.py:95 in run                      |
+|                                                                             |
+|    92     train_end_d = date.fromisoformat(train_end) if train_end else dat |
+|    93     train_start_d = date.fromisoformat(train_start)                   |
+|    94                                                                       |
+| >  95     obs, stats = load_observations(                                   |
+|    96         csv,                                                          |
+|    97         tmp_min_c=cfg.tmp_c_int_plausibility.min,                     |
+|    98         tmp_max_c=cfg.tmp_c_int_plausibility.max,                     |
+|                                                                             |
+| +-------------------------------- locals ---------------------------------+ |
+| |             cfg = StationConfig(                                        | |
+| |                       icao='NZWN',                                      | |
+| |                       name='Wellington International Airport',          | |
+| |                       country='NZ',                                     | |
+| |                       lat=-41.3272,                                     | |
+| |                       lon=174.8053,                                     | |
+| |                       elevation_m=12.0,                                 | |
+| |                       tz='Pacific/Auckland',                            | |
+| |                       cp_set_utc=[                                      | |
+| |                           '20:00',                                      | |
+| |                           '21:00',                                      | |
+| |                           '22:00',                                      | |
+| |                           '23:00'                                       | |
+| |                       ],                                                | |
+| |                       cp_operational_utc='23:00',                       | |
+| |                       tmp_c_int_plausibility=TmpcIntPlausibility(       | |
+| |                           min=-10,                                      | |
+| |                           max=40                                        | |
+| |                       ),                                                | |
+| |                       day_complete=DayCompleteRule(                     | |
+| |                           min_obs=40,                                   | |
+| |                           max_gap_minutes=120,                          | |
+| |                           min_quartile_coverage=1                       | |
+| |                       )                                                 | |
+| |                   )                                                     | |
+| |              cp = '20'                                                  | |
+| |         cp_hhmm = '20:00'                                               | |
+| |             csv = WindowsPath('artifacts/state/NZWN_live_merged.csv')   | |
+| |               d = datetime.date(2026, 6, 4)                             | |
+| |         dry_run = True                                                  | |
+| |           model = 'auto'                                                | |
+| |  nwp_fetch_live = False                                                 | |
+| |       nwp_probe = False                                                 | |
+| |        nwp_root = WindowsPath('artifacts/raw/nwp')                      | |
+| |        out_root = WindowsPath('artifacts/forecasts')                    | |
+| |             rid = '38fc9f4d-b32b-4863-99dd-4ea111b81a1d'                | |
+| | serve_residuals = False                                                 | |
+| |    station_yaml = WindowsPath('nzwn/config/station.yaml')               | |
+| |     target_date = '2026-06-04'                                          | |
+| |       train_end = None                                                  | |
+| |     train_end_d = datetime.date(2026, 6, 3)                             | |
+| |     train_start = '2020-01-01'                                          | |
+| |   train_start_d = datetime.date(2020, 1, 1)                             | |
+| +-------------------------------------------------------------------------+ |
+|                                                                             |
+| D:\Downloads\Wellington\core\ingest\iem_csv.py:207 in load_observations     |
+|                                                                             |
+|   204     tmp_max_c: int = _DEFAULT_TMP_MAX_C,                              |
+|   205 ) -> tuple[pl.DataFrame, ParseStats]:                                 |
+|   206     """One-shot helper combining ``read_iem_csv`` and ``parse_observa |
+| > 207     raw = read_iem_csv(path)                                          |
+|   208     return parse_observations(raw, tmp_min_c=tmp_min_c, tmp_max_c=tmp |
+|   209                                                                       |
+|   210                                                                       |
+|                                                                             |
+| +---------------------------- locals -----------------------------+         |
+| |      path = WindowsPath('artifacts/state/NZWN_live_merged.csv') |         |
+| | tmp_max_c = 40                                                  |         |
+| | tmp_min_c = -10                                                 |         |
+| +-----------------------------------------------------------------+         |
+|                                                                             |
+| D:\Downloads\Wellington\core\ingest\iem_csv.py:128 in read_iem_csv          |
+|                                                                             |
+|   125         infer_schema_length=10_000,                                   |
+|   126     )                                                                 |
+|   127     if "valid" not in df.columns:                                     |
+| > 128         raise ValueError("Expected 'valid' column in IEM CSV.")       |
+|   129     df = df.with_columns(                                             |
+|   130         pl.col("valid")                                               |
+|   131         .str.strptime(pl.Datetime("us"), "%Y-%m-%d %H:%M", strict=Tru |
+|                                                                             |
+| +-------------------------------- locals ---------------------------------+ |
+| |   df = shape: (112_520, 2)                                              | |
+| |        \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500… | |
+| |        \u2502 ts_utc                          \u2506 metar                        | |
+| |        \u2502                                                                | |
+| |        \u2502 ---                             \u2506 ---                          | |
+| |        \u2502                                                                | |
+| |        \u2502 str                             \u2506 str                          | |
+| |        \u2502                                                                | |
+| |        \u255e\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u256a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550… | |
+| |        \u2502 2020-01-01T00:00:00.000000+000… \u2506 NZWN 010000Z AUTO 01023KT    | |
+| |        9999… \u2502                                                          | |
+| |        \u2502 2020-01-01T00:30:00.000000+000… \u2506 NZWN 010030Z AUTO 36028KT    | |
+| |        9999… \u2502                                                          | |
+| |        \u2502 2020-01-01T01:00:00.000000+000… \u2506 NZWN 010100Z AUTO 01026KT    | |
+| |        9999… \u2502                                                          | |
+| |        \u2502 2020-01-01T01:30:00.000000+000… \u2506 NZWN 010130Z AUTO 01024KT    | |
+| |        9999… \u2502                                                          | |
+| |        \u2502 2020-01-01T02:00:00.000000+000… \u2506 NZWN 010200Z AUTO 01026KT    | |
+| |        9999… \u2502                                                          | |
+| |        \u2502 …                               \u2506 …                            | |
+| |        \u2502                                                                | |
+| |        \u2502 2026-06-03T19:00:00.000000+000… \u2506 METAR NZWN 031900Z AUTO      | |
+| |        36016G… \u2502                                                        | |
+| |        \u2502 2026-06-03T19:30:00.000000+000… \u2506 METAR NZWN 031930Z AUTO      | |
+| |        36016K… \u2502                                                        | |
+| |        \u2502 2026-06-03T20:00:00.000000+000… \u2506 METAR NZWN 032000Z AUTO      | |
+| |        36015K… \u2502                                                        | |
+| |        \u2502 2026-06-03T20:30:00.000000+000… \u2506 METAR NZWN 032030Z AUTO      | |
+| |        02014K… \u2502                                                        | |
+| |        \u2502 2026-06-03T21:00:00.000000+000… \u2506 METAR NZWN 032100Z AUTO      | |
+| |        02017K… \u2502                                                        | |
+| |        \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500… | |
+| |    p = WindowsPath('artifacts/state/NZWN_live_merged.csv')              | |
+| | path = WindowsPath('artifacts/state/NZWN_live_merged.csv')              | |
+| +-------------------------------------------------------------------------+ |
++-----------------------------------------------------------------------------+
+ValueError: Expected 'valid' column in IEM CSV.

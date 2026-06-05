@@ -30,8 +30,11 @@ BLOCKED_FEATURES: dict[str, str] = {
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _coverage_weight(code: str | None) -> float:
-    return _SKY_WEIGHTS.get(code, 0.0)
+def _coverage_weight(code: str | None) -> float | None:
+    """Return cloud coverage weight or None for unknown/missing codes (Fix 18)."""
+    if code is None:
+        return None
+    return _SKY_WEIGHTS.get(code)
 
 
 def _annotate_obs(obs: pl.DataFrame) -> pl.DataFrame:
@@ -106,8 +109,8 @@ def _in_sector(val: float, start: float, end: float) -> bool:
     return val >= start or val <= end
 
 
-def _max_cloud_cover(slice_df: pl.DataFrame) -> float:
-    best = 0.0
+def _max_cloud_cover(slice_df: pl.DataFrame) -> float | None:
+    best: float | None = None
     for i in range(1, 5):
         col = f"skyc{i}"
         if col not in slice_df.columns:
@@ -115,13 +118,13 @@ def _max_cloud_cover(slice_df: pl.DataFrame) -> float:
         for val in slice_df[col].to_list():
             if val is not None:
                 w = _coverage_weight(str(val))
-                if w > best:
+                if w is not None and (best is None or w > best):
                     best = w
     return best
 
 
-def _cloud_base_transparency(slice_df: pl.DataFrame) -> float:
-    best = 0.0
+def _cloud_base_transparency(slice_df: pl.DataFrame) -> float | None:
+    best: float | None = None
     for i in range(1, 5):
         ccol = f"skyc{i}"
         hcol = f"skyl{i}"
@@ -137,9 +140,11 @@ def _cloud_base_transparency(slice_df: pl.DataFrame) -> float:
             if code is None:
                 continue
             cw = _coverage_weight(str(code))
+            if cw is None:
+                continue
             ht_ok = ht if ht is not None else 0
             score = cw * min(1.0, ht_ok / 8000.0)
-            if score > best:
+            if best is None or score > best:
                 best = score
     return best
 
@@ -183,98 +188,75 @@ def build_features(
         ``regime_flags``, and all H1-H23 feature columns.
     """
     obs = _annotate_obs(obs).sort("valid")
+    tz = ZoneInfo(TZ_NAME)
 
     dates = obs["date_local"].unique().sort().to_list()
 
-    # ---- Pass 1: regime per date (full-day obs) ----
-    date_regimes: dict[dt.date, tuple[str, dict]] = {}
-    for d in dates:
-        day_obs = obs.filter(pl.col("date_local") == d)
-        date_regimes[d] = _classify_regime_for_date(day_obs)
+    # ---- Build label lookups (neighbour-day values only — no future leakage) ----
+    # Pre-build dicts: date → tmax_int, tmin_int, tmax_hour for fast lookup
+    label_by_date: dict[dt.date, dict[str, Any]] = {}
+    for lr in labels.iter_rows(named=True):
+        d_lab = lr["date_local"]
+        label_by_date[d_lab] = lr
 
-    # ---- Climatological lookups from labels + regimes ----
-    regime_df = pl.DataFrame({
-        "date_local": list(date_regimes.keys()),
-        "_regime": [r[0] for r in date_regimes.values()],
-    })
-
-    labels_w_regime = labels.join(regime_df, on="date_local", how="left").with_columns(
-        pl.col("date_local").dt.month().alias("_month"),
-    )
-
-    # per-(month, regime) mean tmax_hour
-    mr_stats = labels_w_regime.group_by(["_month", "_regime"]).agg(
-        pl.col("tmax_hour").mean().alias("_mean_tmax_hour"),
-    )
-    month_regime_tmax_hour: dict[tuple[int, str], float] = {
-        (r["_month"], r["_regime"]): r["_mean_tmax_hour"]
-        for r in mr_stats.iter_rows(named=True) if r["_mean_tmax_hour"] is not None
-    }
-
-    # per-(regime, cp) k_cp mean + std
-    regime_kcp: dict[str, dict[str, dict[str, float]]] = {}
-    for cp_str in cp_set:
-        k_col = f"k_cp__cp_{cp_str.replace(':', '')}"
-        per_reg = labels_w_regime.group_by("_regime").agg(
-            pl.col(k_col).mean().alias("_mean_kcp"),
-            pl.col(k_col).std().alias("_std_kcp"),
-        )
-        for r in per_reg.iter_rows(named=True):
-            reg = r["_regime"]
-            if reg is None:
-                continue
-            regime_kcp.setdefault(reg, {})[cp_str] = {
-                "mean": r["_mean_kcp"],
-                "std": r["_std_kcp"] if r["_std_kcp"] is not None else 1.0,
-            }
-
-    # ---- Pass 2: feature rows ----
     rows: list[dict[str, Any]] = []
 
     for d in dates:
         day_obs = obs.filter(pl.col("date_local") == d)
-        regime_label, regime_flags = date_regimes[d]
-        month = d.month
 
-        # Neighbour-day values from labels
-        lrow = labels.filter(pl.col("date_local") == d)
-        if lrow.height == 0:
+        # Labels for this date and neighbour days
+        lr = label_by_date.get(d)
+        if lr is None:
             continue
-        lr = lrow.row(0, named=True)
-        tmax_d = lr.get("tmax_int")
-        tmin_d = lr.get("tmin_int")
+        tmin_d = lr.get("tmin_int")  # full-day tmin (used only where causal)
 
-        lrow_m1 = labels.filter(pl.col("date_local") == d - dt.timedelta(days=1))
-        tmax_dminus1 = lrow_m1.row(0, named=True).get("tmax_int") if lrow_m1.height > 0 else None
+        lr_m1 = label_by_date.get(d - dt.timedelta(days=1))
+        tmax_dminus1 = lr_m1.get("tmax_int") if lr_m1 else None
 
-        lrow_m2 = labels.filter(pl.col("date_local") == d - dt.timedelta(days=2))
-        tmax_dminus2 = lrow_m2.row(0, named=True).get("tmax_int") if lrow_m2.height > 0 else None
+        lr_m2 = label_by_date.get(d - dt.timedelta(days=2))
+        tmax_dminus2 = lr_m2.get("tmax_int") if lr_m2 else None
 
-        # H9: day_sequence_pattern
+        lr_m3 = label_by_date.get(d - dt.timedelta(days=3))
+        tmax_dminus3 = lr_m3.get("tmax_int") if lr_m3 else None
+
+        # H9: day_sequence_pattern — uses only D-1, D-2, D-3 (causal, no target leakage)
         day_seq: str | None = None
-        if tmax_d is not None and tmax_dminus1 is not None and tmax_dminus2 is not None:
-            if abs(tmax_d - tmax_dminus1) <= 1 and abs(tmax_dminus1 - tmax_dminus2) <= 1:
+        if tmax_dminus1 is not None and tmax_dminus2 is not None and tmax_dminus3 is not None:
+            if abs(tmax_dminus1 - tmax_dminus2) <= 1 and abs(tmax_dminus2 - tmax_dminus3) <= 1:
                 day_seq = "flat"
-            elif tmax_dminus2 < tmax_dminus1 < tmax_d:
+            elif tmax_dminus3 < tmax_dminus2 < tmax_dminus1:
                 day_seq = "warming"
-            elif tmax_dminus2 > tmax_dminus1 > tmax_d:
+            elif tmax_dminus3 > tmax_dminus2 > tmax_dminus1:
                 day_seq = "cooling"
-            elif tmax_dminus2 < tmax_dminus1 > tmax_d:
+            elif tmax_dminus3 < tmax_dminus2 > tmax_dminus1:
                 day_seq = "peaked"
-            elif tmax_dminus2 > tmax_dminus1 < tmax_d:
+            elif tmax_dminus3 > tmax_dminus2 < tmax_dminus1:
                 day_seq = "troughed"
             else:
                 day_seq = "flat"
 
         for cp_str in cp_set:
-            cp_hour = int(cp_str.split(":")[0])
             cp_utc_val = cp_to_utc(d, cp_str, TZ_NAME).astimezone(dt.timezone.utc)
+            cp_local_hour = cp_utc_val.astimezone(tz).hour
 
-            # Causal slice
+            # Causal slice: observations strictly before CP with valid temperature
             slice_df = day_obs.filter(
                 (pl.col("valid") < cp_utc_val)
                 & (pl.col("dq_tmp_c_int") != "missing"),
             )
+
+            # Compute regime from CAUSAL slice only (not full-day — Fix 1)
+            regime_label: str | None = None
+            regime_flags: dict[str, Any] = {}
+            if slice_df.height >= 3:
+                wd_col_sl = "wind_dir_deg" if "wind_dir_deg" in slice_df.columns else "drct"
+                regime_label, regime_flags = classify_regime(
+                    slice_df.with_columns(pl.col(wd_col_sl).alias("wind_dir_deg")),
+                )
+            elif slice_df.height == 0:
+                regime_label = "insufficient"
+            else:
+                regime_label = "insufficient"
 
             if slice_df.height == 0:
                 row: dict[str, Any] = {
@@ -286,19 +268,17 @@ def build_features(
                     fc = hyp.feature_column
                     if fc in ("regime_label",):
                         continue
-                    if fc in BLOCKED_FEATURES:
-                        row[fc] = None
-                    else:
-                        row[fc] = None
+                    row[fc] = None
                 rows.append(row)
                 continue
 
             feature_max_ts = slice_df["valid"].max()
 
             # ---- Anchor values ----
+            # Use local CP hour for anchor filtering (Fix 8: UTC/local mixing)
             anchors: dict[int, dict[str, Any]] = {}
             for ah in ANCHOR_HOURS:
-                if ah >= cp_hour:
+                if ah >= cp_local_hour:
                     anchors[ah] = {"tmp_c_int": None, "dwp_c_int": None,
                                    "sknt": None, "drct": None, "alti": None}
                 else:
@@ -312,15 +292,15 @@ def build_features(
 
             valid_anchors = [
                 ah for ah in ANCHOR_HOURS
-                if ah < cp_hour and anchors[ah]["tmp_c_int"] is not None
+                if ah < cp_local_hour and anchors[ah]["tmp_c_int"] is not None
             ]
             dwp_anchors = [
                 ah for ah in ANCHOR_HOURS
-                if ah < cp_hour and anchors[ah]["dwp_c_int"] is not None
+                if ah < cp_local_hour and anchors[ah]["dwp_c_int"] is not None
             ]
             alti_anchors = [
                 ah for ah in ANCHOR_HOURS
-                if ah < cp_hour and anchors[ah]["alti"] is not None
+                if ah < cp_local_hour and anchors[ah]["alti"] is not None
             ]
 
             # ---- Aggregate values ----
@@ -350,11 +330,8 @@ def build_features(
                 if t0 is not None and t1 is not None and dh > 0:
                     slope_3h = (t1 - t0) / dh
 
-            # H2  hours_to_expected_peak
-            expected_peak = month_regime_tmax_hour.get((month, regime_label))
-            hours_to_peak: float | None = (
-                float(expected_peak) - cp_hour if expected_peak is not None else None
-            )
+            # H2  hours_to_expected_peak — requires train-only stats; set None (recomputed in harness)
+            hours_to_peak: float | None = None
 
             # H3  regime_label        (already available)
             # H4  dewpoint_depression
@@ -363,10 +340,11 @@ def build_features(
             )
 
             # H5  tmax_dminus1        (already available)
-            # H6  tmin_delta_tmax
+            # H6  tmin_delta_tmax — use tmin_so_far from causal slice, not full-day tmin_d
+            tmin_so_far = slice_df["tmp_c_int"].min() if slice_df.height > 0 else None
             tmin_delta_tmax: int | None = (
-                tmin_d - tmax_dminus1
-                if tmin_d is not None and tmax_dminus1 is not None
+                tmin_so_far - tmax_dminus1
+                if tmin_so_far is not None and tmax_dminus1 is not None
                 else None
             )
 
@@ -395,11 +373,11 @@ def build_features(
             if _has_wxcode(slice_df, "RA"):
                 precip_disruption = 1
 
-            # H11 tmax_hour_by_regime_month
-            tmax_hour_by_regime: float | None = expected_peak  # Mean tmax_hour for this (month, regime)
+            # H11 tmax_hour_by_regime_month — requires train-only stats; set None (recomputed in harness)
+            tmax_hour_by_regime: float | None = None
 
             # H12 cloud_cover_suppression
-            cloud_suppression: float = _max_cloud_cover(slice_df)
+            cloud_suppression: float | None = _max_cloud_cover(slice_df)
 
             # H13 pressure_trend_3h
             pressure_trend: float | None = None
@@ -412,14 +390,10 @@ def build_features(
                     pressure_trend = ((a1 - a0) * 33.8639) / dh
 
             # H14 foehn_score
-            # H15 late_warming_anomaly
+            # H15 late_warming_anomaly — requires train-only stats; set None (recomputed in harness)
             kcp_col = f"k_cp__cp_{cp_str.replace(':', '')}"
             k_cp = lr.get(kcp_col)
             late_warming_anomaly: float | None = None
-            if k_cp is not None and regime_kcp.get(regime_label, {}).get(cp_str):
-                stats = regime_kcp[regime_label][cp_str]
-                if stats["mean"] is not None and stats["std"] is not None:
-                    late_warming_anomaly = (k_cp - stats["mean"]) / max(stats["std"], 1.0)
 
             # H16 regime_score_argmax
             regime_score_argmax: str = regime_label
@@ -471,7 +445,7 @@ def build_features(
                     nw_not_foehn = 1
 
             # H23 cloud_base_transparency
-            cloud_transparency: float = _cloud_base_transparency(slice_df)
+            cloud_transparency: float | None = _cloud_base_transparency(slice_df)
 
             # ---- Assemble row ----
             row = {

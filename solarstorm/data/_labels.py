@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass
+from zoneinfo import ZoneInfo
 
 import polars as pl
 
@@ -18,10 +19,12 @@ class DayCompleteParams:
 
 
 def risco_de_flip(tmax_dec: float) -> float:
-    """Distance from the nearest .5°C rounding boundary (P1+P4).
+    """Boundary distance: how far *tmax_dec* is from the nearest .5 degC rounding boundary.
 
-    0.0 = exactly on a .5 boundary (no flip risk).
-    0.5 = exactly at integer (max flip risk — 0.1°C decides bracket).
+    0.5 = at integer center (far from any boundary -- safe, wide margin).
+    0.0 = exactly on a .5 boundary (a micro-variation flips the bracket).
+
+    This is the *inverse* of flip risk: low boundary distance = high flip risk.
     """
     return round(0.5 - abs(tmax_dec - round(tmax_dec)), 10)
 
@@ -29,6 +32,17 @@ def risco_de_flip(tmax_dec: float) -> float:
 def remaining_warming(*, tmax: int, k_cp: int) -> int:
     """How much warming remains after the checkpoint. Core target from Onda 3."""
     return tmax - k_cp
+
+
+def _quartile(hour: int) -> int:
+    """Map a local hour to a quartile block (0-3)."""
+    if hour < 6:
+        return 0
+    if hour < 12:
+        return 1
+    if hour < 18:
+        return 2
+    return 3
 
 
 def build_tmax_labels(
@@ -50,51 +64,102 @@ def build_tmax_labels(
         pl.col("ts_local").dt.hour().alias("hour_local"),
     )
 
-    valid = obs.filter(pl.col("dq_tmp_c_int") != "missing")
+    # Settlement target: only METAR-text temps (dq == "ok"), not imputed from tmpf
+    valid = obs.filter(pl.col("dq_tmp_c_int") == "ok")
 
-    # --- Daily aggregates ---
+    # --- Daily aggregates (from canonical Tmax row) ---
+    # Canonical row: max tmp_c_int, tiebreak by earliest ts_local
+    canonical = (
+        valid.sort(["tmp_c_int", "ts_local"], descending=[True, False])
+        .head(1)
+        .select(
+            pl.col("date_local"),
+            pl.col("tmp_c_int").alias("tmax_int"),
+            pl.col("ts_local").alias("tmax_ts"),
+            pl.col("hour_local").alias("tmax_hour_local"),
+        )
+    )
+    # Tmax decimal from the canonical row's tmpf (P1: internal decimal)
+    tmpf_canonical = (
+        valid.sort(["tmp_c_int", "ts_local"], descending=[True, False])
+        .head(1)
+        .select(pl.col("date_local"), pl.col("tmpf").alias("tmpf_max_canonical"))
+    )
+    canonical = canonical.join(tmpf_canonical, on="date_local", how="left")
+
+    # Daily stats
     daily = valid.group_by("date_local").agg([
-        pl.col("tmp_c_int").max().alias("tmax_int"),
-        pl.col("tmpf").max().alias("tmpf_max"),
         pl.col("tmp_c_int").min().alias("tmin_int"),
         pl.col("tmpf").min().alias("tmpf_min"),
         pl.col("ts_local").count().alias("n_obs"),
         pl.col("ts_local").sort().diff().dt.total_minutes().max().alias("max_gap_min"),
-        # Tmax hour: hour_local at which tmp_c_int == max (first occurrence)
-        pl.col("hour_local")
-          .sort_by("tmp_c_int", descending=True)
-          .first()
-          .alias("tmax_hour_local"),
+        pl.col("hour_local").min().alias("first_hour_local"),
+        pl.col("hour_local").max().alias("last_hour_local"),
+        # Count of imputed temps used in this day (for provenance)
+        (pl.col("dq_tmp_c_int") == "imputed").sum().alias("n_imputed"),
     ])
 
-    # Tmax decimal from tmpf (P1: internal decimal, not integer)
+    # Join canonical Tmax onto daily
+    daily = daily.join(canonical, on="date_local", how="left")
+
+    # Tmax decimal from canonical row's tmpf
     daily = daily.with_columns(
-        ((pl.col("tmpf_max") - 32.0) * 5.0 / 9.0).alias("tmax_dec"),
+        ((pl.col("tmpf_max_canonical") - 32.0) * 5.0 / 9.0).alias("tmax_dec"),
         ((pl.col("tmpf_min") - 32.0) * 5.0 / 9.0).alias("tmin_dec"),
     )
 
-    # day_complete gate
+    # tmax_source provenance
+    daily = daily.with_columns(
+        pl.lit("ok").alias("tmax_source"),
+    )
+
+    # --- day_complete gate with quartile coverage + edge gaps ---
+    tz = ZoneInfo(TZ_NAME)
+    daily = daily.with_columns(
+        # Edge gap start: minutes from local midnight to first obs
+        (
+            (pl.col("first_hour_local").cast(pl.Float64) * 60.0)
+            .alias("edge_gap_start_min")
+        ),
+        # Edge gap end: minutes from last obs to local midnight (next day)
+        (
+            ((23.0 - pl.col("last_hour_local").cast(pl.Float64)) * 60.0 + 60.0)
+            .alias("edge_gap_end_min")
+        ),
+    )
+
+    # Quartile coverage (per-date) — compute from the valid obs
+    quartile_coverage = (
+        valid.with_columns(
+            pl.col("hour_local").map_elements(_quartile, return_dtype=pl.Int32).alias("quartile")
+        )
+        .group_by("date_local")
+        .agg(pl.col("quartile").n_unique().alias("quartile_count"))
+    )
+    daily = daily.join(quartile_coverage, on="date_local", how="left")
+
     daily = daily.with_columns(
         (
             (pl.col("n_obs") >= params.min_obs)
             & (pl.col("max_gap_min").fill_null(0) <= params.max_gap_minutes)
+            & (pl.col("edge_gap_start_min") <= params.max_gap_minutes)
+            & (pl.col("edge_gap_end_min") <= params.max_gap_minutes)
+            & (pl.col("quartile_count").fill_null(0) >= params.min_quartile_coverage)
         ).alias("day_complete")
     )
 
     # --- Per-CP k_cp ---
+    # Use only METAR-text temps (dq=="ok") for k_cp consistency
+    obs_ok = obs.filter(pl.col("dq_tmp_c_int") == "ok")
     for cp_str in CP_SET_UTC:
         col_name = f"k_cp__cp_{cp_str.replace(':', '')}"
         kcp_rows = []
         for row in daily.iter_rows(named=True):
             d = row["date_local"]
-            # cp is tz-aware (Pacific/Auckland); convert to UTC so the `<`
-            # comparison against the UTC-typed `valid` column is well-typed.
             cp = cp_to_utc(d, cp_str, TZ_NAME).astimezone(dt.timezone.utc)
-            # Subset obs for this date where ts_utc < cp_utc
-            day_obs = obs.filter(
+            day_obs = obs_ok.filter(
                 (pl.col("date_local") == d)
                 & (pl.col("valid") < cp)
-                & (pl.col("dq_tmp_c_int") != "missing")
             )
             if day_obs.height > 0:
                 kcp_rows.append({"date_local": d, col_name: int(day_obs["tmp_c_int"].max())})
@@ -107,7 +172,7 @@ def build_tmax_labels(
         )
         daily = daily.join(kcp_map, on="date_local", how="left")
 
-    # --- tmax_hour: local hour-of-day integer of the max (test contract) ---
+    # --- tmax_hour: local hour-of-day integer of the canonical max ---
     daily = daily.with_columns(
         pl.col("tmax_hour_local").alias("tmax_hour")
     )
@@ -140,5 +205,10 @@ def build_tmax_labels(
     daily = daily.with_columns(
         pl.col("tmax_dec").map_elements(risco_de_flip, return_dtype=pl.Float64).alias("risco_de_flip")
     )
+
+    # Drop internal-only columns
+    daily = daily.drop(["first_hour_local", "last_hour_local", "edge_gap_start_min",
+                         "edge_gap_end_min", "quartile_count", "tmpf_max_canonical"],
+                        strict=False)
 
     return daily

@@ -46,10 +46,10 @@ def test_remaining_warming():
 
 
 def test_risco_de_flip():
-    # Exactly at integer: max risk (0.5 from .5 boundary)
+    # At integer center (15.0): boundary_distance = 0.5 (far from .5 boundary, safe)
     assert risco_de_flip(15.0) == 0.5
-    # At .5 boundary: zero risk (rounded up to 16 or down to 15 equally? no — .5 rounds up)
+    # At .5 boundary (15.5): boundary_distance = 0.0 (micro-variation flips bracket)
     assert risco_de_flip(15.5) == 0.0
-    # Well inside bucket: low risk
+    # Inside bucket: between 0 and 0.5
     assert risco_de_flip(15.2) == 0.3
     assert risco_de_flip(14.8) == pytest.approx(0.3)

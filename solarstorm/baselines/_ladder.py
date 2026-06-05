@@ -33,12 +33,13 @@ def evaluate_step(
 ) -> LadderResult:
     p50 = pred["p50"]
     error = p50 - truth
+    from solarstorm.data._settlement import integer_settlement
     return LadderResult(
         level=level, name=name, cp=cp,
         mae=abs(error),
         rmse=error**2,
         bias=error,
-        bracket_match=1.0 if round(p50) == round(truth) else 0.0,
+        bracket_match=1.0 if integer_settlement(p50) == integer_settlement(truth) else 0.0,
         fallback_rate=fallback_rate,
     )
 

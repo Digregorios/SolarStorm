@@ -41,7 +41,8 @@ def skill_score(pred: np.ndarray, baseline: np.ndarray, truth: np.ndarray) -> fl
 
 
 def bracket_match_at_p50(p50: float, truth: int) -> float:
-    return 1.0 if round(p50) == round(truth) else 0.0
+    from solarstorm.data._settlement import integer_settlement
+    return 1.0 if integer_settlement(p50) == integer_settlement(truth) else 0.0
 
 
 def rps(prob_dist: dict[int, float], truth: int) -> float:
