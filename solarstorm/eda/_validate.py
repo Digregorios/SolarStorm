@@ -112,7 +112,7 @@ def _default_test_starts(labels: pl.DataFrame) -> list[dt.date]:
 def _bootstrap_p_value(
     a: np.ndarray,
     b: np.ndarray,
-    n_bootstrap: int = 1000,
+    n_bootstrap: int = 9999,
     seed: int = 42,
 ) -> float:
     """One-sided p-value for H0: mean(a) <= mean(b) vs H1: mean(a) > mean(b).
@@ -240,7 +240,8 @@ def _compute_single_result(
     # G3: p50 mode share
     p50_mode = _mode_share(challenger_preds)
 
-    # Gates
+    # Gates — pass skill_ci_lo (MAE improvement CI lower bound) for G4
+    # morning-CP stratification (Murphy 1987: correlation blind to bias)
     gates = apply_all_gates(
         model_mae=challenger_mae,
         best_null_mae=baseline_mae,
@@ -248,6 +249,7 @@ def _compute_single_result(
         fallback_rate=0.0,
         p50_mode_share=p50_mode,
         corr_diff=corr_diff,
+        skill_ci_lo=ci_lo,
         per_cp_passed=True,
     )
 

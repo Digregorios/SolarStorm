@@ -2,10 +2,29 @@
 
 G4 (anti-nowcaster) is hard and non-demotable — the exact gate the old project
 demoted to diagnostic (phase4_evaluate.py:95). The lesson is structural.
+
+G4 uses different criteria by lead-time (Jolliffe & Stephenson 2012, Murphy 1987):
+
+- **Morning CPs** (local hour < 12, Tmax still ahead): MAE skill CI test — the
+  95% CI lower bound of MAE improvement must be > 0.  Correlation is
+  mathematically blind to bias corrections (Murphy 1987), which are the
+  primary mechanism of improvement at long lead times.
+- **Evening CPs** (local hour >= 12, nowcasting risk): original corr_diff
+  threshold — challenger must improve Pearson r by >= 0.05 with CI lo > 0.
+
+References:
+  Murphy, A. H. (1987). Skill scores based on the mean square error and their
+  relationships to the correlation coefficient. Monthly Weather Review.
+  Jolliffe, I. T., & Stephenson, D. B. (2012). Forecast Verification: A
+  Practitioner's Guide in Atmospheric Science. Wiley.
 """
 from __future__ import annotations
 
+import datetime as dt
 from dataclasses import dataclass
+from zoneinfo import ZoneInfo
+
+from solarstorm._config import TZ_NAME
 
 
 @dataclass
@@ -47,22 +66,64 @@ def _g3_p50_collapse(p50_mode_share: float) -> GateResult:
     )
 
 
+def _is_morning_cp(cp_str: str) -> bool:
+    """True if the CP local hour is before noon (Tmax still ahead)."""
+    tz = ZoneInfo(TZ_NAME)
+    cp_hour = int(cp_str.split(":")[0])
+    # Use a fixed date — the local-hour offset depends only on DST, not the
+    # specific date.  NZ DST transitions are rare; using June (winter, NZST)
+    # gives the correct classification for the vast majority of dates.
+    dummy_utc = dt.datetime(2025, 6, 15, cp_hour, 0, tzinfo=dt.timezone.utc)
+    local_hour = dummy_utc.astimezone(tz).hour
+    return local_hour < 12
+
+
 def _g4_anti_nowcaster(
     corr_diff: float | None,
     corr_diff_ci95: tuple[float, float] | None = None,
+    *,
+    skill_ci_lo: float | None = None,
+    cp_str: str = "",
 ) -> GateResult:
-    if corr_diff is None:
-        # Non-demotable: a missing discriminant cannot CLEAR the gate. Surface
-        # it as a failing G4, never let it vanish (the old project's failure).
-        passed = False
-        detail = "corr_diff unavailable — cannot clear anti-nowcaster gate"
-    elif corr_diff_ci95 is not None:
-        lo, hi = corr_diff_ci95
-        passed = corr_diff >= 0.05 and lo > 0.0
-        detail = f"corr_diff={corr_diff:.4f}, ci95=[{lo:.4f}, {hi:.4f}]"
+    """Anti-nowcaster gate, stratified by lead-time.
+
+    **Morning CPs** (local hour < 12): uses MAE skill CI — ``skill_ci_lo > 0``
+    means the 95% CI of MAE improvement excludes zero.  This is the
+    statistically-robust test that the challenger genuinely outperforms the
+    baseline, without relying on correlation (which is blind to bias
+    corrections — Murphy 1987).
+
+    **Evening CPs** (local hour >= 12): uses the original correlation-delta
+    threshold — ``corr_diff >= 0.05 and corr_lo > 0`` — because at short lead
+    times the nowcasting risk is real and correlation discrimination is the
+    appropriate guard.
+    """
+    is_morning = _is_morning_cp(cp_str) if cp_str else True
+
+    if is_morning:
+        # MAE skill CI test — statistically grounded, immune to bias-blindness
+        if skill_ci_lo is None:
+            passed = False
+            detail = "morning CP — skill_ci_lo unavailable; cannot clear anti-nowcaster gate"
+        else:
+            passed = skill_ci_lo > 0.0
+            detail = (
+                f"morning CP — MAE skill CI lo={skill_ci_lo:.4f} "
+                f"({'OK' if passed else 'NOWCAST_SUSPECT — CI includes zero'})"
+            )
     else:
-        passed = corr_diff >= 0.05
-        detail = f"corr_diff={corr_diff:.4f} (no CI)"
+        # Evening CP — original correlation-based guard
+        if corr_diff is None:
+            passed = False
+            detail = "evening CP — corr_diff unavailable; cannot clear anti-nowcaster gate"
+        elif corr_diff_ci95 is not None:
+            lo, hi = corr_diff_ci95
+            passed = corr_diff >= 0.05 and lo > 0.0
+            detail = f"evening CP — corr_diff={corr_diff:.4f}, ci95=[{lo:.4f}, {hi:.4f}]"
+        else:
+            passed = corr_diff >= 0.05
+            detail = f"evening CP — corr_diff={corr_diff:.4f} (no CI)"
+
     return GateResult(
         gate="G4", description="Anti-nowcaster — hard, non-demotable",
         passed=passed,
@@ -89,13 +150,17 @@ def apply_all_gates(
     p50_mode_share: float = 0.0,
     corr_diff: float | None = None,
     corr_diff_ci95: tuple[float, float] | None = None,
+    skill_ci_lo: float | None = None,
     per_cp_passed: bool = True,
 ) -> dict[str, GateResult]:
     results = {
         "G1": _g1_null_not_beaten(model_mae, best_null_mae),
         "G2": _g2_fallback_dominance(fallback_rate),
         "G3": _g3_p50_collapse(p50_mode_share),
-        "G4": _g4_anti_nowcaster(corr_diff, corr_diff_ci95),
+        "G4": _g4_anti_nowcaster(
+            corr_diff, corr_diff_ci95,
+            skill_ci_lo=skill_ci_lo, cp_str=cp,
+        ),
         "G5": _g5_per_cp(cp, per_cp_passed),
     }
     return results

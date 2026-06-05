@@ -143,3 +143,5 @@ NZWN.csv
 # OS
 Thumbs.db
 .DS_Store
+data/obs.parquet
+data/features.parquet

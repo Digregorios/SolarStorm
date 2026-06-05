@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -263,7 +264,18 @@ def leaderboard(
         for row in complete.iter_rows(named=True)
     }
 
+    # ---- Build regime lookup for segments ----
+    regime_lookup: dict[tuple[dt.date, str], str] = {}
+    features_path = Path("./data/features.parquet")
+    if features_path.exists():
+        feats_df = pl.read_parquet(features_path)
+        for frow in feats_df.select(["date_local", "cp", "regime_label"]).iter_rows(named=True):
+            regime_lookup[(frow["date_local"], frow["cp"])] = frow["regime_label"] or "unknown"
+
+    # ---- Evaluate all baselines per-row (with regime tracking) ----
     results: list[LadderResult] = []
+    regime_errors: dict[tuple[str, str, str, str], list[float]] = defaultdict(list)
+    n_missing_dminus1: int = 0
     for row in recent.iter_rows(named=True):
         d = row["date_local"]
         truth = row["tmax_int"]
@@ -276,28 +288,40 @@ def leaderboard(
                 continue
 
             kcp_int = int(kcp)
+            regime = regime_lookup.get((d, cp_str), "unknown")
+            error_l0 = kcp_int - truth
 
             # L0: persistence
             results.append(LadderResult(
                 level="L0", name="persistence", cp=cp_str,
-                mae=abs(kcp_int - truth), n=1,
+                mae=abs(error_l0), rmse=error_l0**2, bias=error_l0,
+                bracket_match=1.0 if kcp_int == truth else 0.0, n=1,
             ))
+            regime_errors[("L0", "persistence", cp_str, regime)].append(abs(error_l0))
 
             # L1: dminus1
             prev_day = d - dt.timedelta(days=1)
             tmax_dminus1 = tmax_by_date.get(prev_day)
             if tmax_dminus1 is not None:
+                error_l1 = tmax_dminus1 - truth
                 results.append(LadderResult(
                     level="L1", name="dminus1", cp=cp_str,
-                    mae=abs(tmax_dminus1 - truth), n=1,
+                    mae=abs(error_l1), rmse=error_l1**2, bias=error_l1,
+                    bracket_match=1.0 if tmax_dminus1 == truth else 0.0, n=1,
                 ))
+                regime_errors[("L1", "dminus1", cp_str, regime)].append(abs(error_l1))
+            else:
+                n_missing_dminus1 += 1
 
             # L2: climatology
             clim_pred = round(climo.tmax_dec_for(d))
+            error_l2 = clim_pred - truth
             results.append(LadderResult(
                 level="L2", name="climatology_doy", cp=cp_str,
-                mae=abs(clim_pred - truth), n=1,
+                mae=abs(error_l2), rmse=error_l2**2, bias=error_l2,
+                bracket_match=1.0 if clim_pred == truth else 0.0, n=1,
             ))
+            regime_errors[("L2", "climatology_doy", cp_str, regime)].append(abs(error_l2))
 
             # L4: empirical conditional (mode of distribution)
             dist, source = emp.predict_dist(
@@ -305,15 +329,63 @@ def leaderboard(
                 support_k=support_k,
             )
             l4_p50 = max(dist, key=dist.get)
+            error_l4 = l4_p50 - truth
             results.append(LadderResult(
                 level="L4", name="empirical_conditional", cp=cp_str,
-                mae=abs(l4_p50 - truth), n=1,
+                mae=abs(error_l4), rmse=error_l4**2, bias=error_l4,
+                bracket_match=1.0 if l4_p50 == truth else 0.0, n=1,
                 fallback_rate=0.0 if source == "conditional" else 1.0,
             ))
+            regime_errors[("L4", "empirical_conditional", cp_str, regime)].append(abs(error_l4))
+
+    # ---- Aggregate per-row results into per-(level, name, cp) summaries ----
+    from solarstorm.baselines._ladder import aggregate_results
+    aggregated = aggregate_results(results)
+
+    if n_missing_dminus1 > 0:
+        print(f"L1 (dminus1): {n_missing_dminus1} rows skipped (previous day data unavailable)")
+
+    # ---- Build segments: MAE by regime for each baseline × CP ----
+    segments: dict[str, list[LadderResult]] = {}
+    for (level, name, cp, regime), errors in sorted(regime_errors.items()):
+        n_regime = len(errors)
+        if n_regime > 0:
+            segments.setdefault(regime, []).append(LadderResult(
+                level=level, name=name, cp=cp,
+                mae=sum(errors) / n_regime, n=n_regime,
+            ))
+
+    # ---- Gates: G1-G5 for each aggregated baseline × CP ----
+    from solarstorm.eval._gates import apply_all_gates
+    gates_dict: dict[str, dict[str, dict]] = {}
+    best_null_mae_by_cp: dict[str, float] = {}
+    for r in aggregated:
+        if r.level != "feature":
+            prev_best = best_null_mae_by_cp.get(r.cp, float("inf"))
+            if r.mae < prev_best:
+                best_null_mae_by_cp[r.cp] = r.mae
+
+    for r in aggregated:
+        if r.level == "feature":
+            continue
+        best_mae = best_null_mae_by_cp.get(r.cp, r.mae)
+        gate_results = apply_all_gates(
+            model_mae=r.mae,
+            best_null_mae=best_mae,
+            cp=r.cp,
+            fallback_rate=r.fallback_rate or 0.0,
+            p50_mode_share=r.p50_mode_share,
+            corr_diff=r.corr_diff,
+            per_cp_passed=r.mae <= best_mae,
+        )
+        gates_dict.setdefault(r.cp, {})[f"{r.level}_{r.name}"] = {
+            g.gate: {"passed": g.passed, "status": g.status, "detail": g.detail}
+            for g in gate_results.values()
+        }
 
     # ---- Build and export ----
     board = build_leaderboard(
-        results=results, segments={},
+        results=aggregated, segments=segments, gates=gates_dict,
         window_start=window_start, window_end=today - dt.timedelta(days=1),
     )
 

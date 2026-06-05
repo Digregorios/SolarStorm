@@ -1,0 +1,751 @@
+{
+  "validated_features": [
+    {
+      "id": "H1",
+      "feature_column": "slope_3h",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.7763605245585443,
+      "ci_lo": 1.6707635154815952,
+      "ci_hi": 1.8745600446717996,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H1",
+      "feature_column": "slope_3h",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.2121317259289766,
+      "ci_lo": 1.1498766556765134,
+      "ci_hi": 1.2768660959583245,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H1",
+      "feature_column": "slope_3h",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.846968382662636,
+      "ci_lo": 0.7971260477108989,
+      "ci_hi": 0.8978514321820411,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H1",
+      "feature_column": "slope_3h",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.44654790306926173,
+      "ci_lo": 0.4095994348111848,
+      "ci_hi": 0.4845998339756105,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H2",
+      "feature_column": "hours_to_expected_peak",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.3151590168749283,
+      "ci_lo": 1.2360188921824016,
+      "ci_hi": 1.391036864469783,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H2",
+      "feature_column": "hours_to_expected_peak",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.083745015915503,
+      "ci_lo": 1.0180190247519776,
+      "ci_hi": 1.1506095689089892,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H2",
+      "feature_column": "hours_to_expected_peak",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.8012747467418375,
+      "ci_lo": 0.7471649286302005,
+      "ci_hi": 0.8533790232039717,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H2",
+      "feature_column": "hours_to_expected_peak",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.4210897663858115,
+      "ci_lo": 0.38194781199802275,
+      "ci_hi": 0.4573655008177963,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H4",
+      "feature_column": "dewpoint_depression",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.283371152284254,
+      "ci_lo": 1.202009918936799,
+      "ci_hi": 1.364094679573602,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H4",
+      "feature_column": "dewpoint_depression",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.0690087948813285,
+      "ci_lo": 1.0026890246930158,
+      "ci_hi": 1.139737351475481,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H4",
+      "feature_column": "dewpoint_depression",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.7916497563504308,
+      "ci_lo": 0.7364303542265965,
+      "ci_hi": 0.8450361348645598,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H4",
+      "feature_column": "dewpoint_depression",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.4046714102289459,
+      "ci_lo": 0.3666838895468312,
+      "ci_hi": 0.4421281410346715,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H5",
+      "feature_column": "tmax_dminus1",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.2846338692356305,
+      "ci_lo": 1.2058752046438368,
+      "ci_hi": 1.3628925451986313,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H5",
+      "feature_column": "tmax_dminus1",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.0568337103068288,
+      "ci_lo": 0.9912073133831577,
+      "ci_hi": 1.125295436737862,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H5",
+      "feature_column": "tmax_dminus1",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.7915746340004914,
+      "ci_lo": 0.7374911958675596,
+      "ci_hi": 0.8443896424051596,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H5",
+      "feature_column": "tmax_dminus1",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.4009461122129725,
+      "ci_lo": 0.3629756209461539,
+      "ci_hi": 0.4386574072210664,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H6",
+      "feature_column": "tmin_delta_tmax",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.2955696547020754,
+      "ci_lo": 1.2143350242956337,
+      "ci_hi": 1.375619724952957,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H6",
+      "feature_column": "tmin_delta_tmax",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.0990209220865523,
+      "ci_lo": 1.0314287293137452,
+      "ci_hi": 1.1711110953428112,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H6",
+      "feature_column": "tmin_delta_tmax",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.7910052634757638,
+      "ci_lo": 0.7380519003605202,
+      "ci_hi": 0.8451747132857786,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H6",
+      "feature_column": "tmin_delta_tmax",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.41491980649687765,
+      "ci_lo": 0.37607283664709756,
+      "ci_hi": 0.4517063971192286,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H8",
+      "feature_column": "wind_dir_change_s_to_n",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.2892872256725103,
+      "ci_lo": 1.2100754711388264,
+      "ci_hi": 1.3683961969161167,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H8",
+      "feature_column": "wind_dir_change_s_to_n",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.0550594317318949,
+      "ci_lo": 0.9908942248790465,
+      "ci_hi": 1.1231838288670284,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H8",
+      "feature_column": "wind_dir_change_s_to_n",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.7919141917221213,
+      "ci_lo": 0.7379389594275814,
+      "ci_hi": 0.844563355566026,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H8",
+      "feature_column": "wind_dir_change_s_to_n",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.401104140019379,
+      "ci_lo": 0.3630685772657567,
+      "ci_hi": 0.43879386178492746,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H10",
+      "feature_column": "precip_disruption",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.4324829115771007,
+      "ci_lo": 1.3567671219634332,
+      "ci_hi": 1.5104424609878773,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H10",
+      "feature_column": "precip_disruption",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.210697415645516,
+      "ci_lo": 1.1476935908182673,
+      "ci_hi": 1.277299147011836,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H10",
+      "feature_column": "precip_disruption",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.8357388699499786,
+      "ci_lo": 0.7844779612641521,
+      "ci_hi": 0.8881676763095563,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H10",
+      "feature_column": "precip_disruption",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.4442924169556688,
+      "ci_lo": 0.40642463343337937,
+      "ci_hi": 0.4814352926397987,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H11",
+      "feature_column": "tmax_hour_by_regime_month",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.3151590168749283,
+      "ci_lo": 1.2360188921824014,
+      "ci_hi": 1.391036864469783,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H11",
+      "feature_column": "tmax_hour_by_regime_month",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.083745015915503,
+      "ci_lo": 1.018019024751978,
+      "ci_hi": 1.1506095689089895,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H11",
+      "feature_column": "tmax_hour_by_regime_month",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.8012747467418375,
+      "ci_lo": 0.7471649286302005,
+      "ci_hi": 0.8533790232039717,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H11",
+      "feature_column": "tmax_hour_by_regime_month",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.4210897663858115,
+      "ci_lo": 0.38194781199802286,
+      "ci_hi": 0.4573655008177963,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H12",
+      "feature_column": "cloud_cover_suppression",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.4153487937337874,
+      "ci_lo": 1.3381442802095984,
+      "ci_hi": 1.4942157997313532,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H12",
+      "feature_column": "cloud_cover_suppression",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.187700745192747,
+      "ci_lo": 1.12235760851956,
+      "ci_hi": 1.2568027774555242,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H12",
+      "feature_column": "cloud_cover_suppression",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.8213028754583582,
+      "ci_lo": 0.7714380004995497,
+      "ci_hi": 0.8739757567789254,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H12",
+      "feature_column": "cloud_cover_suppression",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.43221244086260613,
+      "ci_lo": 0.3935509550778139,
+      "ci_hi": 0.4674843175890407,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H13",
+      "feature_column": "pressure_trend_3h",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.5747597899325645,
+      "ci_lo": 1.4198263642423825,
+      "ci_hi": 1.702036311256325,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H13",
+      "feature_column": "pressure_trend_3h",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 0.7120790612313646,
+      "ci_lo": 0.20335376532851066,
+      "ci_hi": 1.0869578629202956,
+      "p_value": 0.0059
+    },
+    {
+      "id": "H13",
+      "feature_column": "pressure_trend_3h",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.7631248913142443,
+      "ci_lo": 0.6935811841324996,
+      "ci_hi": 0.8265111620141344,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H13",
+      "feature_column": "pressure_trend_3h",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.37875827982534427,
+      "ci_lo": 0.3271759267318105,
+      "ci_hi": 0.42558238295012557,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H14",
+      "feature_column": "foehn_score",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.2736306128025856,
+      "ci_lo": 1.194557294051837,
+      "ci_hi": 1.3522693176799947,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H14",
+      "feature_column": "foehn_score",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.0640153504492806,
+      "ci_lo": 0.9983725611891239,
+      "ci_hi": 1.134419007132788,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H14",
+      "feature_column": "foehn_score",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.786489989140994,
+      "ci_lo": 0.7332464063366315,
+      "ci_hi": 0.8414954281610566,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H14",
+      "feature_column": "foehn_score",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.4079827693926411,
+      "ci_lo": 0.3694356244880254,
+      "ci_hi": 0.4474087346339615,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H15",
+      "feature_column": "late_warming_anomaly",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.2871857771951905,
+      "ci_lo": 1.207970758909541,
+      "ci_hi": 1.3642643973364095,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H15",
+      "feature_column": "late_warming_anomaly",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.0742165429769188,
+      "ci_lo": 1.0084705668305272,
+      "ci_hi": 1.1425511326258622,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H15",
+      "feature_column": "late_warming_anomaly",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.789477052474338,
+      "ci_lo": 0.7353299831110995,
+      "ci_hi": 0.8428255906731363,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H15",
+      "feature_column": "late_warming_anomaly",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.40472187542524873,
+      "ci_lo": 0.36671584313738714,
+      "ci_hi": 0.44273921266442945,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H17",
+      "feature_column": "warming_rate_06_09",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.7763605245585443,
+      "ci_lo": 1.6707635154815952,
+      "ci_hi": 1.8745600446717996,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H17",
+      "feature_column": "warming_rate_06_09",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.2121317259289766,
+      "ci_lo": 1.1498766556765134,
+      "ci_hi": 1.2768660959583245,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H17",
+      "feature_column": "warming_rate_06_09",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.846968382662636,
+      "ci_lo": 0.7971260477108989,
+      "ci_hi": 0.8978514321820411,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H17",
+      "feature_column": "warming_rate_06_09",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.4430032969390041,
+      "ci_lo": 0.40518107666703124,
+      "ci_hi": 0.47991461236893634,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H18",
+      "feature_column": "nocturnal_plateau_flag",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.2892872256725103,
+      "ci_lo": 1.2100754711388264,
+      "ci_hi": 1.3683961969161167,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H18",
+      "feature_column": "nocturnal_plateau_flag",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.0550594317318949,
+      "ci_lo": 0.9908942248790465,
+      "ci_hi": 1.1231838288670284,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H18",
+      "feature_column": "nocturnal_plateau_flag",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.7919141917221213,
+      "ci_lo": 0.7379389594275814,
+      "ci_hi": 0.844563355566026,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H18",
+      "feature_column": "nocturnal_plateau_flag",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.4007292269895266,
+      "ci_lo": 0.3633082400475428,
+      "ci_hi": 0.43884661198659913,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H20",
+      "feature_column": "dewpoint_collapse_rate_3h",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.699289200641777,
+      "ci_lo": 1.5883234016358303,
+      "ci_hi": 1.7996747754895681,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H20",
+      "feature_column": "dewpoint_collapse_rate_3h",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.132898778751098,
+      "ci_lo": 1.0685764315259345,
+      "ci_hi": 1.1996976950282656,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H20",
+      "feature_column": "dewpoint_collapse_rate_3h",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.8102043390977074,
+      "ci_lo": 0.7581711968005872,
+      "ci_hi": 0.8634795708807442,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H20",
+      "feature_column": "dewpoint_collapse_rate_3h",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.43414893316629766,
+      "ci_lo": 0.3941035219367087,
+      "ci_hi": 0.4722147945031754,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H21",
+      "feature_column": "prefrontal_warming_window",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.2886577600022413,
+      "ci_lo": 1.20918265071598,
+      "ci_hi": 1.368197895028588,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H21",
+      "feature_column": "prefrontal_warming_window",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.0550887046687483,
+      "ci_lo": 0.9901940096845523,
+      "ci_hi": 1.1238473335270744,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H21",
+      "feature_column": "prefrontal_warming_window",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.7921274243949574,
+      "ci_lo": 0.7381830289266772,
+      "ci_hi": 0.8456467803668034,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H21",
+      "feature_column": "prefrontal_warming_window",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.4017703929147861,
+      "ci_lo": 0.36361853859102156,
+      "ci_hi": 0.43997019873630155,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H22",
+      "feature_column": "nw_sector_not_foehn",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.2897559795462987,
+      "ci_lo": 1.2104786760892354,
+      "ci_hi": 1.368740413381055,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H22",
+      "feature_column": "nw_sector_not_foehn",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.0551554752533403,
+      "ci_lo": 0.9912980227640099,
+      "ci_hi": 1.123113428750788,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H22",
+      "feature_column": "nw_sector_not_foehn",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.7919073148488145,
+      "ci_lo": 0.7380249558775457,
+      "ci_hi": 0.8446632456418511,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H22",
+      "feature_column": "nw_sector_not_foehn",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.40132524264343084,
+      "ci_lo": 0.3631268006527419,
+      "ci_hi": 0.43966371753347927,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H23",
+      "feature_column": "cloud_base_transparency",
+      "cp": "20:00",
+      "regime": "all",
+      "effect_size": 1.2892872256725103,
+      "ci_lo": 1.2100754711388264,
+      "ci_hi": 1.3683961969161167,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H23",
+      "feature_column": "cloud_base_transparency",
+      "cp": "21:00",
+      "regime": "all",
+      "effect_size": 1.0550594317318949,
+      "ci_lo": 0.9908942248790465,
+      "ci_hi": 1.1231838288670284,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H23",
+      "feature_column": "cloud_base_transparency",
+      "cp": "22:00",
+      "regime": "all",
+      "effect_size": 0.7919141917221213,
+      "ci_lo": 0.7379389594275814,
+      "ci_hi": 0.844563355566026,
+      "p_value": 0.0001
+    },
+    {
+      "id": "H23",
+      "feature_column": "cloud_base_transparency",
+      "cp": "23:00",
+      "regime": "all",
+      "effect_size": 0.401104140019379,
+      "ci_lo": 0.3630685772657567,
+      "ci_hi": 0.43879386178492746,
+      "p_value": 0.0001
+    }
+  ],
+  "blocked": [
+    {
+      "id": "H19",
+      "feature_column": "sst_maritime_cap",
+      "reason": "Requires Cook Strait SST \u2014 no METAR source available (H19)"
+    },
+    {
+      "id": "H19",
+      "feature_column": "sst_maritime_cap",
+      "reason": "Requires Cook Strait SST \u2014 no METAR source available (H19)"
+    },
+    {
+      "id": "H19",
+      "feature_column": "sst_maritime_cap",
+      "reason": "Requires Cook Strait SST \u2014 no METAR source available (H19)"
+    },
+    {
+      "id": "H19",
+      "feature_column": "sst_maritime_cap",
+      "reason": "Requires Cook Strait SST \u2014 no METAR source available (H19)"
+    }
+  ],
+  "generated": "2026-06-05T01:58:56.879435+00:00",
+  "alpha": 0.05,
+  "n_hypotheses_tested": 88,
+  "n_validated": 72,
+  "n_rejected": 16
+}

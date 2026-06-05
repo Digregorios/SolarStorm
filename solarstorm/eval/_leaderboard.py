@@ -38,7 +38,10 @@ def build_leaderboard(
         "segments": {k: [{"name": r.name, "mae": r.mae, "n": r.n} for r in v]
                       for k, v in segments.items()},
         "gates": gates or {},
-        "summary": f"Best null varies by CP. {len(results)} baseline results across {len(by_cp)} CPs.",
+        "summary": (
+            f"Best null varies by CP. "
+            f"{len(results)} aggregated baseline results across {len(by_cp)} CPs."
+        ),
     }
 
 
@@ -60,7 +63,10 @@ def export_leaderboard(board: dict, output_dir: Path) -> tuple[Path, Path]:
         lines.append(f"## CP={cp} (best null: {best})")
         for e in entries:
             fb = f"fallback={e['fallback_rate']:.0%}" if e.get("fallback_rate") is not None else ""
-            lines.append(f"- {e['level']} {e['name']}: MAE={e['mae']:.2f}  BM={e['bracket_match']:.2f}  RPS={e['rps']:.2f}  {fb}")
+            n_info = f"n={e['n']}" if e.get("n", 0) > 0 else ""
+            lines.append(f"- {e['level']} {e['name']}: MAE={e['mae']:.2f}  "
+                         f"RMSE={e['rmse']:.2f}  bias={e['bias']:+.2f}  "
+                         f"BM={e['bracket_match']:.2f}  {fb}  {n_info}")
         lines.append("")
 
     if board.get("segments"):
@@ -68,7 +74,23 @@ def export_leaderboard(board: dict, output_dir: Path) -> tuple[Path, Path]:
         for seg_name, seg_entries in board["segments"].items():
             lines.append(f"### {seg_name}")
             for e in seg_entries:
-                lines.append(f"- {e['name']}: MAE={e['mae']:.2f}  n={e['n']}")
+                cp_info = f"CP={e['cp']}" if e.get("cp") else ""
+                lines.append(f"- {e['name']} ({cp_info}): MAE={e['mae']:.2f}  n={e['n']}")
+        lines.append("")
+
+    # Gates section
+    if board.get("gates"):
+        lines.append("## Gates")
+        for cp, entries in board["gates"].items():
+            lines.append(f"### CP={cp}")
+            for name, gate_results in entries.items():
+                passed = sum(1 for g in gate_results.values() if g["passed"])
+                total = len(gate_results)
+                lines.append(f"- **{name}**: {passed}/{total} passed")
+                for gname, g in gate_results.items():
+                    icon = "+" if g["passed"] else "X"
+                    lines.append(f"  - {icon} {gname}: {g['status']} — {g['detail']}")
+        lines.append("")
 
     # Feature null section
     if board.get("feature_nulls"):
